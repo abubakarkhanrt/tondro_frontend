@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TondroAI CRM</title>
+    
+    <!-- Material-UI Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- React Router DOM v5 -->
+    <script src="https://unpkg.com/react-router-dom@5.3.4/umd/react-router-dom.js"></script>
+    
+    <!-- Material-UI v5 -->
+    <script src="https://unpkg.com/@mui/material@5.15.10/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.3/dist/emotion-react.umd.min.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+    
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios@1.6.7/dist/axios.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.8/babel.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        #root {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- Load our components -->
+    <script type="text/babel" src="src/api.js"></script>
+    <script type="text/babel" src="src/theme.js"></script>
+    <!-- Reusable Components -->
+    <script type="text/babel" src="src/components/CreateDialog.js"></script>
+    <script type="text/babel" src="src/components/EntityTable.js"></script>
+    <script type="text/babel" src="src/components/FilterForm.js"></script>
+    <!-- Main Components -->
+    <script type="text/babel" src="src/components/Login.js"></script>
+    <script type="text/babel" src="src/components/Dashboard.js"></script>
+    <script type="text/babel" src="src/components/Organizations.js"></script>
+    <script type="text/babel" src="src/components/Users.js"></script>
+    <script type="text/babel" src="src/components/Subscriptions.js"></script>
+    <script type="text/babel" src="src/components/Products.js"></script>
+    <script type="text/babel" src="src/components/AuditLog.js"></script>
+    <script type="text/babel" src="src/components/ReusableDemo.js"></script>
+    <script type="text/babel" src="src/App.js"></script>
+</body>
+</html> 
