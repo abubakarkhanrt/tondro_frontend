@@ -758,6 +758,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
               />
             </Grid>
             
+            {/* Auto Renewal control hidden as requested
             <Grid item xs={12} sm={6}>
               <FormControlLabel
                 control={
@@ -769,6 +770,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 label="Auto Renewal"
               />
             </Grid>
+            */}
           </Grid>
         </Card>
       ))}

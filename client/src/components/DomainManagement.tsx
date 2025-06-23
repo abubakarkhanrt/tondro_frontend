@@ -4,7 +4,7 @@
  * Description: Domain management component for organizations
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 23-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -386,6 +386,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
               data-testid={TestIds.domainNameInput}
             />
           </Grid>
+          {/* Set as Primary Domain control hidden as requested
           <Grid item xs={12}>
             <FormControlLabel
               control={
@@ -398,6 +399,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
               label="Set as Primary Domain"
             />
           </Grid>
+          */}
         </Grid>
       </DialogContent>
       <DialogActions>

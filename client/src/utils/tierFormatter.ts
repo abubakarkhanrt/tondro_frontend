@@ -4,7 +4,7 @@
  * Description: Utility functions for formatting tier names from backend to user-friendly display
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 23-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -77,29 +77,33 @@ export function getTierColor(tierName: string): TierColorType {
 
 /**
  * Formats a tier name from backend format to user-friendly display format
+ * Removes redundant product names since they're displayed separately
  * 
  * @param tierName - The tier name from backend (e.g., "admissions_tier_1")
- * @returns Formatted tier name for display (e.g., "Admissions Tier 1")
+ * @returns Formatted tier name for display (e.g., "Tier 1")
  * 
  * @example
- * formatTierName("admissions_tier_1"); // "Admissions Tier 1"
- * formatTierName("enterprise_premium"); // "Enterprise Premium"
- * formatTierName("basic"); // "Basic"
+ * formatTierName("admissions_tier_1"); // "Tier 1"
+ * formatTierName("transcript_basic"); // "Basic"
+ * formatTierName("enterprise_premium"); // "Premium"
  */
 export function formatTierName(tierName: string): string {
   if (!tierName) return '';
   
-  // Handle common tier patterns
+  // Handle common tier patterns - remove redundant product names
   const tierMappings: Record<string, string> = {
-    'admissions_tier_1': 'Admissions Tier 1',
-    'admissions_tier_2': 'Admissions Tier 2',
-    'admissions_tier_3': 'Admissions Tier 3',
-    'transcript_basic': 'Transcript Basic',
-    'transcript_premium': 'Transcript Premium',
-    'transcript_enterprise': 'Transcript Enterprise',
-    'enterprise_premium': 'Enterprise Premium',
-    'enterprise_standard': 'Enterprise Standard',
-    'enterprise_basic': 'Enterprise Basic',
+    'admissions_tier_1': 'Tier 1',
+    'admissions_tier_2': 'Tier 2',
+    'admissions_tier_3': 'Tier 3',
+    'transcripts_tier_1': 'Tier 1',
+    'transcripts_tier_2': 'Tier 2',
+    'transcripts_tier_3': 'Tier 3',
+    'transcript_basic': 'Basic',
+    'transcript_premium': 'Premium',
+    'transcript_enterprise': 'Enterprise',
+    'enterprise_premium': 'Premium',
+    'enterprise_standard': 'Standard',
+    'enterprise_basic': 'Basic',
     'professional': 'Professional',
     'basic': 'Basic',
     'premium': 'Premium',
@@ -114,8 +118,21 @@ export function formatTierName(tierName: string): string {
     return tierMappings[tierName.toLowerCase()];
   }
 
-  // Generic formatting for unknown tiers
-  return tierName
+  // Generic formatting for unknown tiers - remove common product prefixes
+  const lowerTierName = tierName.toLowerCase();
+  let cleanedTierName = tierName;
+  
+  // Remove common product prefixes
+  if (lowerTierName.startsWith('admissions_')) {
+    cleanedTierName = tierName.replace(/^admissions_/i, '');
+  } else if (lowerTierName.startsWith('transcript_') || lowerTierName.startsWith('transcripts_')) {
+    cleanedTierName = tierName.replace(/^transcript[s]?_/i, '');
+  } else if (lowerTierName.startsWith('enterprise_')) {
+    cleanedTierName = tierName.replace(/^enterprise_/i, '');
+  }
+
+  // Format the cleaned tier name
+  return cleanedTierName
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');

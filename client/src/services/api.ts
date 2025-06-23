@@ -273,6 +273,13 @@ export const apiHelpers = {
     api.get(`/crm/organizations/${organizationId}/domains`, { signal }),
 
   // ────────────────────────────────────────
+  // User Domain Selection (NEW)
+  // ────────────────────────────────────────
+  
+  getUserDomains: (organizationId: string, signal?: AbortSignal): Promise<AxiosResponse<OrganizationDomainsResponse>> => 
+    api.get(`/crm/users/domains/${organizationId}`, { signal }),
+
+  // ────────────────────────────────────────
   // Users
   // ────────────────────────────────────────
   
