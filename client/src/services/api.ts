@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 24-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -295,8 +295,11 @@ export const apiHelpers = {
   updateUser: (id: string, data: UpdateUserRequest, signal?: AbortSignal): Promise<AxiosResponse<User>> => 
     api.patch(`/crm/users/${id}`, data, { signal }),
     
-  deleteUser: (id: string, reason: string, signal?: AbortSignal): Promise<AxiosResponse<void>> => 
-    api.delete(`/crm/users/${id}?reason=${reason}`, { signal }),
+  deleteUser: (id: string, reason?: string, signal?: AbortSignal): Promise<AxiosResponse<void>> => 
+    api.delete(`/crm/users/${id}`, { 
+      data: reason ? { reason } : undefined,
+      signal 
+    }),
     
   updateUserRole: (id: string, role: string, signal?: AbortSignal): Promise<AxiosResponse<User>> => 
     api.put(`/crm/users/${id}/role`, { role }, { signal }),
@@ -306,9 +309,6 @@ export const apiHelpers = {
     
   recordUserLogin: (id: string, signal?: AbortSignal): Promise<AxiosResponse<void>> => 
     api.post(`/crm/users/${id}/login`, {}, { signal }),
-    
-  bulkCreateUsers: (data: CreateUserRequest[], signal?: AbortSignal): Promise<AxiosResponse<User[]>> => 
-    api.post('/crm/users/bulk', data, { signal }),
 
   // ────────────────────────────────────────
   // Subscriptions

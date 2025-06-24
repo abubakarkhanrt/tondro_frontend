@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 24-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -159,7 +159,7 @@ export interface User {
   first_name: string;
   last_name: string;
   role: 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user';
-  status: 'Active' | 'Inactive' | 'Pending';
+  status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
   organization_id: string;
   domain_id?: number; // Optional field in response
   created_at: string;
@@ -180,7 +180,7 @@ export interface UpdateUserRequest {
   first_name?: string;
   last_name?: string;
   role?: 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user';
-  status?: 'Active' | 'Inactive' | 'Pending';
+  status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
   organization_id?: string;
 }
 

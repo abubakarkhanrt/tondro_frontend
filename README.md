@@ -31,7 +31,6 @@ The CRM application is **ready** with all core functionality implemented and wor
 #### 👥 Users Management
 - Complete user lifecycle management
 - Role-based access control
-- Bulk user creation
 - Advanced filtering and search
 - User status management
 - Login tracking

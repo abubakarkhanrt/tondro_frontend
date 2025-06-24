@@ -52,7 +52,6 @@ The following components have been successfully updated with comprehensive test 
    - Page container and action buttons
    - Filter form with all inputs
    - Table with view/edit/delete actions
-   - Bulk create functionality
    - Pagination and loading states
 
 9. **Subscriptions.tsx** - Subscriptions management

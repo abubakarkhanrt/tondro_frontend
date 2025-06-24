@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 24-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -104,12 +104,11 @@ export const TestIds = {
   // Users
   users: {
     page: "users-page",
-    createButton: "users-create-button",
-    bulkCreateButton: "users-bulk-create-button",
     table: "users-table",
-    viewDetails: (userId: string) => `users-view-details-${userId}`,
-    edit: (userId: string) => `users-edit-${userId}`,
-    deactivate: (userId: string) => `users-deactivate-${userId}`,
+    createButton: "users-create-button",
+    viewDetails: (id: string) => `users-view-details-${id}`,
+    edit: (id: string) => `users-edit-${id}`,
+    deactivate: (id: string) => `users-deactivate-${id}`,
     updateRole: (userId: string) => `users-update-role-${userId}`,
     updateStatus: (userId: string) => `users-update-status-${userId}`,
     recordLogin: (userId: string) => `users-record-login-${userId}`
