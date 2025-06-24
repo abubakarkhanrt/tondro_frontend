@@ -1,0 +1,517 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Run the project in venv and use port 3001
+##  Coding and Security Guidelines for TondroAI CRM App
+
+###  General Code Standards
+
+1. **Use TypeScript across both frontend and backend.**
+
+   * Ensure all components, functions, and API responses are strongly typed.
+
+2. **Follow consistent code style** using [Prettier](mdc:https:/prettier.io) and [ESLint](mdc:https:/eslint.org) with Airbnb or recommended React rules.
+
+3. **Group code into logical folders/modules**:
+
+   * `/components`, `/services`, `/utils`, `/pages`, `/hooks`, `/api` for front-end.
+   * `/routes`, `/controllers`, `/middlewares`, `/services`, `/utils` for backend.
+
+4. **Avoid hard-coded strings or URLs.**
+
+   * Use `.env` files for API URLs, secrets, and configuration.
+
+---
+
+###  Security Rules
+
+1. **Never expose JWT tokens or secrets in frontend code.**
+
+   * Only store access tokens in **HttpOnly cookies** or **memory (not localStorage)** if needed.
+
+2. **Implement secure CORS handling in Express backend.**
+
+   * Allow only trusted origins (`http://localhost:3000` during development).
+
+   ```ts
+   app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+   ```
+
+3. **Validate all incoming request bodies** on backend using `zod` or `Joi` to prevent injection.
+
+4. **Sanitize user input** before sending to backend or external APIs.
+
+5. **Use HTTPS in production**, even for local staging setups if possible (via self-signed certs or local proxies like mkcert).
+
+6. **Protect against CSRF** if using cookies for auth.
+
+   * Implement CSRF tokens or same-site cookie attributes.
+
+---
+
+###  API Proxy & Backend Rules
+
+1. **Use Express as a secure proxy** to the mock API.
+
+   * Don’t expose internal API structure to frontend.
+
+2. **Handle all API responses gracefully**, including error codes.
+
+   * Return consistent error shapes: `{ success: false, error: "message" }`
+
+3. **Include JWT authentication** in all proxied requests to the mock API.
+
+4. **Log backend errors using a logging library** like `winston` or `pino`, but **never log tokens or sensitive info**.
+
+---
+
+###  React Frontend Rules
+
+1. **Use React Functional Components with Hooks.**
+
+2. **Keep UI and logic separated**:
+
+   * Use custom hooks for data fetching (`useOrganizations`, `useUsers`, etc.)
+   * Use MUI theming and components for layout/styling consistency.
+
+3. **Store tokens in memory only**, or use secure cookie storage if handled by backend.
+
+4. **Build reusable UI components** (e.g., `EntityTable`, `EntityForm`).
+
+5. **Use `axios` with interceptors** for global JWT injection and error handling.
+
+---
+
+###  CRUD Functionality Expectations
+
+1. Implement full CRUD operations for:
+
+   * `organizations`, `users`, `subscriptions`, `products`, `usage_events`, `audit_log`
+
+2. Use optimistic UI updates when possible, fallback to re-fetch after mutation.
+
+3. Always handle 401/403 errors by redirecting to login or prompting re-authentication.
+
+---
+
+###  Testing & Validation
+
+1. Write **unit tests** for backend routes and React components.
+
+   * Use `jest` + `supertest` for Express.
+   * Use `react-testing-library` for frontend.
+
+2. Validate OpenAPI 3.1.0 mock API responses against schema if possible (use tools like `openapi-typescript`).
+
+---
+
+###  Deployment Readiness
+
+1. Ensure `.env` files are **not committed** (`.gitignore` them).
+2. Use `dotenv` or equivalent in both front and back.
+3. Scripts:
+
+   * `"dev"` for local dev with `concurrently` running both servers.
+   * `"build"` and `"start"` for production bundling.
+
+---
+
+###  Suggested Directory Structure
+
+```bash
+root/
+├── client/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── App.tsx
+│   │   └── index.tsx
+│   └── .env
+├── server/
+│   ├── routes/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── services/
+│   ├── utils/
+│   └── index.ts
+├── .env
+├── package.json
+└── README.md
+```
+
+---
+
+## Documentation & Code Annotation Standards
+
+### File Header Template
+
+Every **JS/TS file** must include a standardized comment header in this format:
+
+```ts
+/**
+ * ──────────────────────────────────────────────────
+ * File: path/to/your/file.ts[x] or .jsx
+ * Description: $DESCRIPTION
+ * Author: Muhammad Abubakar Khan
+ * Created: $CREATED_DATE
+ * Last Updated: $CURRENT_DATE
+ * ──────────────────────────────────────────────────
+ */
+```
+
+### Module Documentation
+
+Place a top-level comment block for files that define key modules/components:
+
+```ts
+/**
+ * Component: UserDashboard
+ * 
+ * This component is responsible for rendering the main user dashboard.
+ * Includes charts, tables, and summaries.
+ * 
+ * Key Features:
+ * - Fetches data from `/api/dashboard`
+ * - Uses Material UI components
+ * - Responsive layout with Grid system
+ * 
+ * Example Usage:
+ * <UserDashboard userId="12345" />
+ */
+```
+
+### Component Documentation (React)
+
+```tsx
+/**
+ * LoginForm Component
+ * 
+ * Renders a login form using Material UI inputs.
+ * 
+ * Props:
+ * - onSubmit: (data: { email: string; password: string }) => void
+ * 
+ * Example:
+ * <LoginForm onSubmit={handleLogin} />
+ */
+export const LoginForm = ({ onSubmit }: Props) => { ... }
+```
+
+### Function Documentation Standards (Node.js or utils)
+
+```ts
+/**
+ * Validates email address format.
+ * 
+ * @param email - Email string to validate
+ * @returns true if valid, false otherwise
+ * 
+ * @example
+ * validateEmail("test@example.com"); // true
+ */
+export function validateEmail(email: string): boolean { ... }
+```
+
+### Property Documentation (for TypeScript classes or objects)
+
+```ts
+interface UserProfile {
+  /** Unique identifier for the user */
+  id: string;
+
+  /** Full name of the user */
+  name: string;
+
+  /** Optional profile picture URL */
+  avatarUrl?: string;
+}
+```
+
+### TypeScript Usage Guidelines
+
+* ✅ Use `interface` and `type` to define data shapes
+* ✅ All function inputs and outputs must be typed
+* ✅ Use `Record`, `Partial`, `Readonly`, etc., when applicable
+* ✅ Avoid `any`, use `unknown` + type guards when needed
+
+```ts
+type UserRole = 'admin' | 'editor' | 'viewer';
+
+function getPermissions(role: UserRole): string[] { ... }
+```
+
+### Commenting Standards
+
+#### Inline Comments
+
+```ts
+// Retry fetching user data on initial failure
+await fetchUserData();
+
+// TODO: Add error fallback UI for disconnected state
+// NOTE: This is a temporary workaround until backend stabilizes
+```
+
+#### Code Section Separators
+
+```ts
+// ────────────────────────────────────────
+// API Handlers
+// ────────────────────────────────────────
+
+// ────────────────────────────────────────
+// Utility Functions
+// ────────────────────────────────────────
+
+// ────────────────────────────────────────
+// Component Logic
+// ────────────────────────────────────────
+```
+
+### Logging Standards (Node.js Backend)
+
+Use a logger like `winston` or `pino`. Avoid `console.log` in production.
+
+```ts
+import logger from '../utils/logger';
+
+logger.info('User created successfully');
+logger.error('User creation failed', { userId, error });
+```
+
+### TODO, FIXME, NOTE, HACK
+
+Same structure as before:
+
+```ts
+// TODO: Add support for multi-language
+// FIXME: Fails on empty input
+// NOTE: Depends on external OAuth provider
+// HACK: For now, use client-side debounce as backend is slow
+```
+
+### Import Organization (Frontend & Backend)
+
+```ts
+// Standard imports
+import { useState, useEffect } from 'react';
+
+// Third-party libraries
+import axios from 'axios';
+import { Button, TextField } from '@mui/material';
+
+// Local modules/components
+import { useAuth } from '../../hooks/useAuth';
+import { API_URL } from '../../config';
+```
+
+### Exception Handling (Node.js)
+
+```ts
+try {
+  const user = await createUser(data);
+  res.status(201).json(user);
+} catch (err) {
+  logger.error('Failed to create user', { error: err });
+  res.status(500).json({ error: 'Internal Server Error' });
+}
+```
+
+### File Footer Template
+
+```ts
+/**
+ * ──────────────────────────────────────────────────
+ * End of File: path/to/your/file.ts[x]
+ * ──────────────────────────────────────────────────
+ */
+```
+
+### File & Folder Organization
+
+* Group by **feature or domain**, not by type (recommended)
+* Use consistent naming (`camelCase` for files, `PascalCase` for components)
+* Use `index.ts` to aggregate exports in modules
+
+---
+
+## Security Requirements
+
+### Critical Security Rules
+
+* ❌ **Never commit `.env`, API keys, or secrets**
+* ❌ **No hardcoded credentials**
+* ✅ **Use `.env.local` for local config, and `.env.production` for deployed**
+* ✅ **Validate user input on both frontend and backend**
+* ✅ **Escape or sanitize HTML to prevent XSS**
+
+### Sensitive Data Handling
+
+* Use environment variables via `process.env`
+* Apply authentication/authorization checks on all sensitive routes
+* Do not log passwords, tokens, or PII
+* Encrypt secrets at rest (e.g., in database or GCP Secrets)
+
+### Code Review Focus Areas
+
+* Authentication logic
+* Authorization guards (role checks, access control)
+* Input validation
+* Open redirects or token leakage
+* Console logs or exposed stack traces
+
+---
+
+## Pull Request Process
+
+### Before Creating a PR
+
+1. ✅ Ensure the app builds (`npm run build`)
+2. ✅ Run lint (`npm run lint`) and tests (`npm test`)
+3. ✅ Remove `console.log`, `debugger`, and test data
+4. ✅ Update related documentation or README
+5. ✅ Format code using Prettier or ESLint
+
+### PR Requirements
+
+* Clear title & description
+* List of key changes
+* Link to issue or ticket
+* Screenshots for UI updates
+* Include testing steps
+
+### PR Template
+
+```md
+## What This PR Does
+[Short summary]
+
+## Changes Made
+- Updated LoginForm to use MUI v6
+- Refactored auth context
+- Removed deprecated axios usage
+
+## Testing
+- `npm run dev` to test locally
+- Click "Login" with test credentials
+
+## Security Considerations
+- Added input validation
+- Restricted access to admin routes
+```
+
+---
+
+## Communication
+
+### Status Updates
+
+* Share daily status updates in project channel
+* Tag relevant reviewers when stuck
+* Log important decisions in Slack or Notion
+
+### Code Questions
+
+* Use comments in PRs or discussions in Slack
+* Include code snippets when asking questions
+* Avoid “it doesn’t work”; describe the exact issue and error
+
+---
+
+## Quality Assurance
+
+### Testing Requirements
+
+* Unit tests for all business logic
+* Integration tests for API endpoints
+* Manual testing of UI changes
+* Test mobile responsiveness (for frontend)
+* Edge cases: null, undefined, empty states, 404s, etc.
+
+### Documentation
+
+* Update or create README sections
+* Add/update `.env.example`
+* Comment complex logic or algorithms
+* Add inline prop or hook usage descriptions
+
+---
+
+## Prohibited Activities
+
+### Strictly Forbidden
+
+* ❌ Skipping code reviews
+* ❌ Merging with broken tests
+* ❌ Committing secrets or personal info
+* ❌ Installing packages without approval
+* ❌ Circumventing security or auth checks
+
+### Immediate Termination Offenses
+
+* Introducing malware or backdoors
+* Intentional data leaks
+* Accessing unauthorized resources
+* Sharing internal credentials
+* Violating IP or NDA clauses
+
+---
+
+## Getting Help
+
+### Technical Questions
+
+* Check codebase & docs first
+* Ask in team thread or PR comments
+* Escalate only if blocked
+
+### Process Questions
+
+* Refer to this document
+* Ask project/team lead
+* Suggest improvements via PR or feedback
+
+---
+
+## Tools and Setup
+
+### Required Tools
+
+* Node.js (LTS version)
+* React (v18+)
+* VSCode or preferred IDE
+* Material UI (latest stable)
+* Git, GitHub access
+* Optional: GCP CLI access
+
+### Development Environment
+
+* Setup `.env` using `.env.example`
+* Run `npm install`
+* Use `npm run dev` to start
+* Use `npm run lint && npm run format` before pushing
+
+---
+
+## Final Notes
+
+### Code Ownership
+
+* Code is property of the org/repo
+* Follow IP, NDA, and data security policies
+
+### Professional Standards
+
+* Maintain respectful communication
+* Deliver reliable, tested, readable code
+* Be responsive to code reviews
+* Prioritize security and user experience
+
+---
+**Reminder**: Code quality and security are **non-negotiable**. Ask when in doubt. Document what you learn.
+---
