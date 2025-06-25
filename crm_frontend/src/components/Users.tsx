@@ -52,7 +52,7 @@ import {
   type CreateUserRequest,
   type UpdateUserRequest,
   type SnackbarState,
-  type Domain
+  type Domain,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
@@ -84,7 +84,7 @@ const getRoleDisplayName = (role: string): string => {
     case 'tenant_admin':
       return 'Tenant Admin';
     default:
-      return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return role.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   }
 };
 
@@ -113,14 +113,17 @@ const convertOrgIdToInteger = (orgId: string): number => {
   return parseInt(orgId, 10);
 };
 
-const getDomainName = (user: User, domains: Record<string, Domain[]>): string => {
+const getDomainName = (
+  user: User,
+  domains: Record<string, Domain[]>
+): string => {
   if (!user.domain_id) return 'N/A';
-  
+
   const orgId = convertOrgIdToString(user.organization_id);
   const orgDomains = domains[orgId] || [];
-  
-  const domain = orgDomains.find(d => Number(d.id) === user.domain_id);
-  
+
+  const domain = orgDomains.find((d) => Number(d.id) === user.domain_id);
+
   return domain ? domain.domain_name : 'Unknown';
 };
 
@@ -196,83 +199,105 @@ const Users: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       // Convert organization_id from string format to integer for API
       const apiParams = {
         page: pagination.page + 1,
         page_size: pagination.pageSize,
         ...filters,
       };
-      
+
       // Remove empty parameters
-      Object.keys(apiParams).forEach(key => {
-        if (apiParams[key as keyof typeof apiParams] === '') delete apiParams[key as keyof typeof apiParams];
+      Object.keys(apiParams).forEach((key) => {
+        if (apiParams[key as keyof typeof apiParams] === '')
+          delete apiParams[key as keyof typeof apiParams];
       });
-      
+
       // Convert parameters for API compatibility
       const finalApiParams = {
         ...apiParams,
-        ...(apiParams.organization_id && { organization_id: convertOrgIdToInteger(apiParams.organization_id) }),
-        ...(apiParams.status && { status: apiParams.status.toLowerCase() })
+        ...(apiParams.organization_id && {
+          organization_id: convertOrgIdToInteger(apiParams.organization_id),
+        }),
+        ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
       } as any;
-      
+
       // Try API filtering first, then fallback to frontend filtering
       try {
-        const response = await apiHelpers.getUsers(finalApiParams, controller.signal);
+        const response = await apiHelpers.getUsers(
+          finalApiParams,
+          controller.signal
+        );
         const usersData = response.data.items || response.data || [];
         setUsers(usersData);
-        setPagination(prev => ({
+        setPagination((prev) => ({
           ...prev,
-          total: response.data.total || (response.data.items ? response.data.items.length : 0)
+          total:
+            response.data.total ||
+            (response.data.items ? response.data.items.length : 0),
         }));
       } catch (error: any) {
         // If API filtering fails, fall back to frontend filtering
         if (error.response?.status === 500 || error.response?.status === 400) {
-          console.log('API filtering failed, falling back to frontend filtering...');
-          
+          console.log(
+            'API filtering failed, falling back to frontend filtering...'
+          );
+
           // Remove all filters and fetch all users
-          const { status, role, organization_id, search, ...paramsWithoutFilters } = apiParams;
-          const response = await apiHelpers.getUsers(paramsWithoutFilters, controller.signal);
+          const {
+            status,
+            role,
+            organization_id,
+            search,
+            ...paramsWithoutFilters
+          } = apiParams;
+          const response = await apiHelpers.getUsers(
+            paramsWithoutFilters,
+            controller.signal
+          );
           const allUsers = response.data.items || response.data || [];
-          
+
           // Apply filters on the frontend
           let filteredUsers = allUsers;
-          
+
           // Apply status filter
           if (status) {
-            filteredUsers = filteredUsers.filter(user => 
-              user.status.toLowerCase() === status.toLowerCase()
+            filteredUsers = filteredUsers.filter(
+              (user) => user.status.toLowerCase() === status.toLowerCase()
             );
           }
-          
+
           // Apply role filter
           if (role) {
-            filteredUsers = filteredUsers.filter(user => 
-              user.role.toLowerCase() === role.toLowerCase()
+            filteredUsers = filteredUsers.filter(
+              (user) => user.role.toLowerCase() === role.toLowerCase()
             );
           }
-          
+
           // Apply organization filter
           if (organization_id) {
-            filteredUsers = filteredUsers.filter(user => 
-              convertOrgIdToString(user.organization_id) === convertOrgIdToString(organization_id)
+            filteredUsers = filteredUsers.filter(
+              (user) =>
+                convertOrgIdToString(user.organization_id) ===
+                convertOrgIdToString(organization_id)
             );
           }
-          
+
           // Apply search filter
           if (search) {
             const searchLower = search.toLowerCase();
-            filteredUsers = filteredUsers.filter(user => 
-              user.email.toLowerCase().includes(searchLower) ||
-              user.first_name.toLowerCase().includes(searchLower) ||
-              user.last_name.toLowerCase().includes(searchLower)
+            filteredUsers = filteredUsers.filter(
+              (user) =>
+                user.email.toLowerCase().includes(searchLower) ||
+                user.first_name.toLowerCase().includes(searchLower) ||
+                user.last_name.toLowerCase().includes(searchLower)
             );
           }
-          
+
           setUsers(filteredUsers);
-          setPagination(prev => ({
+          setPagination((prev) => ({
             ...prev,
-            total: filteredUsers.length
+            total: filteredUsers.length,
           }));
         } else {
           throw error;
@@ -299,15 +324,20 @@ const Users: React.FC = () => {
       const response = await apiHelpers.getOrganizations();
       const orgs = response.data.organizations || [];
       setOrganizations(orgs);
-      
+
       // Fetch domains for each organization
       const domainsData: Record<string, Domain[]> = {};
       for (const org of orgs) {
         try {
-          const domainsResponse = await apiHelpers.getUserDomains(org.organizationId);
+          const domainsResponse = await apiHelpers.getUserDomains(
+            org.organizationId
+          );
           domainsData[org.organizationId] = domainsResponse.data.domains || [];
         } catch (error) {
-          console.error(`Error fetching domains for organization ${org.organizationId}:`, error);
+          console.error(
+            `Error fetching domains for organization ${org.organizationId}:`,
+            error
+          );
           domainsData[org.organizationId] = [];
         }
       }
@@ -463,7 +493,7 @@ const Users: React.FC = () => {
         organizations={organizations}
         userRoles={userRoles}
       />
-      
+
       {selectedUser && (
         <>
           {!editMode && (
@@ -540,7 +570,13 @@ interface FilterSectionProps {
   handleClearFilters: () => void;
 }
 
-const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, userRoles, handleFilterChange, handleClearFilters }) => {
+const FilterSection: React.FC<FilterSectionProps> = ({
+  filters,
+  organizations,
+  userRoles,
+  handleFilterChange,
+  handleClearFilters,
+}) => {
   const [localSearch, setLocalSearch] = useState<string>(filters.search);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -578,11 +614,21 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
   return (
     <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
       <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
           <Typography variant="h6" gutterBottom>
             Filters
           </Typography>
-          <Button variant="outlined" color="secondary" onClick={handleClearFiltersLocal} data-testid={TestIds.filterForm.clearButton}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleClearFiltersLocal}
+            data-testid={TestIds.filterForm.clearButton}
+          >
             Clear
           </Button>
         </Box>
@@ -592,7 +638,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
               <InputLabel>Organization</InputLabel>
               <Select
                 value={filters.organization_id}
-                onChange={e => handleFilterChange('organization_id', e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange('organization_id', e.target.value)
+                }
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
               >
@@ -610,14 +658,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
               <InputLabel>Role</InputLabel>
               <Select
                 value={filters.role}
-                onChange={e => handleFilterChange('role', e.target.value as string)}
+                onChange={(e) =>
+                  handleFilterChange('role', e.target.value as string)
+                }
                 label="Role"
                 data-testid={TestIds.filterForm.role}
               >
                 <MenuItem value="">All</MenuItem>
                 {userRoles.map((role) => (
                   <MenuItem key={role} value={role}>
-                    {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {role
+                      .replace('_', ' ')
+                      .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </MenuItem>
                 ))}
               </Select>
@@ -628,7 +680,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
               <InputLabel>Status</InputLabel>
               <Select
                 value={filters.status}
-                onChange={e => handleFilterChange('status', e.target.value as string)}
+                onChange={(e) =>
+                  handleFilterChange('status', e.target.value as string)
+                }
                 label="Status"
                 data-testid={TestIds.filterForm.status}
               >
@@ -644,7 +698,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
               fullWidth
               label="Search"
               value={localSearch}
-              onChange={e => handleSearchChange(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search users by email or name..."
               inputRef={searchInputRef}
               data-testid={TestIds.filterForm.search}
@@ -753,11 +807,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {organizations.find(org => org.organizationId === convertOrgIdToString(user.organization_id))?.tenantName || 'Unknown'}
+                        {organizations.find(
+                          (org) =>
+                            org.organizationId ===
+                            convertOrgIdToString(user.organization_id)
+                        )?.tenantName || 'Unknown'}
                       </TableCell>
-                      <TableCell>
-                        {getDomainName(user, domains)}
-                      </TableCell>
+                      <TableCell>{getDomainName(user, domains)}</TableCell>
                       <TableCell>
                         <Chip
                           label={user.role}
@@ -769,7 +825,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
                         <Chip
                           label={user.status}
                           style={{
-                            backgroundColor: getStatusBackgroundColor(user.status),
+                            backgroundColor: getStatusBackgroundColor(
+                              user.status
+                            ),
                             color: '#ffffff',
                           }}
                           size="small"
@@ -856,7 +914,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     email: '',
     first_name: '',
     last_name: '',
-    role: 'tenant_admin'
+    role: 'tenant_admin',
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -869,7 +927,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       fetchDomains(formData.organization_id);
     } else {
       setDomains([]);
-      setFormData(prev => ({ ...prev, domain_id: 0 }));
+      setFormData((prev) => ({ ...prev, domain_id: 0 }));
     }
   }, [formData.organization_id]);
 
@@ -880,23 +938,29 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       const domainsData = response.data.domains || [];
       console.log('Fetched domains data:', domainsData);
       setDomains(domainsData);
-      
+
       // Find the primary domain and set it as default
-      const primaryDomain = domainsData.find(domain => domain.is_primary);
+      const primaryDomain = domainsData.find((domain) => domain.is_primary);
       if (primaryDomain) {
-        setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
+        setFormData((prev) => ({
+          ...prev,
+          domain_id: Number(primaryDomain.id),
+        }));
       } else if (domainsData.length > 0) {
         // If no primary domain found, select the first domain
-        setFormData(prev => ({ ...prev, domain_id: Number(domainsData[0].id) }));
+        setFormData((prev) => ({
+          ...prev,
+          domain_id: Number(domainsData[0].id),
+        }));
       } else {
         // No domains available
-        setFormData(prev => ({ ...prev, domain_id: 0 }));
+        setFormData((prev) => ({ ...prev, domain_id: 0 }));
       }
     } catch (error) {
       console.error('Error fetching domains:', error);
-      setErrors(prev => ({ ...prev, domains: 'Failed to load domains' }));
+      setErrors((prev) => ({ ...prev, domains: 'Failed to load domains' }));
       setDomains([]);
-      setFormData(prev => ({ ...prev, domain_id: 0 }));
+      setFormData((prev) => ({ ...prev, domain_id: 0 }));
     } finally {
       setDomainsLoading(false);
     }
@@ -908,15 +972,15 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
     // Validate required fields
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.organization_id) {
       newErrors.organization_id = 'Organization is required';
     }
-    
+
     if (!formData.domain_id) {
       newErrors.domain_id = 'Domain is required';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else {
@@ -935,14 +999,16 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id and display name for role
       const apiData = {
-        organization_id: convertOrgIdToInteger(formData.organization_id).toString(),
+        organization_id: convertOrgIdToInteger(
+          formData.organization_id
+        ).toString(),
         domain_id: formData.domain_id,
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        role: formData.role ? getRoleDisplayName(formData.role) : undefined // Convert internal value to display name
+        role: formData.role ? getRoleDisplayName(formData.role) : undefined, // Convert internal value to display name
       };
-      
+
       await onSubmit(apiData as unknown as CreateUserRequest);
       setFormData({
         organization_id: '',
@@ -950,7 +1016,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         email: '',
         first_name: '',
         last_name: '',
-        role: 'tenant_admin'
+        role: 'tenant_admin',
       });
       setErrors({});
     } catch (error) {
@@ -967,7 +1033,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       email: '',
       first_name: '',
       last_name: '',
-      role: 'tenant_admin'
+      role: 'tenant_admin',
     });
     setErrors({});
     setDomains([]);
@@ -979,7 +1045,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       <DialogTitle>Create New User</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
-          <FormControl fullWidth margin="normal" required error={!!errors.organization_id}>
+          <FormControl
+            fullWidth
+            margin="normal"
+            required
+            error={!!errors.organization_id}
+          >
             <InputLabel>Organization</InputLabel>
             <Select
               value={formData.organization_id}
@@ -1001,11 +1072,27 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             )}
           </FormControl>
 
-          <FormControl fullWidth margin="normal" required error={!!errors.domain_id}>
+          <FormControl
+            fullWidth
+            margin="normal"
+            required
+            error={!!errors.domain_id}
+          >
             <InputLabel>Domain</InputLabel>
             <Select
-              value={domainsLoading ? '' : (domains.length > 0 ? formData.domain_id : '')}
-              onChange={(e) => setFormData({ ...formData, domain_id: e.target.value as number })}
+              value={
+                domainsLoading
+                  ? ''
+                  : domains.length > 0
+                    ? formData.domain_id
+                    : ''
+              }
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  domain_id: e.target.value as number,
+                })
+              }
               label="Domain"
               disabled={!formData.organization_id || domainsLoading}
             >
@@ -1023,22 +1110,28 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                   <MenuItem key={domain.id} value={domain.id}>
                     {(() => {
                       // Get the domain name from either domain_name or name field
-                      
+
                       let domainName = '';
-                      if (domain.domain_name && typeof domain.domain_name === 'string') {
+                      if (
+                        domain.domain_name &&
+                        typeof domain.domain_name === 'string'
+                      ) {
                         domainName = domain.domain_name;
-                      } else if (domain.name && typeof domain.name === 'string') {
+                      } else if (
+                        domain.name &&
+                        typeof domain.name === 'string'
+                      ) {
                         domainName = domain.name;
                       }
                       // log the domain name
                       console.log('Domain name:', domainName);
                       // Simple domain name cleaning - just trim whitespace
                       const cleanDomainName = domainName.trim();
-                      
+
                       return (
                         <>
                           {cleanDomainName || 'Unknown Domain'}
-                          {domain.is_primary && ' (Primary)' || ''}
+                          {(domain.is_primary && ' (Primary)') || ''}
                         </>
                       );
                     })()}
@@ -1059,7 +1152,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             label="Email"
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
             required
             error={!!errors.email}
             helperText={errors.email}
@@ -1070,7 +1165,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             margin="normal"
             label="First Name"
             value={formData.first_name}
-            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, first_name: e.target.value })
+            }
           />
 
           <TextField
@@ -1078,14 +1175,27 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             margin="normal"
             label="Last Name"
             value={formData.last_name}
-            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, last_name: e.target.value })
+            }
           />
 
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Role</InputLabel>
             <Select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value as
+                    | 'admin'
+                    | 'user'
+                    | 'viewer'
+                    | 'tenant_admin'
+                    | 'tenant_support'
+                    | 'tenant_user',
+                })
+              }
               label="Role"
             >
               {availableRoles.map((role) => (
@@ -1101,9 +1211,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
           disabled={loading}
           data-testid={TestIds.users.createButton}
         >
@@ -1127,13 +1237,13 @@ interface ViewUserDialogProps {
   setEditMode: (edit: boolean) => void;
 }
 
-const ViewUserDialog: React.FC<ViewUserDialogProps> = ({ 
-  user, 
-  onClose, 
-  // onUpdate, 
+const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
+  user,
+  onClose,
+  // onUpdate,
   organizations,
   domains,
-  setEditMode
+  setEditMode,
 }) => {
   return (
     <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
@@ -1173,7 +1283,11 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
                   Organization
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {organizations.find(org => org.organizationId === convertOrgIdToString(user.organization_id))?.tenantName || 'Unknown'}
+                  {organizations.find(
+                    (org) =>
+                      org.organizationId ===
+                      convertOrgIdToString(user.organization_id)
+                  )?.tenantName || 'Unknown'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1228,10 +1342,14 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => {
-          // Set edit mode to true to switch to edit dialog
-          setEditMode(true);
-        }}>Edit</Button>
+        <Button
+          onClick={() => {
+            // Set edit mode to true to switch to edit dialog
+            setEditMode(true);
+          }}
+        >
+          Edit
+        </Button>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
@@ -1257,7 +1375,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   onSubmit,
   organizations,
   domains,
-  userRoles
+  userRoles,
 }) => {
   const [formData, setFormData] = useState<UpdateUserRequest>({
     organization_id: convertOrgIdToString(user.organization_id), // Convert to string format for dropdown
@@ -1265,7 +1383,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
     role: user.role, // Use the original role value directly
-    status: user.status // Add status to form data
+    status: user.status, // Add status to form data
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
@@ -1281,7 +1399,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   }, [formData.organization_id, domains]);
 
   // Find the current user's domain in available domains
-  const currentDomain = availableDomains.find(d => Number(d.id) === user.domain_id);
+  const currentDomain = availableDomains.find(
+    (d) => Number(d.id) === user.domain_id
+  );
 
   const handleSubmit = async (): Promise<void> => {
     if (!formData.email?.trim() || !formData.organization_id) {
@@ -1299,14 +1419,16 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id
       const apiData = {
-        organization_id: convertOrgIdToInteger(formData.organization_id || '').toString(),
+        organization_id: convertOrgIdToInteger(
+          formData.organization_id || ''
+        ).toString(),
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
         role: formData.role,
-        status: formData.status
+        status: formData.status,
       };
-      
+
       await onSubmit(apiData as unknown as UpdateUserRequest);
     } catch (error) {
       console.error('Error in edit dialog:', error);
@@ -1336,7 +1458,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               ))}
             </Select>
           </FormControl>
-          
+
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Domain</InputLabel>
             <Select
@@ -1353,19 +1475,22 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                   {(() => {
                     // Get the domain name from either domain_name or name field
                     let domainName = '';
-                    if (domain.domain_name && typeof domain.domain_name === 'string') {
+                    if (
+                      domain.domain_name &&
+                      typeof domain.domain_name === 'string'
+                    ) {
                       domainName = domain.domain_name;
                     } else if (domain.name && typeof domain.name === 'string') {
                       domainName = domain.name;
                     }
-                    
+
                     // Simple domain name cleaning - just trim whitespace
                     const cleanDomainName = domainName.trim();
-                    
+
                     return (
                       <>
                         {cleanDomainName || 'Unknown Domain'}
-                        {domain.is_primary && ' (Primary)' || ""}
+                        {(domain.is_primary && ' (Primary)') || ''}
                       </>
                     );
                   })()}
@@ -1373,7 +1498,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               ))}
             </Select>
           </FormControl>
-          
+
           <TextField
             fullWidth
             label="Email"
@@ -1407,7 +1532,18 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             <InputLabel>Role</InputLabel>
             <Select
               value={formData.role || ''}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value as
+                    | 'admin'
+                    | 'user'
+                    | 'viewer'
+                    | 'tenant_admin'
+                    | 'tenant_support'
+                    | 'tenant_user',
+                })
+              }
               label="Role"
             >
               {userRoles.map((role) => (
@@ -1417,16 +1553,25 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               ))}
             </Select>
           </FormControl>
-          
+
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
               value={formData.status || ''}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Inactive' | 'Pending' | 'Invited' })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  status: e.target.value as
+                    | 'Active'
+                    | 'Inactive'
+                    | 'Pending'
+                    | 'Invited',
+                })
+              }
               label="Status"
             >
               <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>              
+              <MenuItem value="inactive">Inactive</MenuItem>
               <MenuItem value="invited">Invited</MenuItem>
             </Select>
           </FormControl>

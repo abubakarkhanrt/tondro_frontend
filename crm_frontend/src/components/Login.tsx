@@ -90,7 +90,7 @@ const Login: React.FC = () => {
       window.dispatchEvent(new Event('storage'));
 
       router.push('/dashboard');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       setError('Login failed. Please check your credentials and try again.');
     } finally {

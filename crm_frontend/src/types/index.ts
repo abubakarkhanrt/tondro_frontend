@@ -12,7 +12,7 @@
 // API Response Types
 // ────────────────────────────────────────
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   total?: number;
   page?: number;
@@ -40,7 +40,7 @@ export interface Domain {
   is_primary: boolean | number;
   status: 'active' | 'inactive' | 'pending';
   ssl_certificate?: string | null;
-  dns_settings?: Record<string, any>;
+  dns_settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -158,7 +158,13 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user';
+  role:
+    | 'admin'
+    | 'user'
+    | 'viewer'
+    | 'tenant_admin'
+    | 'tenant_support'
+    | 'tenant_user';
   status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
   organization_id: string;
   domain_id?: number; // Optional field in response
@@ -185,7 +191,13 @@ export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role?: 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user';
+  role?:
+    | 'admin'
+    | 'user'
+    | 'viewer'
+    | 'tenant_admin'
+    | 'tenant_support'
+    | 'tenant_user';
   status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
   organization_id?: string;
 }
@@ -252,7 +264,7 @@ export interface SubscriptionStatusRequest {
 export interface UsageEventRequest {
   event_type: string;
   quantity: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UsageResponse {
@@ -260,7 +272,7 @@ export interface UsageResponse {
   subscription_id: string;
   event_type: string;
   quantity: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -325,7 +337,7 @@ export interface UsageEvent {
   organization_id: string;
   user_id: string;
   event_type: string;
-  event_data: Record<string, any>;
+  event_data: Record<string, unknown>;
   timestamp: string;
   created_at: string;
 }
@@ -334,7 +346,7 @@ export interface CreateUsageEventRequest {
   organization_id: string;
   user_id: string;
   event_type: string;
-  event_data: Record<string, any>;
+  event_data: Record<string, unknown>;
 }
 
 // ────────────────────────────────────────
@@ -348,7 +360,7 @@ export interface AuditLog {
   action: string;
   resource_type: string;
   resource_id: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   ip_address: string;
   user_agent: string;
   timestamp: string;
@@ -361,8 +373,8 @@ export interface AuditLogEntry {
   entity_id: string;
   action: string;
   performed_by: string;
-  changes?: Record<string, any>;
-  metadata?: Record<string, any>;
+  changes?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -393,7 +405,7 @@ export interface PaginationParams {
 export interface ApiParams extends FilterParams, PaginationParams {}
 
 // ────────────────────────────────────────
-// Component Props Types
+// Dialog and UI Types
 // ────────────────────────────────────────
 
 export interface DialogProps {
@@ -424,8 +436,8 @@ export interface TableProps<T> {
     pageSize: number;
     total: number;
   };
-  onPageChange: (event: any, newPage: number) => void;
-  onPageSizeChange: (event: any) => void;
+  onPageChange: (event: React.ChangeEvent<unknown>, newPage: number) => void;
+  onPageSizeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDelete: (id: string) => void;
   onEdit: (item: T) => void;
   onView: (item: T) => void;
@@ -456,7 +468,7 @@ export interface AuthContextType {
 }
 
 // ────────────────────────────────────────
-// Error Types
+// Error and Status Types
 // ────────────────────────────────────────
 
 export interface ApiError {
@@ -465,9 +477,11 @@ export interface ApiError {
   status?: number;
 }
 
-// ────────────────────────────────────────
-// Utility Types
-// ────────────────────────────────────────
+export interface ErrorResponse {
+  error: string;
+  message?: string;
+  status?: number;
+}
 
 export type StatusType =
   | 'Active'
@@ -475,6 +489,7 @@ export type StatusType =
   | 'Pending'
   | 'Cancelled'
   | 'Expired';
+
 export type RoleType = 'admin' | 'user' | 'viewer';
 export type SeverityType = 'success' | 'error' | 'warning' | 'info';
 
@@ -504,6 +519,43 @@ export const ERROR_MESSAGES = {
   'Failed to create tenant organization':
     'Organization creation failed. Please check your input and try again.',
 };
+
+// ────────────────────────────────────────
+// Summary Data Types
+// ────────────────────────────────────────
+
+export interface SummaryData {
+  organizations: OrganizationsResponse | ErrorResponse | null;
+  users: PaginatedResponse<User> | ErrorResponse | null;
+  subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
+  products: Product[] | ErrorResponse | null;
+  root: { status: string } | ErrorResponse | null;
+  health: { status: string } | ErrorResponse | null;
+  status: { status: string } | ErrorResponse | null;
+}
+
+export interface SummaryDataResponse {
+  organizations: OrganizationsResponse | ErrorResponse | null;
+  users: PaginatedResponse<User> | ErrorResponse | null;
+  subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
+  products: Product[] | ErrorResponse | null;
+  root: { status: string } | ErrorResponse | null;
+  health: { status: string } | ErrorResponse | null;
+  status: { status: string } | ErrorResponse | null;
+}
+
+// ────────────────────────────────────────
+// Component Props Types
+// ────────────────────────────────────────
+
+export interface SummaryCardProps {
+  title: string;
+  data: SummaryData[keyof SummaryData];
+  loading: boolean;
+  color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error';
+  path: string;
+  icon: string;
+}
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/types/index.ts

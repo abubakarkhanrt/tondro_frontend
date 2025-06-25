@@ -1,14 +1,14 @@
 /**
  * ──────────────────────────────────────────────────
- * File: client/src/components/Dashboard.tsx
+ * File: src/components/Dashboard.tsx
  * Description: Main dashboard with entity summaries for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 24-06-2025
  * ──────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -20,27 +20,46 @@ import {
   Alert,
   Button,
 } from '@mui/material';
-import { apiHelpers } from '../services/api';
-import axios from 'axios';
 import { TestIds } from '../testIds';
+import {
+  OrganizationsService,
+  type OrganizationsResponse,
+} from '../services/organizations';
+import {
+  UsersService,
+  type PaginatedResponse as UsersPaginatedResponse,
+  type User,
+} from '../services/users';
+import {
+  SubscriptionsService,
+  type PaginatedSubscriptionsResponse,
+} from '../services/subscriptions';
+import { ProductsService, type Product } from '../services/products';
+import {
+  HealthService,
+  type HealthResponse,
+  type StatusResponse,
+} from '../services/health';
+import { createAbortController } from '../lib/api-client';
+import type { ErrorResponse } from '../types/shared';
 
 // ────────────────────────────────────────
-// Type Definitions
+// Dashboard Types
 // ────────────────────────────────────────
 
 interface SummaryData {
-  organizations: any;
-  users: any;
-  subscriptions: any;
-  products: any;
-  root: any;
-  health: any;
-  status: any;
+  organizations: OrganizationsResponse | ErrorResponse | null;
+  users: UsersPaginatedResponse<User> | ErrorResponse | null;
+  subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
+  products: Product[] | ErrorResponse | null;
+  root: HealthResponse | ErrorResponse | null;
+  health: HealthResponse | ErrorResponse | null;
+  status: StatusResponse | ErrorResponse | null;
 }
 
 interface SummaryCardProps {
   title: string;
-  data: any;
+  data: SummaryData[keyof SummaryData];
   loading: boolean;
   color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error';
   path: string;
@@ -67,6 +86,101 @@ const Dashboard: React.FC = () => {
     useState<AbortController | null>(null);
   const router = useRouter();
 
+  const fetchSummaryData = useCallback(async (): Promise<void> => {
+    // Cancel any existing request
+    if (abortController) {
+      abortController.abort();
+    }
+
+    // Create new abort controller
+    const controller = createAbortController();
+    setAbortController(controller);
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Double-check token before making request
+      const token = localStorage.getItem('jwt_token');
+      if (!token || token === 'undefined' || token === 'null') {
+        setError('Authentication token not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch summary data for each entity type using component-specific services
+      const orgsData = await OrganizationsService.getOrganizations(
+        { page: 1, limit: 1 },
+        controller.signal
+      ).catch((err: Error) => ({ error: err.message }));
+      const usersData = await UsersService.getUsers(
+        { page: 1, page_size: 1 },
+        controller.signal
+      ).catch((err: Error) => ({ error: err.message }));
+      const subsData = await SubscriptionsService.getSubscriptions(
+        { page: 1, page_size: 1 },
+        controller.signal
+      ).catch((err: Error) => ({ error: err.message }));
+      const productsData = await ProductsService.getProducts(
+        controller.signal
+      ).catch((err: Error) => ({ error: err.message }));
+
+      // Fetch health check data through health service
+      const rootData = await HealthService.getRoot(controller.signal).catch(
+        (err: Error) => ({ error: err.message })
+      );
+      const healthData = await HealthService.getHealth(controller.signal).catch(
+        (err: Error) => ({ error: err.message })
+      );
+      const statusData = await HealthService.getStatus(controller.signal).catch(
+        (err: Error) => ({ error: err.message })
+      );
+
+      setSummaryData({
+        organizations:
+          'error' in orgsData ? { error: orgsData.error } : orgsData.data,
+        users:
+          'error' in usersData ? { error: usersData.error } : usersData.data,
+        subscriptions:
+          'error' in subsData ? { error: subsData.error } : subsData.data,
+        products:
+          'error' in productsData
+            ? { error: productsData.error }
+            : productsData.data,
+        root: 'error' in rootData ? { error: rootData.error } : rootData.data,
+        health:
+          'error' in healthData ? { error: healthData.error } : healthData.data,
+        status:
+          'error' in statusData ? { error: statusData.error } : statusData.data,
+      });
+    } catch (error: unknown) {
+      // Don't show error for cancelled requests
+      if (
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'AbortError'
+      ) {
+        return;
+      }
+
+      console.error('Error fetching summary data:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const apiError = error as { response?: { status: number } };
+        if (apiError.response?.status === 401) {
+          setError('Authentication failed. Please login again.');
+        } else {
+          setError('Failed to load dashboard data. Please try again.');
+        }
+      } else {
+        setError('Failed to load dashboard data. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+      setAbortController(null);
+    }
+  }, []);
+
   useEffect(() => {
     // Add a longer delay to ensure token is available after login
     const timer = setTimeout(() => {
@@ -87,87 +201,6 @@ const Dashboard: React.FC = () => {
       }
     };
   }, []);
-
-  const fetchSummaryData = async (): Promise<void> => {
-    // Cancel any existing request
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create new abort controller
-    const controller = apiHelpers.createAbortController();
-    setAbortController(controller);
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Double-check token before making request
-      const token = localStorage.getItem('jwt_token');
-      if (!token || token === 'undefined' || token === 'null') {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      // Fetch summary data for each entity type
-      const orgsData = await apiHelpers
-        .getOrganizations({ page: 1, limit: 1 }, controller.signal)
-        .catch((err) => ({ error: err.message }));
-      const usersData = await apiHelpers
-        .getUsers({ page: 1, page_size: 1 }, controller.signal)
-        .catch((err) => ({ error: err.message }));
-      const subsData = await apiHelpers
-        .getSubscriptions({ page: 1, page_size: 1 }, controller.signal)
-        .catch((err) => ({ error: err.message }));
-      const productsData = await apiHelpers
-        .getProducts(controller.signal)
-        .catch((err) => ({ error: err.message }));
-
-      // Fetch health check data through proxy
-      const rootData = await apiHelpers
-        .getRoot(controller.signal)
-        .catch((err) => ({ error: err.message }));
-      const healthData = await apiHelpers
-        .getHealth(controller.signal)
-        .catch((err) => ({ error: err.message }));
-      const statusData = await apiHelpers
-        .getStatus(controller.signal)
-        .catch((err) => ({ error: err.message }));
-
-      setSummaryData({
-        organizations:
-          'error' in orgsData ? { error: orgsData.error } : orgsData,
-        users: 'error' in usersData ? { error: usersData.error } : usersData,
-        subscriptions:
-          'error' in subsData ? { error: subsData.error } : subsData,
-        products:
-          'error' in productsData
-            ? { error: productsData.error }
-            : productsData,
-        root: 'error' in rootData ? { error: rootData.error } : rootData,
-        health:
-          'error' in healthData ? { error: healthData.error } : healthData,
-        status:
-          'error' in statusData ? { error: statusData.error } : statusData,
-      });
-    } catch (error: any) {
-      // Don't show error for cancelled requests
-      if (axios.isCancel(error)) {
-        return;
-      }
-
-      console.error('Error fetching summary data:', error);
-      if (error.response && error.response.status === 401) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Failed to load dashboard data. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setAbortController(null);
-    }
-  };
 
   const handleViewDetails = (path: string): void => {
     router.push(path);
@@ -192,22 +225,43 @@ const Dashboard: React.FC = () => {
     let errorMessage = '';
 
     if (data) {
-      if (data.error) {
+      if ('error' in data) {
         isError = true;
         errorMessage = data.error;
-      } else if (data.count !== undefined) {
+      } else if ('count' in data && typeof data.count === 'number') {
         count = data.count;
-      } else if (data.total !== undefined) {
+      } else if ('total' in data && typeof data.total === 'number') {
         count = data.total;
-      } else if (data.data?.total !== undefined) {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'data' in data &&
+        data.data &&
+        typeof data.data === 'object' &&
+        'total' in data.data &&
+        typeof data.data.total === 'number'
+      ) {
         count = data.data.total;
-      } else if (Array.isArray(data.data)) {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'data' in data &&
+        Array.isArray(data.data)
+      ) {
         count = data.data.length;
       } else if (Array.isArray(data)) {
         count = data.length;
-      } else if (data.status) {
+      } else if ('status' in data && typeof data.status === 'string') {
         statusText = data.status;
-      } else if (data.data?.status) {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'data' in data &&
+        data.data &&
+        typeof data.data === 'object' &&
+        'status' in data.data &&
+        typeof data.data.status === 'string'
+      ) {
         statusText = data.data.status;
       }
     }

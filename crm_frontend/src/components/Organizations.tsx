@@ -806,7 +806,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 placeholder="e.g., 2024-01-01"
               />
             </Grid>
-            
+
             {/* Auto Renewal control hidden as requested
             <Grid item xs={12} sm={6}>
               <FormControlLabel

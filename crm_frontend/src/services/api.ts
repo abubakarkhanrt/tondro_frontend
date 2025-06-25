@@ -139,9 +139,17 @@ export const apiHelpers = {
           signal,
         });
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If filters fail with 500 error, fall back to frontend filtering
-        if (error.response?.status === 500) {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'response' in error &&
+          error.response &&
+          typeof error.response === 'object' &&
+          'status' in error.response &&
+          error.response.status === 500
+        ) {
           console.log('Filters failed, falling back to frontend filtering...');
           try {
             // Remove filters and fetch all organizations
@@ -195,9 +203,17 @@ export const apiHelpers = {
     // If no filters, proceed normally
     try {
       return await api.get('/crm/organizations', { params, signal });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Temporary fallback: try with old API structure if new one fails
-      if (error.response?.status === 500) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'status' in error.response &&
+        error.response.status === 500
+      ) {
         console.log('New organizations API failed, trying old structure...');
         try {
           // Try with old parameter names
@@ -216,18 +232,48 @@ export const apiHelpers = {
             total: oldData.total || 0,
             page: oldData.page || 1,
             limit: oldData.page_size || 10,
-            organizations: (oldData.items || []).map((org: any) => ({
-              organizationId: org.id,
-              tenantName: org.name,
-              organizationDomain: org.domain,
-              status: org.status,
-              subscriptionTier: 'Tier 1', // Default value
-              contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
-              totalUsers: 0, // Default value
-              totalJobs: 0, // Default value
-              usageAgainstLimit: '0%', // Default value
-              createdAt: org.created_at,
-            })),
+            organizations: (oldData.items || []).map((org: unknown) => {
+              if (
+                org &&
+                typeof org === 'object' &&
+                'id' in org &&
+                'name' in org &&
+                'domain' in org &&
+                'status' in org &&
+                'created_at' in org
+              ) {
+                return {
+                  organizationId: String(org.id),
+                  tenantName: String(org.name),
+                  organizationDomain: String(org.domain),
+                  status: String(org.status) as
+                    | 'Active'
+                    | 'Suspended'
+                    | 'Trial'
+                    | 'Inactive',
+                  subscriptionTier: 'Tier 1', // Default value
+                  contractAnniversaryDate: new Date()
+                    .toISOString()
+                    .split('T')[0], // Default value
+                  totalUsers: 0, // Default value
+                  totalJobs: 0, // Default value
+                  usageAgainstLimit: '0%', // Default value
+                  createdAt: String(org.created_at),
+                };
+              }
+              return {
+                organizationId: '',
+                tenantName: '',
+                organizationDomain: '',
+                status: 'Inactive' as const,
+                subscriptionTier: 'Tier 1',
+                contractAnniversaryDate: new Date().toISOString().split('T')[0],
+                totalUsers: 0,
+                totalJobs: 0,
+                usageAgainstLimit: '0%',
+                createdAt: new Date().toISOString(),
+              };
+            }),
           };
 
           return {
@@ -349,8 +395,11 @@ export const apiHelpers = {
   // ────────────────────────────────────────
   // User Domain Selection (NEW)
   // ────────────────────────────────────────
-  
-  getUserDomains: (organizationId: string, signal?: AbortSignal): Promise<AxiosResponse<OrganizationDomainsResponse>> => 
+
+  getUserDomains: (
+    organizationId: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<OrganizationDomainsResponse>> =>
     api.get(`/crm/users/domains/${organizationId}`, { signal }),
 
   // ────────────────────────────────────────
@@ -377,14 +426,22 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
     api.patch(`/crm/users/${id}`, data, { signal }),
-    
-  deleteUser: (id: string, reason?: string, signal?: AbortSignal): Promise<AxiosResponse<void>> => 
-    api.delete(`/crm/users/${id}`, { 
+
+  deleteUser: (
+    id: string,
+    reason?: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<void>> =>
+    api.delete(`/crm/users/${id}`, {
       data: reason ? { reason } : undefined,
-      signal 
+      signal,
     }),
-    
-  updateUserRole: (id: string, role: string, signal?: AbortSignal): Promise<AxiosResponse<User>> => 
+
+  updateUserRole: (
+    id: string,
+    role: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<User>> =>
     api.put(`/crm/users/${id}/role`, { role }, { signal }),
 
   updateUserStatus: (

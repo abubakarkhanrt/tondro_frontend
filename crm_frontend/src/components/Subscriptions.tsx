@@ -59,9 +59,12 @@ import { getButtonProps } from '../utils/buttonStyles';
 // const currentUserId = 'demo-user-id';
 
 // Stubs for missing dialog components (replace with real implementations if available)
-const CreateSubscriptionDialog = (_props: any) => <></>;
-const EditSubscriptionDialog = (_props: any) => <></>;
-const ViewSubscriptionDialog = (_props: any) => <></>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const CreateSubscriptionDialog = (_props: unknown) => <></>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const EditSubscriptionDialog = (_props: unknown) => <></>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ViewSubscriptionDialog = (_props: unknown) => <></>;
 
 // ────────────────────────────────────────
 // Type Definitions

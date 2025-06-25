@@ -1,36 +1,191 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TondroAI CRM Frontend
 
-## Getting Started
+A modern React/Next.js CRM application with component-specific services and modular architecture.
 
-First, run the development server:
+## 🏗️ Project Structure
+
+```
+crm_frontend/
+├── src/
+│   ├── components/          # React components
+│   │   ├── organizations.ts
+│   │   ├── users.ts
+│   │   ├── subscriptions.ts
+│   │   ├── products.ts
+│   │   ├── audit-log.ts
+│   │   ├── auth.ts
+│   │   ├── domains.ts
+│   │   ├── health.ts
+│   │   └── index.ts        # Service exports
+│   ├── lib/                # Shared libraries
+│   │   └── api-client.ts   # Base API client
+│   ├── hooks/              # Custom React hooks
+│   │   ├── useApi.ts       # API call hook
+│   │   └── usePagination.ts # Pagination hook
+│   ├── types/              # TypeScript types
+│   │   └── shared.ts       # Shared types
+│   ├── utils/              # Utility functions
+│   │   └── global-messages/ # Global message system
+│   ├── config/             # Configuration
+│   └── contexts/           # React contexts
+├── pages/                  # Next.js pages
+└── public/                 # Static assets
+```
+
+## 🚀 Features
+
+- **Component-Specific Services**: Each component has its own service with dedicated types and API calls
+- **Modular Architecture**: Clean separation of concerns with dedicated services for each domain
+- **Type Safety**: Full TypeScript support with component-specific type definitions
+- **Global Message System**: Centralized error and success message handling
+- **Custom Hooks**: Reusable hooks for API calls and pagination
+- **Modern React Patterns**: Using latest React and Next.js best practices
+
+## 🛠️ Services Architecture
+
+### Base API Client (`src/lib/api-client.ts`)
+- Centralized Axios configuration
+- Request/response interceptors
+- Authentication token handling
+- Error handling and redirects
+
+### Component-Specific Services
+Each service contains:
+- **Types**: Domain-specific TypeScript interfaces
+- **API Methods**: CRUD operations and business logic
+- **Error Handling**: Service-specific error management
+
+#### Available Services:
+- `OrganizationsService` - Organization management
+- `UsersService` - User management
+- `SubscriptionsService` - Subscription handling
+- `ProductsService` - Product catalog
+- `AuditLogService` - Audit trail
+- `AuthService` - Authentication
+- `DomainsService` - Domain management
+- `HealthService` - System health checks
+
+### Custom Hooks
+
+#### `useApi<T>`
+```typescript
+const { data, loading, error, refetch } = useApi(
+  () => OrganizationsService.getOrganizations(),
+  { immediate: true }
+);
+```
+
+#### `usePagination`
+```typescript
+const { pagination, handlePageChange, handlePageSizeChange } = usePagination({
+  initialPage: 1,
+  initialPageSize: 10
+});
+```
+
+## 📦 Installation
+
+```bash
+npm install
+```
+
+## 🚀 Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏗️ Building
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 Testing
 
-## Learn More
+```bash
+npm test
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📝 Usage Examples
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Using Component-Specific Services
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```typescript
+import { OrganizationsService, type Organization } from '../services/organizations';
 
-## Deploy on Vercel
+// Fetch organizations
+const response = await OrganizationsService.getOrganizations({ page: 1, limit: 10 });
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+// Create organization
+const newOrg = await OrganizationsService.createOrganization({
+  tenantName: 'My Company',
+  organizationDomain: 'mycompany.com',
+  initialAdminEmail: 'admin@mycompany.com',
+  initialSubscriptions: []
+});
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Using Custom Hooks
+
+```typescript
+import { useApi } from '../hooks/useApi';
+import { OrganizationsService } from '../services/organizations';
+
+const MyComponent = () => {
+  const { data, loading, error, refetch } = useApi(
+    () => OrganizationsService.getOrganizations(),
+    { immediate: true }
+  );
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return <div>{/* Render data */}</div>;
+};
+```
+
+### Using Global Messages
+
+```typescript
+import { globalMessages } from '../utils/global-messages';
+
+// Show success message
+globalMessages.showSuccess('Operation completed successfully');
+
+// Show error message
+globalMessages.showError('Something went wrong');
+```
+
+## 🔧 Configuration
+
+Environment variables are configured in `src/config/env.ts`:
+
+```typescript
+export const ENV_CONFIG = {
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081',
+  API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000'),
+  JWT_STORAGE_KEY: process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || 'jwt_token',
+  USER_EMAIL_STORAGE_KEY: process.env.NEXT_PUBLIC_USER_EMAIL_STORAGE_KEY || 'user_email',
+};
+```
+
+## 🎯 Best Practices
+
+1. **Service Isolation**: Each component should use its own service
+2. **Type Safety**: Always use TypeScript interfaces from services
+3. **Error Handling**: Use the global message system for user feedback
+4. **Custom Hooks**: Leverage `useApi` and `usePagination` for common patterns
+5. **Abort Controllers**: Always handle request cancellation properly
+
+## 🤝 Contributing
+
+1. Follow the existing service structure
+2. Add types to the appropriate service file
+3. Use the global message system for user feedback
+4. Write TypeScript interfaces for all data structures
+5. Follow the established naming conventions
+
+## 📄 License
+
+This project is proprietary to TondroAI.

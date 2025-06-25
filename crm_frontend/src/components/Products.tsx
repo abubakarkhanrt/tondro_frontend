@@ -178,7 +178,7 @@ const Products: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (_id: string): Promise<void> => {
+  const handleDeleteProduct = async (): Promise<void> => {
     if (!confirm('Are you sure you want to delete this product?')) {
       return;
     }
@@ -341,7 +341,7 @@ const Products: React.FC = () => {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteProduct(product.id)}
+                            onClick={handleDeleteProduct}
                             data-testid={TestIds.products.delete(product.id)}
                           >
                             <DeleteIcon />

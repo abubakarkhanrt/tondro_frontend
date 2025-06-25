@@ -45,9 +45,22 @@ export const UserRolesProvider: React.FC<UserRolesProviderProps> = ({
       setError(null);
       const response = await apiHelpers.getUserRoles();
       setUserRoles(response.data.roles || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching user roles:', err);
-      setError(err.response?.data?.message || 'Failed to fetch user roles');
+      const errorMessage =
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
+        err.response.data &&
+        typeof err.response.data === 'object' &&
+        'message' in err.response.data &&
+        typeof err.response.data.message === 'string'
+          ? err.response.data.message
+          : 'Failed to fetch user roles';
+      setError(errorMessage);
       // Set default roles as fallback
       setUserRoles(['Super Admin', 'Tenant Admin']);
     } finally {

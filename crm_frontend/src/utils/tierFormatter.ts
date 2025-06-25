@@ -85,10 +85,10 @@ export function getTierColor(tierName: string): TierColorType {
 /**
  * Formats a tier name from backend format to user-friendly display format
  * Removes redundant product names since they're displayed separately
- * 
+ *
  * @param tierName - The tier name from backend (e.g., "admissions_tier_1")
  * @returns Formatted tier name for display (e.g., "Tier 1")
- * 
+ *
  * @example
  * formatTierName("admissions_tier_1"); // "Tier 1"
  * formatTierName("transcript_basic"); // "Basic"
@@ -96,28 +96,28 @@ export function getTierColor(tierName: string): TierColorType {
  */
 export function formatTierName(tierName: string): string {
   if (!tierName) return '';
-  
+
   // Handle common tier patterns - remove redundant product names
   const tierMappings: Record<string, string> = {
-    'admissions_tier_1': 'Tier 1',
-    'admissions_tier_2': 'Tier 2',
-    'admissions_tier_3': 'Tier 3',
-    'transcripts_tier_1': 'Tier 1',
-    'transcripts_tier_2': 'Tier 2',
-    'transcripts_tier_3': 'Tier 3',
-    'transcript_basic': 'Basic',
-    'transcript_premium': 'Premium',
-    'transcript_enterprise': 'Enterprise',
-    'enterprise_premium': 'Premium',
-    'enterprise_standard': 'Standard',
-    'enterprise_basic': 'Basic',
-    'professional': 'Professional',
-    'basic': 'Basic',
-    'premium': 'Premium',
-    'standard': 'Standard',
-    'starter': 'Starter',
-    'growth': 'Growth',
-    'scale': 'Scale'
+    admissions_tier_1: 'Tier 1',
+    admissions_tier_2: 'Tier 2',
+    admissions_tier_3: 'Tier 3',
+    transcripts_tier_1: 'Tier 1',
+    transcripts_tier_2: 'Tier 2',
+    transcripts_tier_3: 'Tier 3',
+    transcript_basic: 'Basic',
+    transcript_premium: 'Premium',
+    transcript_enterprise: 'Enterprise',
+    enterprise_premium: 'Premium',
+    enterprise_standard: 'Standard',
+    enterprise_basic: 'Basic',
+    professional: 'Professional',
+    basic: 'Basic',
+    premium: 'Premium',
+    standard: 'Standard',
+    starter: 'Starter',
+    growth: 'Growth',
+    scale: 'Scale',
   };
 
   // Check if we have a direct mapping
@@ -128,11 +128,14 @@ export function formatTierName(tierName: string): string {
   // Generic formatting for unknown tiers - remove common product prefixes
   const lowerTierName = tierName.toLowerCase();
   let cleanedTierName = tierName;
-  
+
   // Remove common product prefixes
   if (lowerTierName.startsWith('admissions_')) {
     cleanedTierName = tierName.replace(/^admissions_/i, '');
-  } else if (lowerTierName.startsWith('transcript_') || lowerTierName.startsWith('transcripts_')) {
+  } else if (
+    lowerTierName.startsWith('transcript_') ||
+    lowerTierName.startsWith('transcripts_')
+  ) {
     cleanedTierName = tierName.replace(/^transcript[s]?_/i, '');
   } else if (lowerTierName.startsWith('enterprise_')) {
     cleanedTierName = tierName.replace(/^enterprise_/i, '');

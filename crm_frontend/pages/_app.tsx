@@ -1,3 +1,13 @@
+/**
+ * ──────────────────────────────────────────────────
+ * File: pages/_app.tsx
+ * Description: Next.js App component with global theme and message handling
+ * Author: Muhammad Abubakar Khan
+ * Created: 18-06-2025
+ * Last Updated: 24-06-2025
+ * ──────────────────────────────────────────────────
+ */
+
 import type { AppProps } from 'next/app';
 import { ThemeProvider, CssBaseline, Box, Container, Alert, Snackbar } from '@mui/material';
 import { useState, useEffect } from 'react';
@@ -5,6 +15,14 @@ import theme from '../src/theme';
 import { TestIds } from '../src/testIds';
 import { validateEnvironment } from '../src/config/env';
 import Navigation from '../src/components/Navigation';
+
+// Extend Window interface to include our custom properties
+declare global {
+  interface Window {
+    showError: (message: string) => void;
+    showSuccess: (message: string) => void;
+  }
+}
 
 export default function App({ Component, pageProps }: AppProps) {
   const [error, setError] = useState<string>('');
@@ -21,8 +39,8 @@ export default function App({ Component, pageProps }: AppProps) {
   };
 
   useEffect(() => {
-    (window as any).showError = showError;
-    (window as any).showSuccess = showSuccess;
+    window.showError = showError;
+    window.showSuccess = showSuccess;
     validateEnvironment();
   }, []);
 

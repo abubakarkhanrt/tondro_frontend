@@ -45,7 +45,8 @@ const Navigation: React.FC = () => {
     { text: 'Audit Log', path: '/audit-log' },
   ];
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
 
   return (
     <AppBar position="static">
@@ -84,4 +85,4 @@ const Navigation: React.FC = () => {
   );
 };
 
-export default Navigation; 
+export default Navigation;

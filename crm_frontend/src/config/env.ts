@@ -14,8 +14,13 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:8081/api',
-  API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_TIMEOUT || process.env.REACT_APP_TIMEOUT || '5000'),
+  API_BASE_URL:
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.REACT_APP_API_BASE_URL ||
+    'http://localhost:8081/api',
+  API_TIMEOUT: parseInt(
+    process.env.NEXT_PUBLIC_TIMEOUT || process.env.REACT_APP_TIMEOUT || '5000'
+  ),
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -23,12 +28,20 @@ export const ENV_CONFIG = {
   IS_PRODUCTION: (process.env.NODE_ENV || 'development') === 'production',
 
   // Debug Configuration
-  DEBUG: (process.env.NEXT_PUBLIC_DEBUG || process.env.REACT_APP_DEBUG || 'false') === 'true',
+  DEBUG:
+    (process.env.NEXT_PUBLIC_DEBUG ||
+      process.env.REACT_APP_DEBUG ||
+      'false') === 'true',
 
   // Feature Flags
-  ENABLE_AUDIT_LOG: (process.env.NEXT_PUBLIC_ENABLE_AUDIT_LOG || process.env.REACT_APP_ENABLE_AUDIT_LOG || 'true') !== 'false',
+  ENABLE_AUDIT_LOG:
+    (process.env.NEXT_PUBLIC_ENABLE_AUDIT_LOG ||
+      process.env.REACT_APP_ENABLE_AUDIT_LOG ||
+      'true') !== 'false',
   ENABLE_DOMAIN_MANAGEMENT:
-    (process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT || process.env.REACT_APP_ENABLE_DOMAIN_MANAGEMENT || 'true') !== 'false',
+    (process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT ||
+      process.env.REACT_APP_ENABLE_DOMAIN_MANAGEMENT ||
+      'true') !== 'false',
 
   // Authentication
   JWT_STORAGE_KEY: 'jwt_token',
@@ -76,4 +89,4 @@ export const logEnvironment = (): void => {
       ENABLE_DOMAIN_MANAGEMENT: ENV_CONFIG.ENABLE_DOMAIN_MANAGEMENT,
     });
   }
-}; 
+};

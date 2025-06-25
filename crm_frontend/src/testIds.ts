@@ -105,9 +105,9 @@ export const TestIds = {
 
   // Users
   users: {
-    page: "users-page",
-    table: "users-table",
-    createButton: "users-create-button",
+    page: 'users-page',
+    table: 'users-table',
+    createButton: 'users-create-button',
     viewDetails: (id: string) => `users-view-details-${id}`,
     edit: (id: string) => `users-edit-${id}`,
     deactivate: (id: string) => `users-deactivate-${id}`,
@@ -180,4 +180,4 @@ export const TestIds = {
 
 // ──────────────────────────────────────────────────
 // End of File: src/testIds.ts
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────
