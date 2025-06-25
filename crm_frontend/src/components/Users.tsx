@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -975,8 +975,8 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New User</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth data-testid={TestIds.users.createDialog.container}>
+      <DialogTitle data-testid={TestIds.users.createDialog.title}>Create New User</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <FormControl fullWidth margin="normal" required error={!!errors.organization_id}>
@@ -987,6 +987,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 setFormData({ ...formData, organization_id: e.target.value })
               }
               label="Organization"
+              data-testid={TestIds.users.createDialog.organization}
             >
               {organizations.map((org) => (
                 <MenuItem key={org.organizationId} value={org.organizationId}>
@@ -1008,6 +1009,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, domain_id: e.target.value as number })}
               label="Domain"
               disabled={!formData.organization_id || domainsLoading}
+              data-testid={TestIds.users.createDialog.domain}
             >
               {domainsLoading ? (
                 <MenuItem disabled>
@@ -1063,6 +1065,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             required
             error={!!errors.email}
             helperText={errors.email}
+            data-testid={TestIds.users.createDialog.email}
           />
 
           <TextField
@@ -1071,6 +1074,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             label="First Name"
             value={formData.first_name}
             onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            data-testid={TestIds.users.createDialog.firstName}
           />
 
           <TextField
@@ -1079,6 +1083,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             label="Last Name"
             value={formData.last_name}
             onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            data-testid={TestIds.users.createDialog.lastName}
           />
 
           <FormControl fullWidth margin="normal" required>
@@ -1087,6 +1092,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
               label="Role"
+              data-testid={TestIds.users.createDialog.role}
             >
               {availableRoles.map((role) => (
                 <MenuItem key={role} value={role}>
@@ -1098,14 +1104,14 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+        <Button onClick={handleClose} disabled={loading} data-testid={TestIds.users.createDialog.cancel}>
           Cancel
         </Button>
         <Button 
           onClick={handleSubmit} 
           variant="contained" 
           disabled={loading}
-          data-testid={TestIds.users.createButton}
+          data-testid={TestIds.users.createDialog.submit}
         >
           {loading ? <CircularProgress size={20} /> : 'Create User'}
         </Button>
@@ -1136,8 +1142,8 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
   setEditMode
 }) => {
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth data-testid={TestIds.users.viewDialog.container}>
+      <DialogTitle data-testid={TestIds.users.viewDialog.title}>
         User Details: {user?.first_name} {user?.last_name}
       </DialogTitle>
       <DialogContent>
@@ -1231,8 +1237,8 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
         <Button onClick={() => {
           // Set edit mode to true to switch to edit dialog
           setEditMode(true);
-        }}>Edit</Button>
-        <Button onClick={onClose}>Close</Button>
+        }} data-testid={TestIds.users.viewDialog.editButton}>Edit</Button>
+        <Button onClick={onClose} data-testid={TestIds.users.viewDialog.closeButton}>Close</Button>
       </DialogActions>
     </Dialog>
   );
@@ -1316,8 +1322,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   };
 
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit User</DialogTitle>
+    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.users.editDialog.container}>
+      <DialogTitle data-testid={TestIds.users.editDialog.title}>Edit User</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <FormControl fullWidth margin="normal" required>
@@ -1328,6 +1334,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 setFormData({ ...formData, organization_id: e.target.value })
               }
               label="Organization"
+              data-testid={TestIds.users.editDialog.organization}
             >
               {organizations.map((org) => (
                 <MenuItem key={org.organizationId} value={org.organizationId}>
@@ -1347,6 +1354,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               }}
               label="Domain"
               disabled={availableDomains.length === 0}
+              data-testid={TestIds.users.editDialog.domain}
             >
               {availableDomains.map((domain) => (
                 <MenuItem key={domain.id} value={String(domain.id)}>
@@ -1384,6 +1392,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             }
             margin="normal"
             required
+            data-testid={TestIds.users.editDialog.email}
           />
           <TextField
             fullWidth
@@ -1393,6 +1402,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               setFormData({ ...formData, first_name: e.target.value })
             }
             margin="normal"
+            data-testid={TestIds.users.editDialog.firstName}
           />
           <TextField
             fullWidth
@@ -1402,6 +1412,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               setFormData({ ...formData, last_name: e.target.value })
             }
             margin="normal"
+            data-testid={TestIds.users.editDialog.lastName}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Role</InputLabel>
@@ -1409,6 +1420,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               value={formData.role || ''}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
               label="Role"
+              data-testid={TestIds.users.editDialog.role}
             >
               {userRoles.map((role) => (
                 <MenuItem key={role} value={role}>
@@ -1424,6 +1436,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               value={formData.status || ''}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Inactive' | 'Pending' | 'Invited' })}
               label="Status"
+              data-testid={TestIds.users.editDialog.status}
             >
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="inactive">Inactive</MenuItem>              
@@ -1433,8 +1446,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button onClick={onClose} data-testid={TestIds.users.editDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading} data-testid={TestIds.users.editDialog.submit}>
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>

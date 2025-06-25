@@ -4,7 +4,7 @@
  * Description: Utility functions for formatting tier names from backend to user-friendly display
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -25,6 +25,24 @@ export const TIER_COLORS = {
 } as const;
 
 export type TierColorType = (typeof TIER_COLORS)[keyof typeof TIER_COLORS];
+
+// Tier limits mapping for usage display
+export const TIER_LIMITS = {
+  // Admissions tiers
+  'admissions_tier_1': 500,
+  'admissions_tier_2': 1000,
+  'admissions_tier_3': 2000,
+  
+  // Transcript tiers
+  'transcripts_tier_1': 500,
+  'transcripts_tier_2': 1000,
+  'transcripts_tier_3': 2000,
+  
+  // Generic tiers
+  'tier_1': 500,
+  'tier_2': 1000,
+  'tier_3': 2000,
+} as const;
 
 /**
  * Gets the standardized color for a tier based on its category
@@ -104,20 +122,7 @@ export function formatTierName(tierName: string): string {
     'admissions_tier_3': 'Tier 3',
     'transcripts_tier_1': 'Tier 1',
     'transcripts_tier_2': 'Tier 2',
-    'transcripts_tier_3': 'Tier 3',
-    'transcript_basic': 'Basic',
-    'transcript_premium': 'Premium',
-    'transcript_enterprise': 'Enterprise',
-    'enterprise_premium': 'Premium',
-    'enterprise_standard': 'Standard',
-    'enterprise_basic': 'Basic',
-    'professional': 'Professional',
-    'basic': 'Basic',
-    'premium': 'Premium',
-    'standard': 'Standard',
-    'starter': 'Starter',
-    'growth': 'Growth',
-    'scale': 'Scale'
+    'transcripts_tier_3': 'Tier 3'
   };
 
   // Check if we have a direct mapping
@@ -157,4 +162,47 @@ export function formatTierName(tierName: string): string {
  */
 export function formatTierNames(tierNames: string[]): string[] {
   return tierNames.map(formatTierName);
+}
+
+/**
+ * Gets the maximum limit for a given tier
+ *
+ * @param tierName - The tier name from backend
+ * @returns The maximum limit for the tier, or null if not found
+ *
+ * @example
+ * getTierLimit("transcripts_tier_3"); // 2000
+ * getTierLimit("admissions_tier_1"); // 500
+ */
+export function getTierLimit(tierName: string): number | null {
+  if (!tierName) return null;
+  
+  const lowerTierName = tierName.toLowerCase();
+  return TIER_LIMITS[lowerTierName as keyof typeof TIER_LIMITS] || null;
+}
+
+/**
+ * Formats usage display with current usage and tier limit
+ *
+ * @param currentUsage - Current usage value
+ * @param tierName - The tier name from backend
+ * @returns Formatted usage string (e.g., "50/2000") or just current usage if limit not found
+ *
+ * @example
+ * formatUsageDisplay(50, "transcripts_tier_3"); // "50/2000"
+ * formatUsageDisplay(100, "unknown_tier"); // "100"
+ */
+export function formatUsageDisplay(currentUsage: number | string | null, tierName: string): string {
+  if (currentUsage === null || currentUsage === undefined) {
+    return '0';
+  }
+  
+  const usage = typeof currentUsage === 'string' ? parseInt(currentUsage, 10) || 0 : currentUsage;
+  const limit = getTierLimit(tierName);
+  
+  if (limit !== null) {
+    return `${usage}/${limit}`;
+  }
+  
+  return usage.toString();
 }

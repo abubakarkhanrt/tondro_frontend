@@ -4,7 +4,7 @@
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -706,7 +706,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
   };
 
   return (
-    <Box>
+    <Box data-testid={TestIds.organizations.subscriptionForm.container}>
       <Box
         sx={{
           display: 'flex',
@@ -721,6 +721,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
           onClick={addSubscription}
           variant="outlined"
           size="small"
+          data-testid={TestIds.organizations.subscriptionForm.addButton}
         >
           Add Subscription
         </Button>
@@ -733,7 +734,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
       )}
 
       {subscriptions.map((subscription, index) => (
-        <Card key={index} sx={{ mb: 2, p: 2 }}>
+        <Card key={index} sx={{ mb: 2, p: 2 }} data-testid={TestIds.organizations.subscriptionForm.subscriptionCard(index)}>
           <Box
             sx={{
               display: 'flex',
@@ -749,6 +750,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
               onClick={() => removeSubscription(index)}
               color="error"
               size="small"
+              data-testid={TestIds.organizations.subscriptionForm.removeButton(index)}
             >
               <RemoveIcon />
             </IconButton>
@@ -764,6 +766,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                     updateSubscription(index, 'product_id', e.target.value)
                   }
                   label="Product"
+                  data-testid={TestIds.organizations.subscriptionForm.productSelect(index)}
                 >
                   {products.map((product) => (
                     <MenuItem key={product.id} value={product.id}>
@@ -784,6 +787,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   }
                   label="Tier"
                   disabled={!subscription.product_id}
+                  data-testid={TestIds.organizations.subscriptionForm.tierSelect(index)}
                 >
                   {getTierOptions(subscription.product_id).map((tier) => (
                     <MenuItem key={tier} value={tier}>
@@ -804,6 +808,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 }
                 fullWidth
                 placeholder="e.g., 2024-01-01"
+                data-testid={TestIds.organizations.subscriptionForm.endDate(index)}
               />
             </Grid>
             
@@ -968,12 +973,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Create New Organization</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth data-testid={TestIds.organizations.createDialog.container}>
+      <DialogTitle data-testid={TestIds.organizations.createDialog.title}>Create New Organization</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           {errors.general && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2 }} data-testid={TestIds.organizations.createDialog.error}>
               {errors.general}
             </Alert>
           )}
@@ -987,6 +992,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             required
             error={!!errors.tenantName}
             helperText={errors.tenantName}
+            data-testid={TestIds.organizations.createDialog.tenantName}
           />
           <TextField
             label="Organization Domain"
@@ -1001,6 +1007,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               errors.organizationDomain ||
               'Enter a unique domain name for the organization'
             }
+            data-testid={TestIds.organizations.createDialog.organizationDomain}
           />
           <TextField
             label="Initial Admin Email"
@@ -1012,6 +1019,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             required
             error={!!errors.initialAdminEmail}
             helperText={errors.initialAdminEmail}
+            data-testid={TestIds.organizations.createDialog.adminEmail}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Initial Status</InputLabel>
@@ -1019,6 +1027,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               value={formData.initialStatus || 'Active'}
               onChange={(e) => handleChange('initialStatus', e.target.value)}
               label="Initial Status"
+              data-testid={TestIds.organizations.createDialog.status}
             >
               <MenuItem value="Active">Active</MenuItem>
               <MenuItem value="Suspended">Suspended</MenuItem>
@@ -1043,11 +1052,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
+        <Button onClick={handleClose} data-testid={TestIds.organizations.createDialog.cancel}>Cancel</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading || formData.initialSubscriptions.length === 0}
+          data-testid={TestIds.organizations.createDialog.submit}
         >
           {loading ? 'Creating...' : 'Create'}
         </Button>
@@ -1390,8 +1400,8 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   };
 
   return (
-    <Dialog open={!!organization} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Organization</DialogTitle>
+    <Dialog open={!!organization} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.organizations.editDialog.container}>
+      <DialogTitle data-testid={TestIds.organizations.editDialog.title}>Edit Organization</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
@@ -1403,6 +1413,7 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             }
             margin="normal"
             required
+            data-testid={TestIds.organizations.editDialog.tenantName}
           />
           <TextField
             fullWidth
@@ -1413,6 +1424,7 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             }
             margin="normal"
             required
+            data-testid={TestIds.organizations.editDialog.organizationDomain}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
@@ -1422,6 +1434,7 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
                 setFormData({ ...formData, status: e.target.value as any })
               }
               label="Status"
+              data-testid={TestIds.organizations.editDialog.status}
             >
               <MenuItem value="Active">Active</MenuItem>
               <MenuItem value="Suspended">Suspended</MenuItem>
@@ -1432,8 +1445,8 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button onClick={onClose} data-testid={TestIds.organizations.editDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading} data-testid={TestIds.organizations.editDialog.submit}>
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>

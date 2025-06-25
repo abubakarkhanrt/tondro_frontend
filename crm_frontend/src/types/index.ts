@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -97,7 +97,7 @@ export interface OrganizationsResponse {
 export interface InitialSubscription {
   product_id: string;
   tier: string;
-  usage_limit?: number;
+  max_limit?: number;
   auto_renewal?: boolean;
 }
 
@@ -314,6 +314,34 @@ export interface UpdateProductRequest {
   price?: number;
   currency?: string;
   status?: 'Active' | 'Inactive';
+}
+
+// ────────────────────────────────────────
+// Product Tier Types
+// ────────────────────────────────────────
+
+export interface ProductTier {
+  id: string;
+  product_id: string;
+  tier_name: string;
+  display_name: string;
+  max_limit: number;
+  price: number;
+  currency: string;
+  status: 'Active' | 'Inactive';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductTiersResponse {
+  total: number;
+  page: number;
+  limit: number;
+  tiers: ProductTier[];
+}
+
+export interface ProductTierResponse {
+  tier: ProductTier;
 }
 
 // ────────────────────────────────────────

@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -488,6 +488,22 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
     api.patch(`/crm/products/${id}`, data, { signal }),
+
+  // ────────────────────────────────────────
+  // Product Tiers
+  // ────────────────────────────────────────
+
+  getProductTiers: (
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>> =>
+    api.get('/crm/product-tiers', { signal }),
+
+  getProductTier: (
+    productId: string,
+    tierName: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{ tier: any }>> =>
+    api.get(`/crm/product-tiers/${productId}/${tierName}`, { signal }),
 
   // ────────────────────────────────────────
   // Audit Log

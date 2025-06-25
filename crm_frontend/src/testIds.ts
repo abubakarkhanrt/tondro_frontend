@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -101,6 +101,41 @@ export const TestIds = {
     viewUsers: (orgId: string) => `organizations-view-users-${orgId}`,
     viewSubscriptions: (orgId: string) =>
       `organizations-view-subscriptions-${orgId}`,
+    
+    // Create Dialog
+    createDialog: {
+      container: 'organizations-create-dialog',
+      title: 'organizations-create-dialog-title',
+      tenantName: 'organizations-create-tenant-name',
+      organizationDomain: 'organizations-create-domain',
+      adminEmail: 'organizations-create-admin-email',
+      status: 'organizations-create-status',
+      submit: 'organizations-create-submit',
+      cancel: 'organizations-create-cancel',
+      error: 'organizations-create-error',
+    },
+    
+    // Edit Dialog
+    editDialog: {
+      container: 'organizations-edit-dialog',
+      title: 'organizations-edit-dialog-title',
+      tenantName: 'organizations-edit-tenant-name',
+      organizationDomain: 'organizations-edit-domain',
+      status: 'organizations-edit-status',
+      submit: 'organizations-edit-submit',
+      cancel: 'organizations-edit-cancel',
+    },
+    
+    // Subscription Form
+    subscriptionForm: {
+      container: 'organizations-subscription-form',
+      addButton: 'organizations-subscription-add',
+      removeButton: (index: number) => `organizations-subscription-remove-${index}`,
+      productSelect: (index: number) => `organizations-subscription-product-${index}`,
+      tierSelect: (index: number) => `organizations-subscription-tier-${index}`,
+      endDate: (index: number) => `organizations-subscription-end-date-${index}`,
+      subscriptionCard: (index: number) => `organizations-subscription-card-${index}`,
+    },
   },
 
   // Users
@@ -114,6 +149,44 @@ export const TestIds = {
     updateRole: (userId: string) => `users-update-role-${userId}`,
     updateStatus: (userId: string) => `users-update-status-${userId}`,
     recordLogin: (userId: string) => `users-record-login-${userId}`,
+    
+    // Create Dialog
+    createDialog: {
+      container: 'users-create-dialog',
+      title: 'users-create-dialog-title',
+      organization: 'users-create-organization',
+      domain: 'users-create-domain',
+      email: 'users-create-email',
+      firstName: 'users-create-first-name',
+      lastName: 'users-create-last-name',
+      role: 'users-create-role',
+      submit: 'users-create-submit',
+      cancel: 'users-create-cancel',
+      error: 'users-create-error',
+    },
+    
+    // Edit Dialog
+    editDialog: {
+      container: 'users-edit-dialog',
+      title: 'users-edit-dialog-title',
+      organization: 'users-edit-organization',
+      domain: 'users-edit-domain',
+      email: 'users-edit-email',
+      firstName: 'users-edit-first-name',
+      lastName: 'users-edit-last-name',
+      role: 'users-edit-role',
+      status: 'users-edit-status',
+      submit: 'users-edit-submit',
+      cancel: 'users-edit-cancel',
+    },
+    
+    // View Dialog
+    viewDialog: {
+      container: 'users-view-dialog',
+      title: 'users-view-dialog-title',
+      editButton: 'users-view-edit-button',
+      closeButton: 'users-view-close-button',
+    },
   },
 
   // Subscriptions

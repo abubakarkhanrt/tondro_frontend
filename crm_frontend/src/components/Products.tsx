@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -33,7 +33,6 @@ import {
   TablePagination,
   Snackbar,
   IconButton,
-  Chip,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -283,8 +282,6 @@ const Products: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Description</TableCell>
-                    <TableCell>Price</TableCell>
-                    <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
@@ -298,21 +295,6 @@ const Products: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>{product.description}</TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: product.currency || 'USD',
-                        }).format(product.price)}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={product.status}
-                          color={
-                            product.status === 'Active' ? 'success' : 'default'
-                          }
-                          size="small"
-                        />
-                      </TableCell>
                       <TableCell>
                         {new Date(product.created_at).toLocaleDateString()}
                       </TableCell>
