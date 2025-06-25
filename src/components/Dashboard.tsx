@@ -22,7 +22,12 @@ import {
 } from '@mui/material';
 import { TestIds } from '../testIds';
 import { apiHelpers } from '../services/api';
-import type { OrganizationsResponse, ErrorResponse, PaginatedSubscriptionsResponse, Product } from '@/types';
+import type {
+  OrganizationsResponse,
+  ErrorResponse,
+  PaginatedSubscriptionsResponse,
+  Product,
+} from '@/types';
 
 // ────────────────────────────────────────
 // Dashboard Types
@@ -90,32 +95,29 @@ const Dashboard: React.FC = () => {
       }
 
       // Fetch summary data for each entity type using component-specific services
-      const orgsData = await apiHelpers.getOrganizations(
-        { page: 1, limit: 1 },
-        controller.signal
-      ).catch((err: Error) => ({ error: err.message }));
-      const usersData = await apiHelpers.getUsers(
-        { page: 1, page_size: 1 },
-        controller.signal
-      ).catch((err: Error) => ({ error: err.message }));
-      const subsData = await apiHelpers.getSubscriptions(
-        { page: 1, page_size: 1 },
-        controller.signal
-      ).catch((err: Error) => ({ error: err.message }));
-      const productsData = await apiHelpers.getProducts(
-        controller.signal
-      ).catch((err: Error) => ({ error: err.message }));
+      const orgsData = await apiHelpers
+        .getOrganizations({ page: 1, limit: 1 }, controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
+      const usersData = await apiHelpers
+        .getUsers({ page: 1, page_size: 1 }, controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
+      const subsData = await apiHelpers
+        .getSubscriptions({ page: 1, page_size: 1 }, controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
+      const productsData = await apiHelpers
+        .getProducts(controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
 
       // Fetch health check data through health service
-      const rootData = await apiHelpers.getRoot(controller.signal).catch(
-        (err: Error) => ({ error: err.message })
-      );
-      const healthData = await apiHelpers.getHealth(controller.signal).catch(
-        (err: Error) => ({ error: err.message })
-      );
-      const statusData = await apiHelpers.getStatus(controller.signal).catch(
-        (err: Error) => ({ error: err.message })
-      );
+      const rootData = await apiHelpers
+        .getRoot(controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
+      const healthData = await apiHelpers
+        .getHealth(controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
+      const statusData = await apiHelpers
+        .getStatus(controller.signal)
+        .catch((err: Error) => ({ error: err.message }));
 
       setSummaryData({
         organizations:
@@ -209,9 +211,19 @@ const Dashboard: React.FC = () => {
       if (data && typeof data === 'object' && 'error' in data) {
         isError = true;
         errorMessage = data.error as string;
-      } else if (data && typeof data === 'object' && 'count' in data && typeof data.count === 'number') {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'count' in data &&
+        typeof data.count === 'number'
+      ) {
         count = data.count as number;
-      } else if (data && typeof data === 'object' && 'total' in data && typeof data.total === 'number') {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'total' in data &&
+        typeof data.total === 'number'
+      ) {
         count = data.total as number;
       } else if (
         data &&
@@ -232,7 +244,12 @@ const Dashboard: React.FC = () => {
         count = data.data.length;
       } else if (Array.isArray(data)) {
         count = data.length;
-      } else if (data && typeof data === 'object' && 'status' in data && typeof data.status === 'string') {
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'status' in data &&
+        typeof data.status === 'string'
+      ) {
         statusText = data.status;
       } else if (
         data &&

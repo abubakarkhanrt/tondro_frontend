@@ -1447,7 +1447,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             <Select
               value={formData.organization_id ?? ''}
               onChange={(e) =>
-                setFormData({ ...formData, organization_id: e.target.value as string })
+                setFormData({
+                  ...formData,
+                  organization_id: e.target.value as string,
+                })
               }
               label="Organization"
             >

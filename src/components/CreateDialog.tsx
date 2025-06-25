@@ -200,7 +200,7 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             error={hasError}
             helperText={error}
             required={!!field.required}
-            placeholder={field.placeholder ?? ""}
+            placeholder={field.placeholder ?? ''}
             data-testid={TestIds.createDialog.field(field.name)}
           />
         );
@@ -216,7 +216,7 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             error={hasError}
             helperText={error}
             required={!!field.required}
-            placeholder={field.placeholder ?? ""}
+            placeholder={field.placeholder ?? ''}
             inputProps={{
               min: field.min,
               max: field.max,
@@ -237,7 +237,7 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             error={hasError}
             helperText={error}
             required={!!field.required}
-            placeholder={field.placeholder ?? ""}
+            placeholder={field.placeholder ?? ''}
             disabled={!!field.disabled}
             data-testid={TestIds.createDialog.field(field.name)}
           />
