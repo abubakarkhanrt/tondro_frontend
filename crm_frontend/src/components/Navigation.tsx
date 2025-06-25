@@ -42,6 +42,7 @@ const Navigation: React.FC = () => {
     { text: 'Users', path: '/users' },
     { text: 'Subscriptions', path: '/subscriptions' },
     { text: 'Products', path: '/products' },
+    { text: 'Transcripts', path: '/transcripts' },
     { text: 'Audit Log', path: '/audit-log' },
   ];
 

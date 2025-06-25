@@ -100,7 +100,7 @@ const CreateSubscriptionDialog = ({
   };
 
   const handleSubmit = async () => {
-    if (!form.organization_id || !form.product_id || !form.tier_name) {
+    if (!form.organization_id || !form.product_id || !form.tier_name || !form.starts_at) {
       setError('Please fill in all required fields');
       return;
     }
@@ -108,24 +108,21 @@ const CreateSubscriptionDialog = ({
     setSubmitting(true);
     setError(null);
     try {
+      // Calculate end date as one year from start date
+      const startDate = new Date(form.starts_at);
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
       // Format dates properly for backend API
       const formattedData = {
         ...form,
-        starts_at: form.starts_at ? `${form.starts_at}T00:00:00` : undefined,
-        ends_at: form.ends_at ? `${form.ends_at}T00:00:00` : null,
+        auto_renewal: true, // Always true for new subscriptions
+        starts_at: `${form.starts_at}T00:00:00`,
+        ends_at: endDate.toISOString().split('T')[0] + 'T00:00:00',
       };
       
       await onSubmit(formattedData);
       onClose();
-      // Reset form
-      setForm({
-        organization_id: 0,
-        product_id: '',
-        tier_name: '',
-        auto_renewal: true,
-        starts_at: new Date().toISOString().split('T')[0],
-        ends_at: null,
-      });
     } catch (e: any) {
       setError(e?.message || 'Failed to create subscription');
     } finally {
@@ -206,40 +203,15 @@ const CreateSubscriptionDialog = ({
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Auto Renewal</InputLabel>
-                <Select
-                  value={form.auto_renewal ? 'yes' : 'no'}
-                  onChange={(e) => handleChange('auto_renewal', e.target.value === 'yes')}
-                  label="Auto Renewal"
-                >
-                  <MenuItem value="yes">Yes</MenuItem>
-                  <MenuItem value="no">No</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
               <TextField
-                label="Start Date"
+                label="Start Date *"
                 type="date"
                 value={form.starts_at ? form.starts_at.slice(0, 10) : ''}
                 onChange={(e) => handleChange('starts_at', e.target.value)}
                 fullWidth
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="End Date (Optional)"
-                type="date"
-                value={form.ends_at ? form.ends_at.slice(0, 10) : ''}
-                onChange={(e) => handleChange('ends_at', e.target.value || null)}
-                fullWidth
-                margin="normal"
-                InputLabelProps={{ shrink: true }}
+                required
               />
             </Grid>
           </Grid>
@@ -272,8 +244,6 @@ const EditSubscriptionDialog = ({
   const [form, setForm] = useState<UpdateSubscriptionRequest>({
     status: subscription.status,
     tier_name: subscription.tier_name,
-    auto_renewal: subscription.auto_renewal,
-    ends_at: subscription.ends_at,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -328,35 +298,7 @@ const EditSubscriptionDialog = ({
                   label="Status"
                 >
                   <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="trial">Trial</MenuItem>
-                  <MenuItem value="expired">Expired</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                  <MenuItem value="suspended">Suspended</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="End Date"
-                type="date"
-                value={form.ends_at ? form.ends_at.slice(0, 10) : ''}
-                onChange={(e) => handleChange('ends_at', e.target.value)}
-                fullWidth
-                margin="normal"
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Auto Renewal</InputLabel>
-                <Select
-                  value={form.auto_renewal ? 'yes' : 'no'}
-                  onChange={(e) => handleChange('auto_renewal', e.target.value === 'yes')}
-                  label="Auto Renewal"
-                >
-                  <MenuItem value="yes">Yes</MenuItem>
-                  <MenuItem value="no">No</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>                  
                 </Select>
               </FormControl>
             </Grid>
@@ -439,7 +381,7 @@ const Subscriptions: React.FC = () => {
   });
 
   // Product tiers hook for dynamic tier data
-  const { tiers: productTiers, getTierByProductAndName } = useProductTiers();
+  const { tiers: productTiers } = useProductTiers();
 
   useEffect(() => {
     // Add a small delay to ensure token is available after login
@@ -783,9 +725,7 @@ const Subscriptions: React.FC = () => {
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-                <MenuItem value="suspended">Suspended</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>                
               </Select>
             </FormControl>
           </Grid>
@@ -864,7 +804,7 @@ const Subscriptions: React.FC = () => {
                     <TableCell>Product</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Tier</TableCell>
-                    <TableCell>Created</TableCell>
+                    <TableCell>Current Usage</TableCell>
                     <TableCell>End Date</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
@@ -898,7 +838,9 @@ const Subscriptions: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        {new Date(subscription.created_at).toLocaleDateString()}
+                        {subscription.max_limit
+                          ? `${subscription.current_usage}/${subscription.max_limit}`
+                          : `${subscription.current_usage}`}
                       </TableCell>
                       <TableCell>
                         {subscription.ends_at 
@@ -965,7 +907,6 @@ const Subscriptions: React.FC = () => {
     onClose: () => void;
     organizations: Organization[];
     products: Product[];
-    getTierByProductAndName: (productId: string, tierName: string) => any;
   }
 
   const ViewSubscriptionDialog: React.FC<ViewSubscriptionDialogProps> = ({
@@ -973,7 +914,6 @@ const Subscriptions: React.FC = () => {
     onClose,
     organizations,
     products,
-    getTierByProductAndName,
   }) => {
     const getOrganizationName = (organizationId: number): string => {
       const org = organizations.find(
@@ -987,23 +927,9 @@ const Subscriptions: React.FC = () => {
       return product ? product.name : `Product ${productId}`;
     };
 
-    // Get max limit using the hook function
-    const getMaxLimit = (productId: string, tierName: string): number | undefined => {
-      const tierData = getTierByProductAndName(productId, tierName);
-      return tierData?.max_limit;
-    };
-
-    const maxLimit = getMaxLimit(subscription.product_id, subscription.tier_name);
+    // Use max_limit directly from subscription data
     const currentUsage = subscription.current_usage;
-    
-    // Add debugging
-    console.log('Debug subscription details:', {
-      product_id: subscription.product_id,
-      tier_name: subscription.tier_name,
-      current_usage: currentUsage,
-      tierData: getTierByProductAndName(subscription.product_id, subscription.tier_name),
-      maxLimit: maxLimit
-    });
+    const maxLimit = subscription.max_limit;
     
     const usageDisplay = maxLimit 
       ? `${currentUsage}/${maxLimit}`
@@ -1180,7 +1106,6 @@ const Subscriptions: React.FC = () => {
               }}
               organizations={organizations}
               products={products}
-              getTierByProductAndName={getTierByProductAndName}
             />
           )}
           {editMode && (

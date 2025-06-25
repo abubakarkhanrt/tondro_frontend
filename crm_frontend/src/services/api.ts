@@ -509,11 +509,17 @@ export const apiHelpers = {
   // Audit Log
   // ────────────────────────────────────────
 
-  getAuditLog: (
+  getAuditLogs: (
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<AuditLog>>> =>
-    api.get('/crm/audit_log', { params, signal }),
+    api.get('/crm/audit-logs', { params, signal }),
+
+  getAuditLog: (
+    id: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<AuditLog>> =>
+    api.get(`/crm/audit-logs/${id}`, { signal }),
 
   // ────────────────────────────────────────
   // Authentication

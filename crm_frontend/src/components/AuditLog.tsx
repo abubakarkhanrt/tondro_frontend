@@ -4,7 +4,7 @@
  * Description: Audit log management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -103,7 +103,7 @@ const AuditLog: React.FC = () => {
     setError(null);
 
     try {
-      const response = await apiHelpers.getAuditLog({
+      const response = await apiHelpers.getAuditLogs({
         page: pagination.page + 1,
         page_size: pagination.pageSize,
         ...filters,
@@ -123,6 +123,21 @@ const AuditLog: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogDetails = async (id: string): Promise<AuditLogType | null> => {
+    try {
+      const response = await apiHelpers.getAuditLog(id);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching audit log details:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to fetch audit log details',
+        severity: 'error',
+      });
+      return null;
     }
   };
 
@@ -294,12 +309,12 @@ const AuditLog: React.FC = () => {
                       <TableRow>
                         <TableCell>
                           <Chip
-                            label={log.resource_type}
-                            color={getEntityTypeColor(log.resource_type)}
+                            label={log.entity_type}
+                            color={getEntityTypeColor(log.entity_type)}
                             size="small"
                           />
                         </TableCell>
-                        <TableCell>{log.resource_id}</TableCell>
+                        <TableCell>{log.entity_id}</TableCell>
                         <TableCell>
                           <Chip
                             label={log.action}
@@ -307,7 +322,7 @@ const AuditLog: React.FC = () => {
                             size="small"
                           />
                         </TableCell>
-                        <TableCell>{log.user_id}</TableCell>
+                        <TableCell>{log.performed_by}</TableCell>
                         <TableCell>
                           {new Date(log.created_at).toLocaleString()}
                         </TableCell>
@@ -315,12 +330,12 @@ const AuditLog: React.FC = () => {
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                               size="small"
-                              onClick={() => toggleRowExpansion(log.id)}
+                              onClick={() => toggleRowExpansion(String(log.id))}
                               data-testid={TestIds.auditLog.expandDetails(
-                                log.id
+                                String(log.id)
                               )}
                             >
-                              {expandedRows.has(log.id) ? (
+                              {expandedRows.has(String(log.id)) ? (
                                 <ExpandLessIcon />
                               ) : (
                                 <ExpandMoreIcon />
@@ -329,7 +344,7 @@ const AuditLog: React.FC = () => {
                             <IconButton
                               size="small"
                               onClick={() => setSelectedLog(log)}
-                              data-testid={TestIds.auditLog.viewDetails(log.id)}
+                              data-testid={TestIds.auditLog.viewDetails(String(log.id))}
                             >
                               <VisibilityIcon />
                             </IconButton>
@@ -342,7 +357,7 @@ const AuditLog: React.FC = () => {
                           colSpan={6}
                         >
                           <Collapse
-                            in={expandedRows.has(log.id)}
+                            in={expandedRows.has(String(log.id))}
                             timeout="auto"
                             unmountOnExit
                           >
@@ -406,12 +421,11 @@ const AuditLog: React.FC = () => {
       <FilterSection />
       <AuditLogTable />
 
-      {selectedLog && (
-        <ViewAuditLogDialog
-          log={selectedLog}
-          onClose={() => setSelectedLog(null)}
-        />
-      )}
+      <ViewAuditLogDialog
+        log={selectedLog}
+        onClose={() => setSelectedLog(null)}
+        onFetchDetails={fetchAuditLogDetails}
+      />
 
       <Snackbar
         open={snackbar.open}
@@ -440,19 +454,70 @@ const AuditLog: React.FC = () => {
 // ────────────────────────────────────────
 
 interface ViewAuditLogDialogProps {
-  log: AuditLogType;
+  log: AuditLogType | null;
   onClose: () => void;
+  onFetchDetails: (id: string) => Promise<AuditLogType | null>;
 }
 
 const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
   log,
   onClose,
+  onFetchDetails,
 }) => {
+  const [detailedLog, setDetailedLog] = useState<AuditLogType | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Reset and fetch data when log changes
+  useEffect(() => {
+    if (!log) {
+      setDetailedLog(null);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    
+    const loadDetails = async () => {
+      setLoading(true);
+      setDetailedLog(log); // Set initial data immediately
+      
+      try {
+        const freshLog = await onFetchDetails(String(log.id));
+        if (isMounted && freshLog) {
+          setDetailedLog(freshLog);
+        }
+      } catch (error) {
+        console.error('Error loading audit log details:', error);
+        // Keep the original log data if fetch fails
+        if (isMounted) {
+          setDetailedLog(log);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [log?.id, onFetchDetails]);
+
+  // Don't render anything if no log is provided
+  if (!log) return null;
+
   return (
     <Dialog open={!!log} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Audit Log Details: {log?.id}</DialogTitle>
+      <DialogTitle>Audit Log Details: {detailedLog?.id || log.id}</DialogTitle>
       <DialogContent>
-        {log && (
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : detailedLog ? (
           <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -460,7 +525,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   ID
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {log.id}
+                  {detailedLog.id}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -468,7 +533,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   Entity Type
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {log.resource_type}
+                  {detailedLog.entity_type}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -476,7 +541,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   Entity ID
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {log.resource_id}
+                  {detailedLog.entity_id}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -484,7 +549,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   Action
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {log.action}
+                  {detailedLog.action}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -492,7 +557,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   Performed By
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {log.user_id}
+                  {detailedLog.performed_by}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -500,20 +565,32 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
                   Created
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {new Date(log.created_at).toLocaleString()}
+                  {new Date(detailedLog.created_at).toLocaleString()}
                 </Typography>
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  Changes
+                  Details
                 </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {log.details
-                    ? JSON.stringify(log.details, null, 2)
-                    : 'No changes recorded'}
-                </Typography>
+                <pre
+                  style={{
+                    backgroundColor: '#f5f5f5',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    overflow: 'auto',
+                  }}
+                >
+                  {detailedLog.details
+                    ? JSON.stringify(detailedLog.details, null, 2)
+                    : 'No details recorded'}
+                </pre>
               </Grid>
             </Grid>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <Typography>No data available</Typography>
           </Box>
         )}
       </DialogContent>

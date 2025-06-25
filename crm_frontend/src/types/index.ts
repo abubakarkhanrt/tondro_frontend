@@ -207,6 +207,7 @@ export interface Subscription {
     | 'suspended';
   tier_name: string;
   current_usage: number;
+  max_limit: number;
   auto_renewal: boolean;
   starts_at: string;
   ends_at: string | null;
@@ -370,16 +371,12 @@ export interface CreateUsageEventRequest {
 // ────────────────────────────────────────
 
 export interface AuditLog {
-  id: string;
-  organization_id: string;
-  user_id: string;
+  id: string | number;
+  entity_type: string;
+  entity_id: string;
   action: string;
-  resource_type: string;
-  resource_id: string;
+  performed_by: string;
   details: Record<string, any>;
-  ip_address: string;
-  user_agent: string;
-  timestamp: string;
   created_at: string;
 }
 

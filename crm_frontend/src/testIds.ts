@@ -16,6 +16,7 @@ export const TestIds = {
     users: 'navigation-users',
     subscriptions: 'navigation-subscriptions',
     products: 'navigation-products',
+    transcripts: 'navigation-transcripts',
     auditLog: 'navigation-audit-log',
     logout: 'navigation-logout',
   },
@@ -201,6 +202,17 @@ export const TestIds = {
     viewUsage: (subId: string) => `subscriptions-view-usage-${subId}`,
     checkLimits: (subId: string) => `subscriptions-check-limits-${subId}`,
     cancel: (subId: string) => `subscriptions-cancel-${subId}`,
+  },
+
+  // Transcripts
+  transcripts: {
+    page: 'transcripts-page',
+    fileInput: 'transcripts-file-input',
+    browseButton: 'transcripts-browse-button',
+    formatSelect: 'transcripts-format-select',
+    submitButton: 'transcripts-submit-button',
+    clearButton: 'transcripts-clear-button',
+    responseDisplay: 'transcripts-response-display',
   },
 
   // Products

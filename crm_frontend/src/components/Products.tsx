@@ -37,7 +37,6 @@ import {
 import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
 import {
@@ -82,6 +81,7 @@ const Products: React.FC = () => {
   });
   const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
@@ -172,28 +172,6 @@ const Products: React.FC = () => {
       setSnackbar({
         open: true,
         message: 'Failed to create product',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleDeleteProduct = async (_id: string): Promise<void> => {
-    if (!confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-
-    try {
-      // Note: The API doesn't have a delete endpoint for products, so we'll just show a message
-      setSnackbar({
-        open: true,
-        message: 'Product deletion not implemented in API',
-        severity: 'warning',
-      });
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete product',
         severity: 'error',
       });
     }
@@ -304,6 +282,7 @@ const Products: React.FC = () => {
                             size="small"
                             onClick={() => {
                               setSelectedProduct(product);
+                              setEditMode(false);
                             }}
                             data-testid={TestIds.products.viewDetails(
                               product.id
@@ -315,18 +294,11 @@ const Products: React.FC = () => {
                             size="small"
                             onClick={() => {
                               setSelectedProduct(product);
+                              setEditMode(true);
                             }}
                             data-testid={TestIds.products.edit(product.id)}
                           >
                             <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteProduct(product.id)}
-                            data-testid={TestIds.products.delete(product.id)}
-                          >
-                            <DeleteIcon />
                           </IconButton>
                         </Box>
                       </TableCell>
@@ -378,16 +350,29 @@ const Products: React.FC = () => {
 
       {selectedProduct && (
         <>
-          <ViewProductDialog
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-            onUpdate={fetchProducts}
-          />
-          <EditProductDialog
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-            onSubmit={handleUpdateProduct}
-          />
+          {!editMode && (
+            <ViewProductDialog
+              product={selectedProduct}
+              onClose={() => {
+                setSelectedProduct(null);
+                setEditMode(false);
+              }}
+              onEdit={() => {
+                setSelectedProduct(selectedProduct);
+                setEditMode(true);
+              }}
+            />
+          )}
+          {editMode && (
+            <EditProductDialog
+              product={selectedProduct}
+              onClose={() => {
+                setSelectedProduct(null);
+                setEditMode(false);
+              }}
+              onSubmit={handleUpdateProduct}
+            />
+          )}
         </>
       )}
 
@@ -496,13 +481,13 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
 interface ViewProductDialogProps {
   product: Product;
   onClose: () => void;
-  onUpdate: () => void;
+  onEdit: () => void;
 }
 
 const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
   product,
   onClose,
-  onUpdate,
+  onEdit,
 }) => {
   return (
     <Dialog open={!!product} onClose={onClose} maxWidth="md" fullWidth>
@@ -556,7 +541,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onUpdate}>Edit</Button>
+        <Button onClick={onEdit}>Edit</Button>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
