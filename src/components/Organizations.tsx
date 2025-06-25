@@ -671,7 +671,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
       product_id: '',
       tier_name: '',
       auto_renewal: true,
-      ends_at: new Date().toISOString().split('T')[0], // Default to today in YYYY-MM-DD format
+      ends_at: new Date().toISOString().split('T')[0] || new Date().toISOString().slice(0, 10), // Default to today in YYYY-MM-DD format
     };
     onSubscriptionsChange([...subscriptions, newSubscription]);
   };
@@ -687,7 +687,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     value: any
   ) => {
     const newSubscriptions = [...subscriptions];
-    newSubscriptions[index] = { ...newSubscriptions[index], [field]: value };
+    newSubscriptions[index] = { 
+      ...newSubscriptions[index], 
+      [field]: value 
+    } as ProductSubscriptionRequest;
     onSubscriptionsChange(newSubscriptions);
   };
 
@@ -1417,9 +1420,9 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
-              value={formData.status}
+              value={formData.status || 'Active'}
               onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value as any })
+                setFormData({ ...formData, status: e.target.value as "Active" | "Suspended" | "Trial" | "Inactive" })
               }
               label="Status"
             >

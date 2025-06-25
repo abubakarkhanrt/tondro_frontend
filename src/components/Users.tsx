@@ -950,7 +950,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         // If no primary domain found, select the first domain
         setFormData((prev) => ({
           ...prev,
-          domain_id: Number(domainsData[0].id),
+          domain_id: Number(domainsData[0]?.id ?? 0),
         }));
       } else {
         // No domains available
@@ -1445,9 +1445,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Organization</InputLabel>
             <Select
-              value={formData.organization_id}
+              value={formData.organization_id ?? ''}
               onChange={(e) =>
-                setFormData({ ...formData, organization_id: e.target.value })
+                setFormData({ ...formData, organization_id: e.target.value as string })
               }
               label="Organization"
             >

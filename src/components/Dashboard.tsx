@@ -21,27 +21,8 @@ import {
   Button,
 } from '@mui/material';
 import { TestIds } from '../testIds';
-import {
-  OrganizationsService,
-  type OrganizationsResponse,
-} from '../services/organizations';
-import {
-  UsersService,
-  type PaginatedResponse as UsersPaginatedResponse,
-  type User,
-} from '../services/users';
-import {
-  SubscriptionsService,
-  type PaginatedSubscriptionsResponse,
-} from '../services/subscriptions';
-import { ProductsService, type Product } from '../services/products';
-import {
-  HealthService,
-  type HealthResponse,
-  type StatusResponse,
-} from '../services/health';
-import { createAbortController } from '../lib/api-client';
-import type { ErrorResponse } from '../types/shared';
+import { apiHelpers } from '../services/api';
+import type { OrganizationsResponse, ErrorResponse, PaginatedSubscriptionsResponse, Product } from '@/types';
 
 // ────────────────────────────────────────
 // Dashboard Types
@@ -49,12 +30,12 @@ import type { ErrorResponse } from '../types/shared';
 
 interface SummaryData {
   organizations: OrganizationsResponse | ErrorResponse | null;
-  users: UsersPaginatedResponse<User> | ErrorResponse | null;
+  users: unknown | ErrorResponse | null;
   subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
   products: Product[] | ErrorResponse | null;
-  root: HealthResponse | ErrorResponse | null;
-  health: HealthResponse | ErrorResponse | null;
-  status: StatusResponse | ErrorResponse | null;
+  root: unknown | ErrorResponse | null;
+  health: unknown | ErrorResponse | null;
+  status: unknown | ErrorResponse | null;
 }
 
 interface SummaryCardProps {
@@ -93,7 +74,7 @@ const Dashboard: React.FC = () => {
     }
 
     // Create new abort controller
-    const controller = createAbortController();
+    const controller = new AbortController();
     setAbortController(controller);
 
     setLoading(true);
@@ -109,30 +90,30 @@ const Dashboard: React.FC = () => {
       }
 
       // Fetch summary data for each entity type using component-specific services
-      const orgsData = await OrganizationsService.getOrganizations(
+      const orgsData = await apiHelpers.getOrganizations(
         { page: 1, limit: 1 },
         controller.signal
       ).catch((err: Error) => ({ error: err.message }));
-      const usersData = await UsersService.getUsers(
+      const usersData = await apiHelpers.getUsers(
         { page: 1, page_size: 1 },
         controller.signal
       ).catch((err: Error) => ({ error: err.message }));
-      const subsData = await SubscriptionsService.getSubscriptions(
+      const subsData = await apiHelpers.getSubscriptions(
         { page: 1, page_size: 1 },
         controller.signal
       ).catch((err: Error) => ({ error: err.message }));
-      const productsData = await ProductsService.getProducts(
+      const productsData = await apiHelpers.getProducts(
         controller.signal
       ).catch((err: Error) => ({ error: err.message }));
 
       // Fetch health check data through health service
-      const rootData = await HealthService.getRoot(controller.signal).catch(
+      const rootData = await apiHelpers.getRoot(controller.signal).catch(
         (err: Error) => ({ error: err.message })
       );
-      const healthData = await HealthService.getHealth(controller.signal).catch(
+      const healthData = await apiHelpers.getHealth(controller.signal).catch(
         (err: Error) => ({ error: err.message })
       );
-      const statusData = await HealthService.getStatus(controller.signal).catch(
+      const statusData = await apiHelpers.getStatus(controller.signal).catch(
         (err: Error) => ({ error: err.message })
       );
 
@@ -225,13 +206,13 @@ const Dashboard: React.FC = () => {
     let errorMessage = '';
 
     if (data) {
-      if ('error' in data) {
+      if (data && typeof data === 'object' && 'error' in data) {
         isError = true;
-        errorMessage = data.error;
-      } else if ('count' in data && typeof data.count === 'number') {
-        count = data.count;
-      } else if ('total' in data && typeof data.total === 'number') {
-        count = data.total;
+        errorMessage = data.error as string;
+      } else if (data && typeof data === 'object' && 'count' in data && typeof data.count === 'number') {
+        count = data.count as number;
+      } else if (data && typeof data === 'object' && 'total' in data && typeof data.total === 'number') {
+        count = data.total as number;
       } else if (
         data &&
         typeof data === 'object' &&
@@ -251,7 +232,7 @@ const Dashboard: React.FC = () => {
         count = data.data.length;
       } else if (Array.isArray(data)) {
         count = data.length;
-      } else if ('status' in data && typeof data.status === 'string') {
+      } else if (data && typeof data === 'object' && 'status' in data && typeof data.status === 'string') {
         statusText = data.status;
       } else if (
         data &&

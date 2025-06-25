@@ -199,8 +199,8 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             rows={field.rows || 3}
             error={hasError}
             helperText={error}
-            required={field.required}
-            placeholder={field.placeholder}
+            required={!!field.required}
+            placeholder={field.placeholder ?? ""}
             data-testid={TestIds.createDialog.field(field.name)}
           />
         );
@@ -215,8 +215,8 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             type="number"
             error={hasError}
             helperText={error}
-            required={field.required}
-            placeholder={field.placeholder}
+            required={!!field.required}
+            placeholder={field.placeholder ?? ""}
             inputProps={{
               min: field.min,
               max: field.max,
@@ -236,9 +236,9 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             type={field.type || 'text'}
             error={hasError}
             helperText={error}
-            required={field.required}
-            placeholder={field.placeholder}
-            disabled={field.disabled}
+            required={!!field.required}
+            placeholder={field.placeholder ?? ""}
+            disabled={!!field.disabled}
             data-testid={TestIds.createDialog.field(field.name)}
           />
         );

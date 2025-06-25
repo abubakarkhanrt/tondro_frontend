@@ -248,7 +248,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
               variant={action.variant || 'outlined'}
               color={action.color || 'primary'}
               onClick={() => action.onClick(row)}
-              disabled={action.disabled && action.disabled(row)}
+              disabled={action.disabled ? action.disabled(row) : false}
               startIcon={action.icon}
               data-testid={TestIds.entityTable.actionButton(
                 action.label.toLowerCase().replace(/\s+/g, '-'),

@@ -12,6 +12,7 @@ import axios, {
   type AxiosInstance,
   type InternalAxiosRequestConfig,
   type AxiosResponse,
+  type GenericAbortSignal,
 } from 'axios';
 import { ENV_CONFIG } from '../config/env';
 import {
@@ -136,9 +137,9 @@ export const apiHelpers = {
         // First try with all filters
         const response = await api.get('/crm/organizations', {
           params,
-          signal,
+          signal: signal as GenericAbortSignal,
         });
-        return response;
+        return response;  
       } catch (error: unknown) {
         // If filters fail with 500 error, fall back to frontend filtering
         if (
@@ -156,7 +157,7 @@ export const apiHelpers = {
             const { status, search, ...paramsWithoutFilters } = params;
             const response = await api.get('/crm/organizations', {
               params: paramsWithoutFilters,
-              signal,
+              signal: signal as GenericAbortSignal,
             });
             const data: OrganizationsResponse = response.data;
 
@@ -202,7 +203,7 @@ export const apiHelpers = {
 
     // If no filters, proceed normally
     try {
-      return await api.get('/crm/organizations', { params, signal });
+      return await api.get('/crm/organizations', { params, signal: signal as GenericAbortSignal });
     } catch (error: unknown) {
       // Temporary fallback: try with old API structure if new one fails
       if (
@@ -223,7 +224,7 @@ export const apiHelpers = {
           };
           const oldResponse = await api.get('/crm/organizations', {
             params: oldParams,
-            signal,
+            signal: signal as GenericAbortSignal,
           });
 
           // Transform old response to new format
@@ -293,46 +294,46 @@ export const apiHelpers = {
     data: CreateOrganizationRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<CreateOrganizationResponse>> =>
-    api.post('/crm/organizations', data, { signal }),
+    api.post('/crm/organizations', data, { signal: signal as GenericAbortSignal }),
 
   getOrganization: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
-    api.get(`/crm/organizations/${id}`, { signal }),
+    api.get(`/crm/organizations/${id}`, { signal: signal as GenericAbortSignal }),
 
   updateOrganization: (
     id: string,
     data: UpdateOrganizationRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
-    api.patch(`/crm/organizations/${id}`, data, { signal }),
+    api.patch(`/crm/organizations/${id}`, data, { signal: signal as GenericAbortSignal }),
 
   deleteOrganization: (
     id: string,
     force: boolean = false,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(`/crm/organizations/${id}?force=${force}`, { signal }),
+    api.delete(`/crm/organizations/${id}?force=${force}`, { signal: signal as GenericAbortSignal }),
 
   updateOrganizationStatus: (
     id: string,
     status: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
-    api.put(`/crm/organizations/${id}/status`, { status }, { signal }),
+    api.put(`/crm/organizations/${id}/status`, { status }, { signal: signal as GenericAbortSignal }),
 
   getOrganizationMetrics: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<OrganizationMetrics>> =>
-    api.get(`/crm/organizations/${id}/metrics`, { signal }),
+    api.get(`/crm/organizations/${id}/metrics`, { signal: signal as GenericAbortSignal }),
 
   getOrganizationUsers: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<User>>> =>
-    api.get(`/crm/organizations/${id}/users`, { signal }),
+    api.get(`/crm/organizations/${id}/users`, { signal: signal as GenericAbortSignal }),
 
   getOrganizationSubscriptions: (
     id: string,
@@ -341,7 +342,7 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<PaginatedResponse<Subscription>>> =>
     api.get(
       `/crm/organizations/${id}/subscriptions?active_only=${activeOnly}`,
-      { signal }
+      { signal: signal as GenericAbortSignal }
     ),
 
   // ────────────────────────────────────────
@@ -352,45 +353,45 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<DomainResponse>> =>
-    api.get('/crm/domains', { params, signal }),
+    api.get('/crm/domains', { params, signal: signal as GenericAbortSignal }),
 
   createDomain: (
     data: CreateDomainRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.post('/crm/domains', data, { signal }),
+    api.post('/crm/domains', data, { signal: signal as GenericAbortSignal }),
 
   getDomain: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.get(`/crm/domains/${id}`, { signal }),
+    api.get(`/crm/domains/${id}`, { signal: signal as GenericAbortSignal }),
 
   updateDomain: (
     id: string,
     data: UpdateDomainRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.patch(`/crm/domains/${id}`, data, { signal }),
+    api.patch(`/crm/domains/${id}`, data, { signal: signal as GenericAbortSignal }),
 
   deleteDomain: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(`/crm/domains/${id}`, { signal }),
+    api.delete(`/crm/domains/${id}`, { signal: signal as GenericAbortSignal }),
 
   createSubdomain: (
     parentId: string,
     data: CreateDomainRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.post(`/crm/domains/${parentId}/subdomains`, data, { signal }),
+    api.post(`/crm/domains/${parentId}/subdomains`, data, { signal: signal as GenericAbortSignal }),
 
   getOrganizationDomains: (
     organizationId: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<OrganizationDomainsResponse>> =>
-    api.get(`/crm/organizations/${organizationId}/domains`, { signal }),
+    api.get(`/crm/organizations/${organizationId}/domains`, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // User Domain Selection (NEW)
@@ -400,7 +401,7 @@ export const apiHelpers = {
     organizationId: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<OrganizationDomainsResponse>> =>
-    api.get(`/crm/users/domains/${organizationId}`, { signal }),
+    api.get(`/crm/users/domains/${organizationId}`, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Users
@@ -410,22 +411,22 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<User>>> =>
-    api.get('/crm/users', { params, signal }),
+    api.get('/crm/users', { params, signal: signal as GenericAbortSignal }),
 
   createUser: (
     data: CreateUserRequest,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<User>> => api.post('/crm/users', data, { signal }),
+  ): Promise<AxiosResponse<User>> => api.post('/crm/users', data, { signal: signal as GenericAbortSignal }),
 
   getUser: (id: string, signal?: AbortSignal): Promise<AxiosResponse<User>> =>
-    api.get(`/crm/users/${id}`, { signal }),
+    api.get(`/crm/users/${id}`, { signal: signal as GenericAbortSignal }),
 
   updateUser: (
     id: string,
     data: UpdateUserRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
-    api.patch(`/crm/users/${id}`, data, { signal }),
+    api.patch(`/crm/users/${id}`, data, { signal: signal as GenericAbortSignal }),
 
   deleteUser: (
     id: string,
@@ -434,7 +435,7 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<void>> =>
     api.delete(`/crm/users/${id}`, {
       data: reason ? { reason } : undefined,
-      signal,
+      signal: signal as GenericAbortSignal,
     }),
 
   updateUserRole: (
@@ -442,20 +443,20 @@ export const apiHelpers = {
     role: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
-    api.put(`/crm/users/${id}/role`, { role }, { signal }),
+    api.put(`/crm/users/${id}/role`, { role }, { signal: signal as GenericAbortSignal }),
 
   updateUserStatus: (
     id: string,
     status: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
-    api.put(`/crm/users/${id}/status`, { status }, { signal }),
+    api.put(`/crm/users/${id}/status`, { status }, { signal: signal as GenericAbortSignal }),
 
   recordUserLogin: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.post(`/crm/users/${id}/login`, {}, { signal }),
+    api.post(`/crm/users/${id}/login`, {}, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Subscriptions
@@ -465,26 +466,26 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedSubscriptionsResponse>> =>
-    api.get('/crm/subscriptions', { params, signal }),
+    api.get('/crm/subscriptions', { params, signal: signal as GenericAbortSignal }),
 
   createSubscription: (
     data: CreateSubscriptionRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Subscription>> =>
-    api.post('/crm/subscriptions', data, { signal }),
+    api.post('/crm/subscriptions', data, { signal: signal as GenericAbortSignal }),
 
   getSubscription: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Subscription>> =>
-    api.get(`/crm/subscriptions/${id}`, { signal }),
+    api.get(`/crm/subscriptions/${id}`, { signal: signal as GenericAbortSignal }),
 
   updateSubscription: (
     id: string,
     data: UpdateSubscriptionRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Subscription>> =>
-    api.patch(`/crm/subscriptions/${id}`, data, { signal }),
+    api.patch(`/crm/subscriptions/${id}`, data, { signal: signal as GenericAbortSignal }),
 
   deleteSubscription: (
     id: string,
@@ -492,7 +493,7 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
     api.delete(`/crm/subscriptions/${id}${reason ? `?reason=${reason}` : ''}`, {
-      signal,
+      signal: signal as GenericAbortSignal,
     }),
 
   updateSubscriptionStatus: (
@@ -500,14 +501,14 @@ export const apiHelpers = {
     data: SubscriptionStatusRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Subscription>> =>
-    api.put(`/crm/subscriptions/${id}/status`, data, { signal }),
+    api.put(`/crm/subscriptions/${id}/status`, data, { signal: signal as GenericAbortSignal }),
 
   recordUsage: (
     id: string,
     data: UsageEventRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<UsageResponse>> =>
-    api.post(`/crm/subscriptions/${id}/usage`, data, { signal }),
+    api.post(`/crm/subscriptions/${id}/usage`, data, { signal: signal as GenericAbortSignal }),
 
   getUsageSummary: (
     id: string,
@@ -516,7 +517,7 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<UsageSummaryResponse>> =>
     api.get(
       `/crm/subscriptions/${id}/usage/summary?period_days=${periodDays}`,
-      { signal }
+      { signal: signal as GenericAbortSignal }
     ),
 
   checkUsageLimits: (
@@ -524,27 +525,27 @@ export const apiHelpers = {
     data: UsageEventRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<UsageLimitsResponse>> =>
-    api.post(`/crm/subscriptions/${id}/usage/check`, data, { signal }),
+    api.post(`/crm/subscriptions/${id}/usage/check`, data, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Products
   // ────────────────────────────────────────
 
   getProducts: (signal?: AbortSignal): Promise<AxiosResponse<Product[]>> =>
-    api.get('/crm/products', { signal }),
+    api.get('/crm/products', { signal: signal as GenericAbortSignal }),
 
   createProduct: (
     data: CreateProductRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
-    api.post('/crm/products', data, { signal }),
+    api.post('/crm/products', data, { signal: signal as GenericAbortSignal }),
 
   updateProduct: (
     id: string,
     data: UpdateProductRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
-    api.patch(`/crm/products/${id}`, data, { signal }),
+    api.patch(`/crm/products/${id}`, data, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Audit Log
@@ -554,33 +555,33 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<AuditLog>>> =>
-    api.get('/crm/audit_log', { params, signal }),
+    api.get('/crm/audit_log', { params, signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Authentication
   // ────────────────────────────────────────
 
   getMockToken: (signal?: AbortSignal): Promise<AxiosResponse<LoginResponse>> =>
-    api.get('/crm/mock-token', { signal }),
+    api.get('/crm/mock-token', { signal: signal as GenericAbortSignal }),
 
   login: (
     credentials: LoginRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<LoginResponse>> =>
-    api.post('/crm/login', credentials, { signal }),
+    api.post('/crm/login', credentials, { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // Health checks
   // ────────────────────────────────────────
 
   getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
-    axios.get('http://localhost:8081/health', { signal }),
+    axios.get('http://localhost:8081/health', { signal: signal as GenericAbortSignal }),
 
   getStatus: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
-    api.get('/crm/status', { signal }),
+    api.get('/crm/status', { signal: signal as GenericAbortSignal }),
 
   getRoot: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
-    axios.get('http://localhost:8081/', { signal }),
+    axios.get('http://localhost:8081/', { signal: signal as GenericAbortSignal }),
 
   // ────────────────────────────────────────
   // User Roles
@@ -589,7 +590,7 @@ export const apiHelpers = {
   getUserRoles: (
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ roles: string[] }>> =>
-    api.get('/crm/users/user-roles', { signal }),
+    api.get('/crm/users/user-roles', { signal: signal as GenericAbortSignal }),
 };
 
 // Also export for backward compatibility

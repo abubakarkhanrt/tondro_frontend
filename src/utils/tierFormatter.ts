@@ -122,7 +122,7 @@ export function formatTierName(tierName: string): string {
 
   // Check if we have a direct mapping
   if (tierMappings[tierName.toLowerCase()]) {
-    return tierMappings[tierName.toLowerCase()];
+    return tierMappings[tierName.toLowerCase()] ?? '';
   }
 
   // Generic formatting for unknown tiers - remove common product prefixes

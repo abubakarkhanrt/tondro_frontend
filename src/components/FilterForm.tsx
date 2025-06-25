@@ -232,7 +232,7 @@ const FilterForm: React.FC<FilterFormProps> = ({
             type="number"
             value={value}
             onChange={(e) => handleFilterChange(filter.name, e.target.value)}
-            placeholder={filter.placeholder}
+            placeholder={filter.placeholder ?? ""}
             inputProps={{
               min: filter.min,
               max: filter.max,
@@ -259,7 +259,7 @@ const FilterForm: React.FC<FilterFormProps> = ({
                   min: e.target.value,
                 })
               }
-              placeholder={filter.placeholder}
+              placeholder={filter.placeholder ?? ""}
               inputProps={{
                 min: filter.min,
                 max: filter.max,
@@ -282,7 +282,7 @@ const FilterForm: React.FC<FilterFormProps> = ({
                   max: e.target.value,
                 })
               }
-              placeholder={filter.placeholder}
+              placeholder={filter.placeholder ?? ""}
               inputProps={{
                 min: filter.min,
                 max: filter.max,
@@ -303,9 +303,7 @@ const FilterForm: React.FC<FilterFormProps> = ({
             label={filter.label}
             value={value}
             onChange={(e) => handleFilterChange(filter.name, e.target.value)}
-            placeholder={
-              filter.placeholder || `Search ${filter.label.toLowerCase()}...`
-            }
+            placeholder={filter.placeholder ?? `Search ${filter.label.toLowerCase()}...`}
             InputProps={{
               startAdornment: <span style={{ marginRight: 8 }}>🔍</span>,
             }}
@@ -319,7 +317,7 @@ const FilterForm: React.FC<FilterFormProps> = ({
             label={filter.label}
             value={value}
             onChange={(e) => handleFilterChange(filter.name, e.target.value)}
-            placeholder={filter.placeholder}
+            placeholder={filter.placeholder ?? ""}
             data-testid={
               TestIds.filterForm[
                 filter.name as keyof typeof TestIds.filterForm

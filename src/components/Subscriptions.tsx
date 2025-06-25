@@ -60,11 +60,29 @@ import { getButtonProps } from '../utils/buttonStyles';
 
 // Stubs for missing dialog components (replace with real implementations if available)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const CreateSubscriptionDialog = (_props: unknown) => <></>;
+const CreateSubscriptionDialog = (_props: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (formData: CreateSubscriptionRequest) => Promise<void>;
+  organizations: Organization[];
+  products: Product[];
+}) => <></>;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const EditSubscriptionDialog = (_props: unknown) => <></>;
+const EditSubscriptionDialog = (_props: {
+  subscription: Subscription;
+  onClose: () => void;
+  onSubmit: (formData: UpdateSubscriptionRequest) => Promise<void>;
+  organizations: Organization[];
+  products: Product[];
+}) => <></>;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ViewSubscriptionDialog = (_props: unknown) => <></>;
+const ViewSubscriptionDialog = (_props: {
+  subscription: Subscription;
+  onClose: () => void;
+  onUpdate: () => Promise<void>;
+  organizations: Organization[];
+  products: Product[];
+}) => <></>;
 
 // ────────────────────────────────────────
 // Type Definitions
