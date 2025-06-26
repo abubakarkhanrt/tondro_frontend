@@ -233,10 +233,29 @@ export const TestIds = {
     page: 'transcripts-page',
     fileInput: 'transcripts-file-input',
     browseButton: 'transcripts-browse-button',
-    formatSelect: 'transcripts-format-select',
     submitButton: 'transcripts-submit-button',
     clearButton: 'transcripts-clear-button',
     responseDisplay: 'transcripts-response-display',
+    
+    // Processing Information
+    processingInfo: {
+      container: 'transcripts-processing-info',
+      jobId: 'transcripts-job-id',
+      processingTime: 'transcripts-processing-time',
+      firstPassConfidence: 'transcripts-first-pass-confidence',
+      finalPassConfidence: 'transcripts-final-pass-confidence',
+    },
+    
+    // Analysis Results
+    analysisResults: {
+      container: 'transcripts-analysis-results',
+      firstPassContainer: 'transcripts-first-pass-container',
+      finalPassContainer: 'transcripts-final-pass-container',
+      documentInfoTable: 'transcripts-document-info-table',
+      studentInfoTable: 'transcripts-student-info-table',
+      academicSummaryTable: 'transcripts-academic-summary-table',
+      dynamicTable: (passType: string, sectionKey: string) => `transcripts-table-${passType}-${sectionKey}`,
+    },
   },
 
   // Products

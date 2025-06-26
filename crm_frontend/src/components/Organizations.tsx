@@ -4,7 +4,7 @@
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -378,6 +378,10 @@ const Organizations: React.FC = () => {
                 placeholder="Search organizations..."
                 inputRef={searchInputRef}
                 data-testid={TestIds.filterForm.search}
+                inputProps={{
+                  'data-testid': TestIds.filterForm.search,
+                  'aria-label': 'Search organizations input'
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -809,6 +813,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 fullWidth
                 placeholder="e.g., 2024-01-01"
                 data-testid={TestIds.organizations.subscriptionForm.endDate(index)}
+                inputProps={{
+                  'data-testid': TestIds.organizations.subscriptionForm.endDate(index),
+                  'aria-label': 'Subscription end date input'
+                }}
               />
             </Grid>
             
@@ -993,6 +1001,10 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             error={!!errors.tenantName}
             helperText={errors.tenantName}
             data-testid={TestIds.organizations.createDialog.tenantName}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.tenantName,
+              'aria-label': 'Tenant name input'
+            }}
           />
           <TextField
             label="Organization Domain"
@@ -1008,6 +1020,10 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               'Enter a unique domain name for the organization'
             }
             data-testid={TestIds.organizations.createDialog.organizationDomain}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.organizationDomain,
+              'aria-label': 'Organization domain input'
+            }}
           />
           <TextField
             label="Initial Admin Email"
@@ -1020,6 +1036,10 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             error={!!errors.initialAdminEmail}
             helperText={errors.initialAdminEmail}
             data-testid={TestIds.organizations.createDialog.adminEmail}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.adminEmail,
+              'aria-label': 'Admin email input'
+            }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Initial Status</InputLabel>
@@ -1414,6 +1434,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             margin="normal"
             required
             data-testid={TestIds.organizations.editDialog.tenantName}
+            inputProps={{
+              'data-testid': TestIds.organizations.editDialog.tenantName,
+              'aria-label': 'Tenant name input'
+            }}
           />
           <TextField
             fullWidth
@@ -1425,6 +1449,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             margin="normal"
             required
             data-testid={TestIds.organizations.editDialog.organizationDomain}
+            inputProps={{
+              'data-testid': TestIds.organizations.editDialog.organizationDomain,
+              'aria-label': 'Organization domain input'
+            }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>

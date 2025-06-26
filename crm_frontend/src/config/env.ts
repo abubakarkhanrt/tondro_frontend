@@ -4,7 +4,7 @@
  * Description: Environment configuration for TondroAI CRM Next.js app
  * Author: Muhammad Abubakar Khan
  * Created: 19-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -14,8 +14,9 @@
 
 export const ENV_CONFIG = {
   // API Configuration
+  //API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'https://8080-tondroai-rolus.cluster-sjj3zsn3ffchivwccxsgsswqek.cloudworkstations.dev/api',
   API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:8081/api',
-  API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_TIMEOUT || process.env.REACT_APP_TIMEOUT || '5000'),
+  API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_TIMEOUT || process.env.REACT_APP_TIMEOUT || '10000'),
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -36,7 +37,7 @@ export const ENV_CONFIG = {
 
   // Default Values
   DEFAULT_PAGE_SIZE: 10,
-  DEFAULT_TIMEOUT: 5000,
+  DEFAULT_TIMEOUT: 10000,
 } as const;
 
 // ────────────────────────────────────────

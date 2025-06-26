@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -555,6 +555,54 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ roles: string[] }>> =>
     api.get('/crm/users/user-roles', { signal }),
+
+  // ────────────────────────────────────────
+  // Transcript Analysis
+  // ────────────────────────────────────────
+
+  analyzeTranscript: (
+    formData: FormData,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{
+    success: boolean;
+    data?: {
+      job_id: string;
+      file_info: {
+        filename: string;
+        file_size: number;
+        file_type: string;
+        uploaded_at: string;
+        processing_started_at: string;
+        processing_completed_at: string;
+        total_processing_time_seconds: number;
+      };
+      analysis_results: {
+        first_pass: any;
+        final_pass: any;
+      };
+      processing_metadata: {
+        first_pass_confidence: number;
+        final_pass_confidence: number;
+        improvement_score: number;
+        processing_warnings: string[];
+        extraction_quality_score: number;
+      };
+    };
+    error?: {
+      code: string;
+      message: string;
+      details?: Record<string, any>;
+    };
+  }>> => {
+    // Override Content-Type for multipart form data
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      signal,
+    };
+    return api.post('/crm/cv/analyze', formData, config);
+  },
 };
 
 // Also export for backward compatibility

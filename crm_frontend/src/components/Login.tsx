@@ -4,7 +4,7 @@
  * Description: Authentication component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -140,6 +140,10 @@ const Login: React.FC = () => {
               disabled={loading}
               autoComplete="username"
               data-testid={TestIds.login.username}
+              inputProps={{
+                'data-testid': TestIds.login.username,
+                'aria-label': 'Username or Email input'
+              }}
             />
             <TextField
               fullWidth
@@ -153,6 +157,10 @@ const Login: React.FC = () => {
               disabled={loading}
               autoComplete="current-password"
               data-testid={TestIds.login.password}
+              inputProps={{
+                'data-testid': TestIds.login.password,
+                'aria-label': 'Password input'
+              }}
             />
             <Button
               type="submit"

@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -648,6 +648,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
               placeholder="Search users by email or name..."
               inputRef={searchInputRef}
               data-testid={TestIds.filterForm.search}
+              inputProps={{
+                'data-testid': TestIds.filterForm.search,
+                'aria-label': 'Search users input'
+              }}
             />
           </Grid>
         </Grid>
@@ -1066,6 +1070,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             error={!!errors.email}
             helperText={errors.email}
             data-testid={TestIds.users.createDialog.email}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.email,
+              'aria-label': 'User email input'
+            }}
           />
 
           <TextField
@@ -1075,6 +1083,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             value={formData.first_name}
             onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
             data-testid={TestIds.users.createDialog.firstName}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.firstName,
+              'aria-label': 'User first name input'
+            }}
           />
 
           <TextField
@@ -1084,6 +1096,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             value={formData.last_name}
             onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
             data-testid={TestIds.users.createDialog.lastName}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.lastName,
+              'aria-label': 'User last name input'
+            }}
           />
 
           <FormControl fullWidth margin="normal" required>
@@ -1393,6 +1409,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             margin="normal"
             required
             data-testid={TestIds.users.editDialog.email}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.email,
+              'aria-label': 'User email input'
+            }}
           />
           <TextField
             fullWidth
@@ -1403,6 +1423,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             }
             margin="normal"
             data-testid={TestIds.users.editDialog.firstName}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.firstName,
+              'aria-label': 'User first name input'
+            }}
           />
           <TextField
             fullWidth
@@ -1413,6 +1437,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             }
             margin="normal"
             data-testid={TestIds.users.editDialog.lastName}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.lastName,
+              'aria-label': 'User last name input'
+            }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Role</InputLabel>
