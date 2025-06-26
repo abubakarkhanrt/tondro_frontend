@@ -394,6 +394,10 @@ const Organizations: React.FC = () => {
                   }
                   label="Status"
                   data-testid={TestIds.filterForm.status}
+                  inputProps={{
+                    'data-testid': TestIds.filterForm.status,
+                    'aria-label': 'Status filter'
+                  }}
                 >
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="Active">Active</MenuItem>
@@ -771,6 +775,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   }
                   label="Product"
                   data-testid={TestIds.organizations.subscriptionForm.productSelect(index)}
+                  inputProps={{
+                    'data-testid': TestIds.organizations.subscriptionForm.productSelect(index),
+                    'aria-label': 'Product selection'
+                  }}
                 >
                   {products.map((product) => (
                     <MenuItem key={product.id} value={product.id}>
@@ -792,6 +800,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   label="Tier"
                   disabled={!subscription.product_id}
                   data-testid={TestIds.organizations.subscriptionForm.tierSelect(index)}
+                  inputProps={{
+                    'data-testid': TestIds.organizations.subscriptionForm.tierSelect(index),
+                    'aria-label': 'Tier selection'
+                  }}
                 >
                   {getTierOptions(subscription.product_id).map((tier) => (
                     <MenuItem key={tier} value={tier}>
@@ -1048,6 +1060,10 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               onChange={(e) => handleChange('initialStatus', e.target.value)}
               label="Initial Status"
               data-testid={TestIds.organizations.createDialog.status}
+              inputProps={{
+                'data-testid': TestIds.organizations.createDialog.status,
+                'aria-label': 'Initial status selection'
+              }}
             >
               <MenuItem value="Active">Active</MenuItem>
               <MenuItem value="Suspended">Suspended</MenuItem>
@@ -1463,6 +1479,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
               }
               label="Status"
               data-testid={TestIds.organizations.editDialog.status}
+              inputProps={{
+                'data-testid': TestIds.organizations.editDialog.status,
+                'aria-label': 'Status selection'
+              }}
             >
               <MenuItem value="Active">Active</MenuItem>
               <MenuItem value="Suspended">Suspended</MenuItem>

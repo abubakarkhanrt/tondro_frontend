@@ -595,6 +595,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('organization_id', e.target.value)}
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
+                inputProps={{
+                  'data-testid': TestIds.filterForm.organization,
+                  'aria-label': 'Organization filter'
+                }}
               >
                 <MenuItem value="">All Organizations</MenuItem>
                 {organizations.map((org) => (
@@ -613,6 +617,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('role', e.target.value as string)}
                 label="Role"
                 data-testid={TestIds.filterForm.role}
+                inputProps={{
+                  'data-testid': TestIds.filterForm.role,
+                  'aria-label': 'Role filter'
+                }}
               >
                 <MenuItem value="">All</MenuItem>
                 {userRoles.map((role) => (
@@ -631,6 +639,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('status', e.target.value as string)}
                 label="Status"
                 data-testid={TestIds.filterForm.status}
+                inputProps={{
+                  'data-testid': TestIds.filterForm.status,
+                  'aria-label': 'Status filter'
+                }}
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="active">Active</MenuItem>
@@ -992,6 +1004,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               }
               label="Organization"
               data-testid={TestIds.users.createDialog.organization}
+              inputProps={{
+                'data-testid': TestIds.users.createDialog.organization,
+                'aria-label': 'Organization selection'
+              }}
             >
               {organizations.map((org) => (
                 <MenuItem key={org.organizationId} value={org.organizationId}>
@@ -1014,6 +1030,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               label="Domain"
               disabled={!formData.organization_id || domainsLoading}
               data-testid={TestIds.users.createDialog.domain}
+              inputProps={{
+                'data-testid': TestIds.users.createDialog.domain,
+                'aria-label': 'Domain selection'
+              }}
             >
               {domainsLoading ? (
                 <MenuItem disabled>
@@ -1109,6 +1129,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
               label="Role"
               data-testid={TestIds.users.createDialog.role}
+              inputProps={{
+                'data-testid': TestIds.users.createDialog.role,
+                'aria-label': 'Role selection'
+              }}
             >
               {availableRoles.map((role) => (
                 <MenuItem key={role} value={role}>
@@ -1351,6 +1375,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               }
               label="Organization"
               data-testid={TestIds.users.editDialog.organization}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.organization,
+                'aria-label': 'Organization selection'
+              }}
             >
               {organizations.map((org) => (
                 <MenuItem key={org.organizationId} value={org.organizationId}>
@@ -1371,6 +1399,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               label="Domain"
               disabled={availableDomains.length === 0}
               data-testid={TestIds.users.editDialog.domain}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.domain,
+                'aria-label': 'Domain selection'
+              }}
             >
               {availableDomains.map((domain) => (
                 <MenuItem key={domain.id} value={String(domain.id)}>
@@ -1449,6 +1481,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
               label="Role"
               data-testid={TestIds.users.editDialog.role}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.role,
+                'aria-label': 'Role selection'
+              }}
             >
               {userRoles.map((role) => (
                 <MenuItem key={role} value={role}>
@@ -1465,6 +1501,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Inactive' | 'Pending' | 'Invited' })}
               label="Status"
               data-testid={TestIds.users.editDialog.status}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.status,
+                'aria-label': 'Status selection'
+              }}
             >
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="inactive">Inactive</MenuItem>              

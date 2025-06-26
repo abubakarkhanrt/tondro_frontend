@@ -146,6 +146,14 @@ const AuditLog: React.FC = () => {
     setPagination((prev) => ({ ...prev, page: 0 }));
   };
 
+  const handleClearFilters = (): void => {
+    setFilters({
+      entity_type: '',
+      action: '',
+    });
+    setPagination((prev) => ({ ...prev, page: 0 }));
+  };
+
   const handlePageChange = (_event: unknown, newPage: number): void => {
     setPagination((prev) => ({ ...prev, page: newPage }));
   };
@@ -213,9 +221,24 @@ const AuditLog: React.FC = () => {
   const FilterSection: React.FC = () => (
     <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Filters
-        </Typography>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Typography variant="h6" gutterBottom>
+            Filters
+          </Typography>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleClearFilters}
+            data-testid={TestIds.filterForm.clearButton}
+          >
+            Clear
+          </Button>
+        </Box>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
@@ -233,6 +256,7 @@ const AuditLog: React.FC = () => {
                 <MenuItem value="user">User</MenuItem>
                 <MenuItem value="subscription">Subscription</MenuItem>
                 <MenuItem value="product">Product</MenuItem>
+                <MenuItem value="cv_analysis">CV Analysis</MenuItem>
               </Select>
             </FormControl>
           </Grid>

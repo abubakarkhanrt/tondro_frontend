@@ -127,8 +127,8 @@ export const TestIds = {
       cancel: 'organizations-edit-cancel',
     },
     
-    // Subscription Form
-    subscriptionForm: {
+  // Subscription Form
+  subscriptionForm: {
       container: 'organizations-subscription-form',
       addButton: 'organizations-subscription-add',
       removeButton: (index: number) => `organizations-subscription-remove-${index}`,
