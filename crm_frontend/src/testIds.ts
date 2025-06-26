@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -202,6 +202,30 @@ export const TestIds = {
     viewUsage: (subId: string) => `subscriptions-view-usage-${subId}`,
     checkLimits: (subId: string) => `subscriptions-check-limits-${subId}`,
     cancel: (subId: string) => `subscriptions-cancel-${subId}`,
+    
+    // Create Dialog
+    createDialog: {
+      container: 'subscriptions-create-dialog',
+      title: 'subscriptions-create-dialog-title',
+      organization: 'subscriptions-create-organization',
+      product: 'subscriptions-create-product',
+      tier: 'subscriptions-create-tier',
+      startDate: 'subscriptions-create-start-date',
+      submit: 'subscriptions-create-submit',
+      cancel: 'subscriptions-create-cancel',
+      error: 'subscriptions-create-error',
+    },
+    
+    // Edit Dialog
+    editDialog: {
+      container: 'subscriptions-edit-dialog',
+      title: 'subscriptions-edit-dialog-title',
+      tier: 'subscriptions-edit-tier',
+      status: 'subscriptions-edit-status',
+      submit: 'subscriptions-edit-submit',
+      cancel: 'subscriptions-edit-cancel',
+      error: 'subscriptions-edit-error',
+    },
   },
 
   // Transcripts
@@ -223,6 +247,34 @@ export const TestIds = {
     viewDetails: (productId: string) => `products-view-details-${productId}`,
     edit: (productId: string) => `products-edit-${productId}`,
     delete: (productId: string) => `products-delete-${productId}`,
+    
+    // Create Dialog
+    createDialog: {
+      container: 'products-create-dialog',
+      title: 'products-create-dialog-title',
+      name: 'products-create-name',
+      description: 'products-create-description',
+      submit: 'products-create-submit',
+      cancel: 'products-create-cancel',
+    },
+    
+    // Edit Dialog
+    editDialog: {
+      container: 'products-edit-dialog',
+      title: 'products-edit-dialog-title',
+      name: 'products-edit-name',
+      description: 'products-edit-description',
+      submit: 'products-edit-submit',
+      cancel: 'products-edit-cancel',
+    },
+    
+    // View Dialog
+    viewDialog: {
+      container: 'products-view-dialog',
+      title: 'products-view-dialog-title',
+      editButton: 'products-view-edit-button',
+      closeButton: 'products-view-close-button',
+    },
   },
 
   // Audit Log
@@ -231,6 +283,13 @@ export const TestIds = {
     table: 'audit-log-table',
     viewDetails: (logId: string) => `audit-log-view-details-${logId}`,
     expandDetails: (logId: string) => `audit-log-expand-details-${logId}`,
+    
+    // View Dialog
+    viewDialog: {
+      container: 'audit-log-view-dialog',
+      title: 'audit-log-view-dialog-title',
+      closeButton: 'audit-log-view-close-button',
+    },
   },
 
   // Common Actions

@@ -4,7 +4,7 @@
  * Description: Audit log management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -249,8 +249,7 @@ const AuditLog: React.FC = () => {
                 <MenuItem value="create">Create</MenuItem>
                 <MenuItem value="update">Update</MenuItem>
                 <MenuItem value="delete">Delete</MenuItem>
-                <MenuItem value="login">Login</MenuItem>
-                <MenuItem value="logout">Logout</MenuItem>
+                <MenuItem value="login">Login</MenuItem>                
               </Select>
             </FormControl>
           </Grid>
@@ -510,8 +509,8 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
   if (!log) return null;
 
   return (
-    <Dialog open={!!log} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Audit Log Details: {detailedLog?.id || log.id}</DialogTitle>
+    <Dialog open={!!log} onClose={onClose} maxWidth="md" fullWidth data-testid={TestIds.auditLog.viewDialog.container}>
+      <DialogTitle data-testid={TestIds.auditLog.viewDialog.title}>Audit Log Details: {detailedLog?.id || log.id}</DialogTitle>
       <DialogContent>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -595,7 +594,7 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose} data-testid={TestIds.auditLog.viewDialog.closeButton}>Close</Button>
       </DialogActions>
     </Dialog>
   );

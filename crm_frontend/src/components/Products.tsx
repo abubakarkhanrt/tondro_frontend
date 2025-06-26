@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -437,8 +437,8 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New Product</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.products.createDialog.container}>
+      <DialogTitle data-testid={TestIds.products.createDialog.title}>Create New Product</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
@@ -449,6 +449,7 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             margin="normal"
             required
             placeholder="Enter product name"
+            data-testid={TestIds.products.createDialog.name}
           />
           <TextField
             fullWidth
@@ -461,12 +462,13 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             multiline
             rows={3}
             placeholder="Enter product description"
+            data-testid={TestIds.products.createDialog.description}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button onClick={onClose} data-testid={TestIds.products.createDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading} data-testid={TestIds.products.createDialog.submit}>
           {loading ? 'Creating...' : 'Create'}
         </Button>
       </DialogActions>
@@ -490,8 +492,8 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
   onEdit,
 }) => {
   return (
-    <Dialog open={!!product} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Product Details: {product?.name}</DialogTitle>
+    <Dialog open={!!product} onClose={onClose} maxWidth="md" fullWidth data-testid={TestIds.products.viewDialog.container}>
+      <DialogTitle data-testid={TestIds.products.viewDialog.title}>Product Details: {product?.name}</DialogTitle>
       <DialogContent>
         {product && (
           <Box sx={{ pt: 1 }}>
@@ -541,8 +543,8 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onEdit}>Edit</Button>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onEdit} data-testid={TestIds.products.viewDialog.editButton}>Edit</Button>
+        <Button onClick={onClose} data-testid={TestIds.products.viewDialog.closeButton}>Close</Button>
       </DialogActions>
     </Dialog>
   );
@@ -586,8 +588,8 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   return (
-    <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Product</DialogTitle>
+    <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.products.editDialog.container}>
+      <DialogTitle data-testid={TestIds.products.editDialog.title}>Edit Product</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
@@ -597,6 +599,7 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             margin="normal"
             required
+            data-testid={TestIds.products.editDialog.name}
           />
           <TextField
             fullWidth
@@ -608,12 +611,13 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             margin="normal"
             multiline
             rows={3}
+            data-testid={TestIds.products.editDialog.description}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button onClick={onClose} data-testid={TestIds.products.editDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading} data-testid={TestIds.products.editDialog.submit}>
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>

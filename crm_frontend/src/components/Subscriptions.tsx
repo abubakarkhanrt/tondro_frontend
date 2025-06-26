@@ -4,7 +4,7 @@
  * Description: Subscriptions management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -145,8 +145,8 @@ const CreateSubscriptionDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Create New Subscription</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth data-testid={TestIds.subscriptions.createDialog.container}>
+      <DialogTitle data-testid={TestIds.subscriptions.createDialog.title}>Create New Subscription</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
@@ -157,6 +157,7 @@ const CreateSubscriptionDialog = ({
                   value={form.organization_id || ''}
                   onChange={(e) => handleChange('organization_id', Number(e.target.value))}
                   label="Organization *"
+                  data-testid={TestIds.subscriptions.createDialog.organization}
                 >
                   {organizations.map((org) => (
                     <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)}>
@@ -174,6 +175,7 @@ const CreateSubscriptionDialog = ({
                   value={form.product_id}
                   onChange={(e) => handleChange('product_id', e.target.value)}
                   label="Product *"
+                  data-testid={TestIds.subscriptions.createDialog.product}
                 >
                   {products.map((product) => (
                     <MenuItem key={product.id} value={product.id}>
@@ -192,6 +194,7 @@ const CreateSubscriptionDialog = ({
                   onChange={(e) => handleChange('tier_name', e.target.value)}
                   label="Tier *"
                   disabled={!form.product_id}
+                  data-testid={TestIds.subscriptions.createDialog.tier}
                 >
                   {tierOptions.map((tier) => (
                     <MenuItem key={tier} value={tier}>
@@ -212,17 +215,18 @@ const CreateSubscriptionDialog = ({
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
                 required
+                data-testid={TestIds.subscriptions.createDialog.startDate}
               />
             </Grid>
           </Grid>
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+            <Alert severity="error" sx={{ mt: 2 }} data-testid={TestIds.subscriptions.createDialog.error}>{error}</Alert>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={submitting}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={submitting}>
+        <Button onClick={handleClose} disabled={submitting} data-testid={TestIds.subscriptions.createDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={submitting} data-testid={TestIds.subscriptions.createDialog.submit}>
           {submitting ? 'Creating...' : 'Create Subscription'}
         </Button>
       </DialogActions>
@@ -268,8 +272,8 @@ const EditSubscriptionDialog = ({
   };
 
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Subscription</DialogTitle>
+    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.subscriptions.editDialog.container}>
+      <DialogTitle data-testid={TestIds.subscriptions.editDialog.title}>Edit Subscription</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
@@ -280,6 +284,7 @@ const EditSubscriptionDialog = ({
                   value={form.tier_name}
                   onChange={(e) => handleChange('tier_name', e.target.value)}
                   label="Tier"
+                  data-testid={TestIds.subscriptions.editDialog.tier}
                 >
                   {tierOptions.map((tier) => (
                     <MenuItem key={tier} value={tier}>
@@ -296,6 +301,7 @@ const EditSubscriptionDialog = ({
                   value={form.status}
                   onChange={(e) => handleChange('status', e.target.value)}
                   label="Status"
+                  data-testid={TestIds.subscriptions.editDialog.status}
                 >
                   <MenuItem value="active">Active</MenuItem>
                   <MenuItem value="inactive">Inactive</MenuItem>                  
@@ -304,13 +310,13 @@ const EditSubscriptionDialog = ({
             </Grid>
           </Grid>
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+            <Alert severity="error" sx={{ mt: 2 }} data-testid={TestIds.subscriptions.editDialog.error}>{error}</Alert>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={submitting}>
+        <Button onClick={onClose} disabled={submitting} data-testid={TestIds.subscriptions.editDialog.cancel}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={submitting} data-testid={TestIds.subscriptions.editDialog.submit}>
           {submitting ? 'Saving...' : 'Save'}
         </Button>
       </DialogActions>
