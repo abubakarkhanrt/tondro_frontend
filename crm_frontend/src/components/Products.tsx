@@ -450,6 +450,10 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             required
             placeholder="Enter product name"
             data-testid={TestIds.products.createDialog.name}
+            inputProps={{
+              'data-testid': TestIds.products.createDialog.name,
+              'aria-label': 'Product name input'
+            }}
           />
           <TextField
             fullWidth
@@ -463,6 +467,10 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             rows={3}
             placeholder="Enter product description"
             data-testid={TestIds.products.createDialog.description}
+            inputProps={{
+              'data-testid': TestIds.products.createDialog.description,
+              'aria-label': 'Product description input'
+            }}
           />
         </Box>
       </DialogContent>
@@ -600,6 +608,10 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             margin="normal"
             required
             data-testid={TestIds.products.editDialog.name}
+            inputProps={{
+              'data-testid': TestIds.products.editDialog.name,
+              'aria-label': 'Product name input'
+            }}
           />
           <TextField
             fullWidth
@@ -612,6 +624,10 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             multiline
             rows={3}
             data-testid={TestIds.products.editDialog.description}
+            inputProps={{
+              'data-testid': TestIds.products.editDialog.description,
+              'aria-label': 'Product description input'
+            }}
           />
         </Box>
       </DialogContent>

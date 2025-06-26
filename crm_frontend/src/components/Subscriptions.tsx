@@ -216,6 +216,10 @@ const CreateSubscriptionDialog = ({
                 InputLabelProps={{ shrink: true }}
                 required
                 data-testid={TestIds.subscriptions.createDialog.startDate}
+                inputProps={{
+                  'data-testid': TestIds.subscriptions.createDialog.startDate,
+                  'aria-label': 'Subscription start date input'
+                }}
               />
             </Grid>
           </Grid>
