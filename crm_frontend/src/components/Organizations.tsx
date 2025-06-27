@@ -392,14 +392,13 @@ const Organizations: React.FC = () => {
                   onChange={(e) =>
                     onFiltersChange({ ...filters, status: e.target.value })
                   }
-                  label="Status"
-                  data-testid={TestIds.filterForm.status}
+                  label="Status"                  
                   inputProps={{
                     'data-testid': TestIds.filterForm.status,
                     'aria-label': 'Status filter'
                   }}
                 >
-                  <MenuItem value="">All</MenuItem>
+                  <MenuItem data-testid={TestIds.filterForm.status} value="">All</MenuItem>
                   <MenuItem value="Active">Active</MenuItem>
                   <MenuItem value="Suspended">Suspended</MenuItem>
                   <MenuItem value="Trial">Trial</MenuItem>
@@ -706,9 +705,9 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     // Generate tier options based on product name
     const productName = product.name.toLowerCase();
     if (productName.includes('transcript')) {
-      return ['transcripts_tier_1', 'transcripts_tier_2', 'transcripts_tier_3'];
+      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
     } else if (productName.includes('admission')) {
-      return ['admissions_tier_1', 'admissions_tier_2', 'admissions_tier_3'];
+      return ['admissions_200', 'admissions_500', 'admissions_1000'];
     }
     return ['tier_1', 'tier_2', 'tier_3'];
   };

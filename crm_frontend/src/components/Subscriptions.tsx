@@ -56,7 +56,7 @@ import axios from 'axios';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
-import { formatTierName } from '../utils/tierFormatter';
+import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { useProductTiers } from '../hooks/useProductTiers';
 
 // Stub for current user ID (replace with real user context if available)
@@ -561,9 +561,9 @@ const Subscriptions: React.FC = () => {
 
     const productName = product.name.toLowerCase();
     if (productName.includes('transcript')) {
-      return ['transcripts_tier_1', 'transcripts_tier_2', 'transcripts_tier_3'];
+      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
     } else if (productName.includes('admission')) {
-      return ['admissions_tier_1', 'admissions_tier_2', 'admissions_tier_3'];
+      return ['admissions_200', 'admissions_500', 'admissions_1000'];
     }
     return ['tier_1', 'tier_2', 'tier_3'];
   };
@@ -601,15 +601,6 @@ const Subscriptions: React.FC = () => {
       pageSize: newPageSize,
       page: 0, // Reset to first page
     }));
-  };
-
-  const getTierColor = (
-    tier: string
-  ): 'primary' | 'secondary' | 'success' | 'info' | 'warning' => {
-    if (tier.includes('tier_1')) return 'success';
-    if (tier.includes('tier_2')) return 'info';
-    if (tier.includes('tier_3')) return 'warning';
-    return 'primary';
   };
 
   const getOrganizationIdString = (numericId: number): string => {

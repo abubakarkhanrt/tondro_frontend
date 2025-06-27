@@ -160,13 +160,13 @@ const Users: React.FC = () => {
     severity: 'success',
   });
 
+  // This runs only once when component mounts
   useEffect(() => {
-    // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
       const token = localStorage.getItem('jwt_token');
       if (token) {
         fetchUsers();
-        fetchOrganizations();
+        fetchOrganizations(); // Only called once
       } else {
         setError('No authentication token found. Please login again.');
         setLoading(false);
@@ -179,6 +179,14 @@ const Users: React.FC = () => {
         abortController.abort();
       }
     };
+  }, []); // Empty dependency array
+
+  // This runs only when filters/pagination change
+  useEffect(() => {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      fetchUsers(); // Only fetch users, not organizations
+    }
   }, [filters, pagination.page, pagination.pageSize]);
 
   const fetchUsers = async (): Promise<void> => {
@@ -298,11 +306,17 @@ const Users: React.FC = () => {
     try {
       const response = await apiHelpers.getOrganizations();
       const orgs = response.data.organizations || [];
-      setOrganizations(orgs);
+      
+      // Remove duplicate organizations based on organizationId
+      const uniqueOrgs = orgs.filter((org, index, self) => 
+        index === self.findIndex(o => o.organizationId === org.organizationId)
+      );
+      
+      setOrganizations(uniqueOrgs);
       
       // Fetch domains for each organization
       const domainsData: Record<string, Domain[]> = {};
-      for (const org of orgs) {
+      for (const org of uniqueOrgs) {
         try {
           const domainsResponse = await apiHelpers.getUserDomains(org.organizationId);
           domainsData[org.organizationId] = domainsResponse.data.domains || [];
@@ -600,7 +614,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                   'aria-label': 'Organization filter'
                 }}
               >
-                <MenuItem value="">All Organizations</MenuItem>
+                <MenuItem value="">All Organizations</MenuItem>                
                 {organizations.map((org) => (
                   <MenuItem key={org.organizationId} value={org.organizationId}>
                     {org.tenantName}
