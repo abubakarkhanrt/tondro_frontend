@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 27-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -468,6 +468,7 @@ const Users: React.FC = () => {
         handleDeleteUser={handleDeleteUser}
         setSelectedUser={setSelectedUser}
         setCreateDialogOpen={setCreateDialogOpen}
+        setEditMode={setEditMode}
       />
 
       <CreateUserDialog
@@ -609,14 +610,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('organization_id', e.target.value)}
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
-                inputProps={{
-                  'data-testid': TestIds.filterForm.organization,
+                inputProps={{                  
                   'aria-label': 'Organization filter'
                 }}
               >
-                <MenuItem value="">All Organizations</MenuItem>                
+                <MenuItem value="" data-testid={TestIds.filterForm.organizationOptionAll}>All Organizations</MenuItem>
                 {organizations.map((org) => (
-                  <MenuItem key={org.organizationId} value={org.organizationId}>
+                  <MenuItem key={org.organizationId} value={org.organizationId} data-testid={TestIds.filterForm.organizationOption(org.organizationId)}>
                     {org.tenantName}
                   </MenuItem>
                 ))}
@@ -631,14 +631,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('role', e.target.value as string)}
                 label="Role"
                 data-testid={TestIds.filterForm.role}
-                inputProps={{
-                  'data-testid': TestIds.filterForm.role,
+                inputProps={{                  
                   'aria-label': 'Role filter'
                 }}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.roleOptionAll}>All</MenuItem>
                 {userRoles.map((role) => (
-                  <MenuItem key={role} value={role}>
+                  <MenuItem key={role} value={role} data-testid={TestIds.filterForm.roleOption(role)} >
                     {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </MenuItem>
                 ))}
@@ -653,15 +652,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({ filters, organizations, u
                 onChange={e => handleFilterChange('status', e.target.value as string)}
                 label="Status"
                 data-testid={TestIds.filterForm.status}
-                inputProps={{
-                  'data-testid': TestIds.filterForm.status,
+                inputProps={{                  
                   'aria-label': 'Status filter'
                 }}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="invited">Invited</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.statusOptionAll}>All</MenuItem>
+                <MenuItem value="active" data-testid={TestIds.filterForm.statusOption('active')}>Active</MenuItem>
+                <MenuItem value="inactive" data-testid={TestIds.filterForm.statusOption('inactive')}>Inactive</MenuItem>
+                <MenuItem value="invited" data-testid={TestIds.filterForm.statusOption('invited')}>Invited</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -708,6 +706,7 @@ interface UsersTableProps {
   handleDeleteUser: (id: string) => void;
   setSelectedUser: (user: User) => void;
   setCreateDialogOpen: (open: boolean) => void;
+  setEditMode: (edit: boolean) => void;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
@@ -722,6 +721,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   handleDeleteUser,
   setSelectedUser,
   setCreateDialogOpen,
+  setEditMode
 }) => {
   return (
     <Card data-testid={TestIds.users.table}>
@@ -814,6 +814,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                             size="small"
                             onClick={() => {
                               setSelectedUser(user);
+                              setEditMode(false);
                             }}
                             data-testid={TestIds.users.viewDetails(user.id)}
                           >
@@ -823,6 +824,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                             size="small"
                             onClick={() => {
                               setSelectedUser(user);
+                              setEditMode(true);
                             }}
                             data-testid={TestIds.users.edit(user.id)}
                           >
@@ -1018,15 +1020,17 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               }
               label="Organization"
               data-testid={TestIds.users.createDialog.organization}
-              inputProps={{
-                'data-testid': TestIds.users.createDialog.organization,
+              inputProps={{                  
                 'aria-label': 'Organization selection'
               }}
             >
               {organizations.map((org) => (
-                <MenuItem key={org.organizationId} value={org.organizationId}>
-                  {org.tenantName}
+                
+                <MenuItem key={org.organizationId} value={org.organizationId} data-testid={TestIds.users.createDialog.organizationOption(org.organizationId)}>
+                {org.tenantName}
                 </MenuItem>
+                  
+                
               ))}
             </Select>
             {errors.organization_id && (
@@ -1044,8 +1048,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               label="Domain"
               disabled={!formData.organization_id || domainsLoading}
               data-testid={TestIds.users.createDialog.domain}
-              inputProps={{
-                'data-testid': TestIds.users.createDialog.domain,
+              inputProps={{                  
                 'aria-label': 'Domain selection'
               }}
             >
@@ -1059,20 +1062,15 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               ) : domains.length === 0 ? (
                 <MenuItem disabled>No domains available</MenuItem>
               ) : (
-                domains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id}>
+                domains.map((domain) => (                  
+                  <MenuItem key={domain.id} value={domain.id} data-testid={TestIds.users.createDialog.domainOption(domain.id)}  >
                     {(() => {
-                      // Get the domain name from either domain_name or name field
-                      
                       let domainName = '';
                       if (domain.domain_name && typeof domain.domain_name === 'string') {
                         domainName = domain.domain_name;
                       } else if (domain.name && typeof domain.name === 'string') {
                         domainName = domain.name;
                       }
-                      // log the domain name
-                      console.log('Domain name:', domainName);
-                      // Simple domain name cleaning - just trim whitespace
                       const cleanDomainName = domainName.trim();
                       
                       return (
@@ -1143,13 +1141,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' | 'viewer' | 'tenant_admin' | 'tenant_support' | 'tenant_user' })}
               label="Role"
               data-testid={TestIds.users.createDialog.role}
-              inputProps={{
-                'data-testid': TestIds.users.createDialog.role,
+              inputProps={{                  
                 'aria-label': 'Role selection'
               }}
             >
               {availableRoles.map((role) => (
-                <MenuItem key={role} value={role}>
+                <MenuItem key={role} value={role} data-testid={TestIds.users.createDialog.roleOption(role)}>
                   {getRoleDisplayName(role)}
                 </MenuItem>
               ))}
@@ -1394,10 +1391,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 'aria-label': 'Organization selection'
               }}
             >
-              {organizations.map((org) => (
-                <MenuItem key={org.organizationId} value={org.organizationId}>
-                  {org.tenantName}
+              {organizations.map((org) => (                
+                <MenuItem key={org.organizationId} value={org.organizationId} data-testid={TestIds.users.editDialog.organizationOption(org.organizationId)}>
+                {org.tenantName}
                 </MenuItem>
+                
               ))}
             </Select>
           </FormControl>
@@ -1501,7 +1499,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               }}
             >
               {userRoles.map((role) => (
-                <MenuItem key={role} value={role}>
+                <MenuItem key={role} value={role} data-testid={TestIds.users.editDialog.roleOption(role)}>
                   {getRoleDisplayName(role)}
                 </MenuItem>
               ))}
@@ -1520,9 +1518,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 'aria-label': 'Status selection'
               }}
             >
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>              
-              <MenuItem value="invited">Invited</MenuItem>
+              <MenuItem value="active" data-testid={TestIds.users.editDialog.statusOption('active')}>Active</MenuItem>
+              <MenuItem value="inactive" data-testid={TestIds.users.editDialog.statusOption('inactive')}>Inactive</MenuItem>              
+              <MenuItem value="invited" data-testid={TestIds.users.editDialog.statusOption('invited')}>Invited</MenuItem>
             </Select>
           </FormControl>
         </Box>

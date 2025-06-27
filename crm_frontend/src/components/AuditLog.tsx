@@ -4,7 +4,7 @@
  * Description: Audit log management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 27-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -251,12 +251,12 @@ const AuditLog: React.FC = () => {
                 label="Entity Type"
                 data-testid={TestIds.filterForm.entityType}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="organization">Organization</MenuItem>
-                <MenuItem value="user">User</MenuItem>
-                <MenuItem value="subscription">Subscription</MenuItem>
-                <MenuItem value="product">Product</MenuItem>
-                <MenuItem value="cv_analysis">CV Analysis</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.entityTypeOptionAll}>All</MenuItem>
+                <MenuItem value="organization" data-testid={TestIds.filterForm.entityTypeOption('organization')}>Organization</MenuItem>
+                <MenuItem value="user" data-testid={TestIds.filterForm.entityTypeOption('user')}>User</MenuItem>
+                <MenuItem value="subscription" data-testid={TestIds.filterForm.entityTypeOption('subscription')}>Subscription</MenuItem>
+                <MenuItem value="product" data-testid={TestIds.filterForm.entityTypeOption('product')}>Product</MenuItem>
+                <MenuItem value="cv_analysis" data-testid={TestIds.filterForm.entityTypeOption('cv_analysis')}>CV Analysis</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -269,11 +269,11 @@ const AuditLog: React.FC = () => {
                 label="Action"
                 data-testid={TestIds.filterForm.action}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="create">Create</MenuItem>
-                <MenuItem value="update">Update</MenuItem>
-                <MenuItem value="delete">Delete</MenuItem>
-                <MenuItem value="login">Login</MenuItem>                
+                <MenuItem value="" data-testid={TestIds.filterForm.actionOptionAll}>All</MenuItem>
+                <MenuItem value="create" data-testid={TestIds.filterForm.actionOption('create')}>Create</MenuItem>
+                <MenuItem value="update" data-testid={TestIds.filterForm.actionOption('update')}>Update</MenuItem>
+                <MenuItem value="delete" data-testid={TestIds.filterForm.actionOption('delete')}>Delete</MenuItem>
+                <MenuItem value="login" data-testid={TestIds.filterForm.actionOption('login')}>Login</MenuItem>
               </Select>
             </FormControl>
           </Grid>

@@ -4,7 +4,7 @@
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 27-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -392,17 +392,17 @@ const Organizations: React.FC = () => {
                   onChange={(e) =>
                     onFiltersChange({ ...filters, status: e.target.value })
                   }
-                  label="Status"                  
-                  inputProps={{
-                    'data-testid': TestIds.filterForm.status,
-                    'aria-label': 'Status filter'
+                  label="Status"
+                  data-testid={TestIds.filterForm.statusTrigger}  
+                  inputProps={{                    
+                    'aria-label': 'Status filter',
                   }}
                 >
-                  <MenuItem data-testid={TestIds.filterForm.status} value="">All</MenuItem>
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="Suspended">Suspended</MenuItem>
-                  <MenuItem value="Trial">Trial</MenuItem>
-                  <MenuItem value="Inactive">Inactive</MenuItem>
+                  <MenuItem value="" data-testid={TestIds.filterForm.statusOptionAll}>All</MenuItem>
+                  <MenuItem value="Active" data-testid={TestIds.filterForm.statusOption('Active')}>Active</MenuItem>
+                  <MenuItem value="Suspended" data-testid={TestIds.filterForm.statusOption('Suspended')}>Suspended</MenuItem>
+                  <MenuItem value="Trial" data-testid={TestIds.filterForm.statusOption('Trial')}>Trial</MenuItem>
+                  <MenuItem value="Inactive" data-testid={TestIds.filterForm.statusOption('Inactive')}>Inactive</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -774,13 +774,16 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   }
                   label="Product"
                   data-testid={TestIds.organizations.subscriptionForm.productSelect(index)}
-                  inputProps={{
-                    'data-testid': TestIds.organizations.subscriptionForm.productSelect(index),
+                  inputProps={{                    
                     'aria-label': 'Product selection'
                   }}
                 >
                   {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id}>
+                      <MenuItem
+                        key={product.id}
+                        value={product.id}
+                        data-testid={TestIds.organizations.subscriptionForm.productSelectOption(index, product.id)} // ✅ test ID for each item
+                      >
                       {product.name}
                     </MenuItem>
                   ))}
@@ -799,13 +802,16 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   label="Tier"
                   disabled={!subscription.product_id}
                   data-testid={TestIds.organizations.subscriptionForm.tierSelect(index)}
-                  inputProps={{
-                    'data-testid': TestIds.organizations.subscriptionForm.tierSelect(index),
+                  inputProps={{                    
                     'aria-label': 'Tier selection'
                   }}
                 >
                   {getTierOptions(subscription.product_id).map((tier) => (
-                    <MenuItem key={tier} value={tier}>
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.organizations.subscriptionForm.tierSelectOption(index, tier)} // ✅ Unique per option
+                    >
                       {formatTierName(tier)}
                     </MenuItem>
                   ))}
@@ -1063,11 +1069,11 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
                 'data-testid': TestIds.organizations.createDialog.status,
                 'aria-label': 'Initial status selection'
               }}
-            >
-              <MenuItem value="Active">Active</MenuItem>
-              <MenuItem value="Suspended">Suspended</MenuItem>
-              <MenuItem value="Trial">Trial</MenuItem>
-              <MenuItem value="Inactive">Inactive</MenuItem>
+              >
+              <MenuItem value="Active" data-testid={TestIds.organizations.createDialog.statusOption('Active')}>Active</MenuItem>
+              <MenuItem value="Suspended" data-testid={TestIds.organizations.createDialog.statusOption('Suspended')}>Suspended</MenuItem>
+              <MenuItem value="Trial" data-testid={TestIds.organizations.createDialog.statusOption('Trial')}>Trial</MenuItem>
+              <MenuItem value="Inactive" data-testid={TestIds.organizations.createDialog.statusOption('Inactive')}>Inactive</MenuItem>                       
             </Select>
           </FormControl>
 
@@ -1390,7 +1396,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose} data-testid={TestIds.organizations.viewDialog.closeButton}>Close</Button>
       </DialogActions>
     </Dialog>
   );
@@ -1483,10 +1489,11 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
                 'aria-label': 'Status selection'
               }}
             >
-              <MenuItem value="Active">Active</MenuItem>
-              <MenuItem value="Suspended">Suspended</MenuItem>
-              <MenuItem value="Trial">Trial</MenuItem>
-              <MenuItem value="Inactive">Inactive</MenuItem>
+              <MenuItem value="Active" data-testid={TestIds.organizations.editDialog.statusOption('Active')}>Active</MenuItem>
+              <MenuItem value="Suspended" data-testid={TestIds.organizations.editDialog.statusOption('Suspended')}>Suspended</MenuItem>
+              <MenuItem value="Trial" data-testid={TestIds.organizations.editDialog.statusOption('Trial')}>Trial</MenuItem>
+              <MenuItem value="Inactive" data-testid={TestIds.organizations.editDialog.statusOption('Inactive')}>Inactive</MenuItem>              
+
             </Select>
           </FormControl>
         </Box>

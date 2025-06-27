@@ -4,7 +4,7 @@
  * Description: Subscriptions management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 27-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -160,7 +160,7 @@ const CreateSubscriptionDialog = ({
                   data-testid={TestIds.subscriptions.createDialog.organization}
                 >
                   {organizations.map((org) => (
-                    <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)}>
+                    <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)} data-testid={TestIds.subscriptions.createDialog.organizationOption(org.organizationId)}>
                       {org.tenantName}
                     </MenuItem>
                   ))}
@@ -178,7 +178,7 @@ const CreateSubscriptionDialog = ({
                   data-testid={TestIds.subscriptions.createDialog.product}
                 >
                   {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id}>
+                    <MenuItem key={product.id} value={product.id} data-testid={TestIds.subscriptions.createDialog.productOption(product.id)}>
                       {product.name}
                     </MenuItem>
                   ))}
@@ -197,7 +197,7 @@ const CreateSubscriptionDialog = ({
                   data-testid={TestIds.subscriptions.createDialog.tier}
                 >
                   {tierOptions.map((tier) => (
-                    <MenuItem key={tier} value={tier}>
+                    <MenuItem key={tier} value={tier} data-testid={TestIds.subscriptions.createDialog.tierOption(tier)}>
                       {formatTierName(tier)}
                     </MenuItem>
                   ))}
@@ -291,7 +291,7 @@ const EditSubscriptionDialog = ({
                   data-testid={TestIds.subscriptions.editDialog.tier}
                 >
                   {tierOptions.map((tier) => (
-                    <MenuItem key={tier} value={tier}>
+                    <MenuItem key={tier} value={tier} data-testid={TestIds.subscriptions.editDialog.tierOption(tier)}>
                       {formatTierName(tier)}
                     </MenuItem>
                   ))}
@@ -307,8 +307,8 @@ const EditSubscriptionDialog = ({
                   label="Status"
                   data-testid={TestIds.subscriptions.editDialog.status}
                 >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>                  
+                  <MenuItem value="active" data-testid={TestIds.subscriptions.editDialog.statusOption('active')}>Active</MenuItem>
+                  <MenuItem value="inactive" data-testid={TestIds.subscriptions.editDialog.statusOption('inactive')}>Inactive</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -686,9 +686,9 @@ const Subscriptions: React.FC = () => {
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
               >
-                <MenuItem value="">All Organizations</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.organizationOptionAll}>All Organizations</MenuItem>
                 {organizations.map((org) => (
-                  <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)}>
+                  <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)} data-testid={TestIds.filterForm.organizationOption(org.organizationId)}>
                     {org.tenantName}
                   </MenuItem>
                 ))}
@@ -706,9 +706,9 @@ const Subscriptions: React.FC = () => {
                 label="Product"
                 data-testid={TestIds.filterForm.product}
               >
-                <MenuItem value="">All Products</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.productOptionAll}>All Products</MenuItem>
                 {products.map((product) => (
-                  <MenuItem key={product.id} value={product.id}>
+                  <MenuItem key={product.id} value={product.id} data-testid={TestIds.filterForm.productOption(product.id)}>
                     {product.name}
                   </MenuItem>
                 ))}
@@ -724,9 +724,9 @@ const Subscriptions: React.FC = () => {
                 label="Status"
                 data-testid={TestIds.filterForm.status}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>                
+                <MenuItem value="" data-testid={TestIds.filterForm.statusOptionAll}>All</MenuItem>
+                <MenuItem value="active" data-testid={TestIds.filterForm.statusOption('active')}>Active</MenuItem>
+                <MenuItem value="inactive" data-testid={TestIds.filterForm.statusOption('inactive')}>Inactive</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -742,9 +742,9 @@ const Subscriptions: React.FC = () => {
                 disabled={!filters.product_id}
                 data-testid={TestIds.filterForm.tier}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="" data-testid={TestIds.filterForm.tierOptionAll}>All</MenuItem>
                 {filters.product_id && getTierOptions(filters.product_id).map((tier) => (
-                  <MenuItem key={tier} value={tier}>
+                  <MenuItem key={tier} value={tier} data-testid={TestIds.filterForm.tierOption(tier)}>
                     {formatTierName(tier)}
                   </MenuItem>
                 ))}
@@ -1061,7 +1061,7 @@ const Subscriptions: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose} data-testid={TestIds.subscriptions.viewDialog.closeButton}>Close</Button>
         </DialogActions>
       </Dialog>
     );
