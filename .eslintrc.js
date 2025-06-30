@@ -9,62 +9,22 @@
  */
 
 module.exports = {
-  parser: '@typescript-eslint/parser',
-  parserOptions: {
-    ecmaVersion: 2020,
-    sourceType: 'module',
-    ecmaFeatures: {
-      jsx: true,
-    },
-  },
   extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
-  ],
-  plugins: [
-    'react',
-    'react-hooks',
+    'next/core-web-vitals',
+    'next/typescript',
   ],
   rules: {
-    // React specific rules
-    'react/react-in-jsx-scope': 'off',
-    'react/prop-types': 'off',
-    'react/display-name': 'off',
-    
-    // General rules
-    'no-console': 'warn',
+    'no-console': 'off',
     'prefer-const': 'error',
     'no-var': 'error',
-    
-    // Custom rule for data-testid enforcement
-    'require-testid': 'error',
-  },
-  settings: {
-    react: {
-      version: 'detect',
-    },
+    '@typescript-eslint/no-explicit-any': 'warn',
+    'react-hooks/exhaustive-deps': 'warn',
   },
   env: {
     browser: true,
     es2020: true,
     node: true,
   },
-  ignorePatterns: [
-    'dist/',
-    'build/',
-    'node_modules/',
-    '*.config.js',
-    '*.config.ts',
-  ],
-  overrides: [
-    {
-      files: ['**/*.tsx', '**/*.jsx'],
-      rules: {
-        'require-testid': 'error',
-      },
-    },
-  ],
 };
 
 // ──────────────────────────────────────────────────
