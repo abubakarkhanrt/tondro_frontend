@@ -52,7 +52,7 @@ const Login: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
@@ -142,7 +142,7 @@ const Login: React.FC = () => {
               data-testid={TestIds.login.username}
               inputProps={{
                 'data-testid': TestIds.login.username,
-                'aria-label': 'Username or Email input'
+                'aria-label': 'Username or Email input',
               }}
             />
             <TextField
@@ -159,7 +159,7 @@ const Login: React.FC = () => {
               data-testid={TestIds.login.password}
               inputProps={{
                 'data-testid': TestIds.login.password,
-                'aria-label': 'Password input'
+                'aria-label': 'Password input',
               }}
             />
             <Button

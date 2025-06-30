@@ -66,10 +66,13 @@ export const TestIds = {
     statusTrigger: 'filter-status-select-trigger',
     statusOptionAll: 'filter-status-option-all',
     statusOption: (status: string) => `filter-form-status-option-${status}`,
-    organizationOption: (orgId: string) => `filter-form-organization-option-${orgId}`,
-    productOption: (productId: string) => `filter-form-product-option-${productId}`,
+    organizationOption: (orgId: string) =>
+      `filter-form-organization-option-${orgId}`,
+    productOption: (productId: string) =>
+      `filter-form-product-option-${productId}`,
     tierOption: (tier: string) => `filter-form-tier-option-${tier}`,
-    entityTypeOption: (entityType: string) => `filter-form-entity-type-option-${entityType}`,
+    entityTypeOption: (entityType: string) =>
+      `filter-form-entity-type-option-${entityType}`,
     actionOption: (action: string) => `filter-form-action-option-${action}`,
     entityTypeOptionAll: 'filter-form-entity-type-option-all',
     actionOptionAll: 'filter-form-action-option-all',
@@ -92,7 +95,7 @@ export const TestIds = {
     actionButton: (action: string, rowId: string) =>
       `entity-table-action-${action}-${rowId}`,
   },
- 
+
   // Organizations
   organizations: {
     page: 'organizations-page',
@@ -106,7 +109,7 @@ export const TestIds = {
     viewUsers: (orgId: string) => `organizations-view-users-${orgId}`,
     viewSubscriptions: (orgId: string) =>
       `organizations-view-subscriptions-${orgId}`,
-    
+
     // Create Dialog
     createDialog: {
       container: 'organizations-create-dialog',
@@ -118,9 +121,10 @@ export const TestIds = {
       submit: 'organizations-create-submit',
       cancel: 'organizations-create-cancel',
       error: 'organizations-create-error',
-      statusOption: (status: string) => `organizations-create-dialog-status-option-${status}`,
+      statusOption: (status: string) =>
+        `organizations-create-dialog-status-option-${status}`,
     },
-    
+
     // Edit Dialog
     editDialog: {
       container: 'organizations-edit-dialog',
@@ -130,22 +134,29 @@ export const TestIds = {
       status: 'organizations-edit-status',
       submit: 'organizations-edit-submit',
       cancel: 'organizations-edit-cancel',
-      statusOption: (status: string) => `organizations-edit-dialog-status-option-${status}`,
+      statusOption: (status: string) =>
+        `organizations-edit-dialog-status-option-${status}`,
     },
-    
+
     // Subscription Form
     subscriptionForm: {
       container: 'organizations-subscription-form',
       addButton: 'organizations-subscription-add',
-      removeButton: (index: number) => `organizations-subscription-remove-${index}`,
-      productSelect: (index: number) => `organizations-subscription-product-${index}`,
+      removeButton: (index: number) =>
+        `organizations-subscription-remove-${index}`,
+      productSelect: (index: number) =>
+        `organizations-subscription-product-${index}`,
       tierSelect: (index: number) => `organizations-subscription-tier-${index}`,
-      endDate: (index: number) => `organizations-subscription-end-date-${index}`,
-      subscriptionCard: (index: number) => `organizations-subscription-card-${index}`,
-      productSelectOption: (index: number, productId: string) => `organizations-subscription-product-option-${index}-${productId}`,
-      tierSelectOption: (index: number, tier: string) => `organizations-subscription-tier-option-${index}-${tier}`,
+      endDate: (index: number) =>
+        `organizations-subscription-end-date-${index}`,
+      subscriptionCard: (index: number) =>
+        `organizations-subscription-card-${index}`,
+      productSelectOption: (index: number, productId: string) =>
+        `organizations-subscription-product-option-${index}-${productId}`,
+      tierSelectOption: (index: number, tier: string) =>
+        `organizations-subscription-tier-option-${index}-${tier}`,
     },
-    
+
     // View Dialog
     viewDialog: {
       container: 'organizations-view-dialog',
@@ -156,16 +167,16 @@ export const TestIds = {
 
   // Users
   users: {
-    page: "users-page",
-    table: "users-table",
-    createButton: "users-create-button",
+    page: 'users-page',
+    table: 'users-table',
+    createButton: 'users-create-button',
     viewDetails: (id: string) => `users-view-details-${id}`,
     edit: (id: string) => `users-edit-${id}`,
     deactivate: (id: string) => `users-deactivate-${id}`,
     updateRole: (userId: string) => `users-update-role-${userId}`,
     updateStatus: (userId: string) => `users-update-status-${userId}`,
     recordLogin: (userId: string) => `users-record-login-${userId}`,
-    
+
     // Create Dialog
     createDialog: {
       container: 'users-create-dialog',
@@ -179,11 +190,13 @@ export const TestIds = {
       submit: 'users-create-submit',
       cancel: 'users-create-cancel',
       error: 'users-create-error',
-      domainOption: (domainId: string | number) => `users-create-dialog-domain-option-${domainId}`,
+      domainOption: (domainId: string | number) =>
+        `users-create-dialog-domain-option-${domainId}`,
       roleOption: (role: string) => `users-create-dialog-role-option-${role}`,
-      organizationOption: (orgId: string) => `users-create-dialog-organization-option-${orgId}`,
+      organizationOption: (orgId: string) =>
+        `users-create-dialog-organization-option-${orgId}`,
     },
-    
+
     // Edit Dialog
     editDialog: {
       container: 'users-edit-dialog',
@@ -198,10 +211,12 @@ export const TestIds = {
       submit: 'users-edit-submit',
       cancel: 'users-edit-cancel',
       roleOption: (role: string) => `users-edit-dialog-role-option-${role}`,
-      statusOption: (status: string) => `users-edit-dialog-status-option-${status}`,
-      organizationOption: (orgId: string) => `users-edit-dialog-organization-option-${orgId}`,
+      statusOption: (status: string) =>
+        `users-edit-dialog-status-option-${status}`,
+      organizationOption: (orgId: string) =>
+        `users-edit-dialog-organization-option-${orgId}`,
     },
-    
+
     // View Dialog
     viewDialog: {
       container: 'users-view-dialog',
@@ -223,7 +238,7 @@ export const TestIds = {
     viewUsage: (subId: string) => `subscriptions-view-usage-${subId}`,
     checkLimits: (subId: string) => `subscriptions-check-limits-${subId}`,
     cancel: (subId: string) => `subscriptions-cancel-${subId}`,
-    
+
     // Create Dialog
     createDialog: {
       container: 'subscriptions-create-dialog',
@@ -235,11 +250,14 @@ export const TestIds = {
       submit: 'subscriptions-create-submit',
       cancel: 'subscriptions-create-cancel',
       error: 'subscriptions-create-error',
-      organizationOption: (orgId: string) => `subscriptions-create-dialog-organization-option-${orgId}`,
-      productOption: (productId: string) => `subscriptions-create-dialog-product-option-${productId}`,
-      tierOption: (tier: string) => `subscriptions-create-dialog-tier-option-${tier}`,
+      organizationOption: (orgId: string) =>
+        `subscriptions-create-dialog-organization-option-${orgId}`,
+      productOption: (productId: string) =>
+        `subscriptions-create-dialog-product-option-${productId}`,
+      tierOption: (tier: string) =>
+        `subscriptions-create-dialog-tier-option-${tier}`,
     },
-    
+
     // Edit Dialog
     editDialog: {
       container: 'subscriptions-edit-dialog',
@@ -249,10 +267,12 @@ export const TestIds = {
       submit: 'subscriptions-edit-submit',
       cancel: 'subscriptions-edit-cancel',
       error: 'subscriptions-edit-error',
-      tierOption: (tier: string) => `subscriptions-edit-dialog-tier-option-${tier}`,
-      statusOption: (status: string) => `subscriptions-edit-dialog-status-option-${status}`,
+      tierOption: (tier: string) =>
+        `subscriptions-edit-dialog-tier-option-${tier}`,
+      statusOption: (status: string) =>
+        `subscriptions-edit-dialog-status-option-${status}`,
     },
-    
+
     // View Dialog
     viewDialog: {
       container: 'subscriptions-view-dialog',
@@ -269,7 +289,7 @@ export const TestIds = {
     submitButton: 'transcripts-submit-button',
     clearButton: 'transcripts-clear-button',
     responseDisplay: 'transcripts-response-display',
-    
+
     // Processing Information
     processingInfo: {
       container: 'transcripts-processing-info',
@@ -278,7 +298,7 @@ export const TestIds = {
       firstPassConfidence: 'transcripts-first-pass-confidence',
       finalPassConfidence: 'transcripts-final-pass-confidence',
     },
-    
+
     // Analysis Results
     analysisResults: {
       container: 'transcripts-analysis-results',
@@ -287,7 +307,8 @@ export const TestIds = {
       documentInfoTable: 'transcripts-document-info-table',
       studentInfoTable: 'transcripts-student-info-table',
       academicSummaryTable: 'transcripts-academic-summary-table',
-      dynamicTable: (passType: string, sectionKey: string) => `transcripts-table-${passType}-${sectionKey}`,
+      dynamicTable: (passType: string, sectionKey: string) =>
+        `transcripts-table-${passType}-${sectionKey}`,
     },
   },
 
@@ -299,7 +320,7 @@ export const TestIds = {
     viewDetails: (productId: string) => `products-view-details-${productId}`,
     edit: (productId: string) => `products-edit-${productId}`,
     delete: (productId: string) => `products-delete-${productId}`,
-    
+
     // Create Dialog
     createDialog: {
       container: 'products-create-dialog',
@@ -309,7 +330,7 @@ export const TestIds = {
       submit: 'products-create-submit',
       cancel: 'products-create-cancel',
     },
-    
+
     // Edit Dialog
     editDialog: {
       container: 'products-edit-dialog',
@@ -319,7 +340,7 @@ export const TestIds = {
       submit: 'products-edit-submit',
       cancel: 'products-edit-cancel',
     },
-    
+
     // View Dialog
     viewDialog: {
       container: 'products-view-dialog',
@@ -335,7 +356,7 @@ export const TestIds = {
     table: 'audit-log-table',
     viewDetails: (logId: string) => `audit-log-view-details-${logId}`,
     expandDetails: (logId: string) => `audit-log-expand-details-${logId}`,
-    
+
     // View Dialog
     viewDialog: {
       container: 'audit-log-view-dialog',
@@ -367,4 +388,4 @@ export const TestIds = {
 
 // ──────────────────────────────────────────────────
 // End of File: src/testIds.ts
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────

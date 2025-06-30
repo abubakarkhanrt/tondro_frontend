@@ -21,7 +21,10 @@ interface UseProductTiersReturn {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  getTierByProductAndName: (productId: string, tierName: string) => ProductTier | undefined;
+  getTierByProductAndName: (
+    productId: string,
+    tierName: string
+  ) => ProductTier | undefined;
   getTiersByProduct: (productId: string) => ProductTier[];
 }
 
@@ -42,10 +45,10 @@ export const useProductTiers = (): UseProductTiersReturn => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const controller = apiHelpers.createAbortController();
       const response = await apiHelpers.getProductTiers(controller.signal);
-      
+
       setTiers(response.data.tiers || []);
     } catch (err: any) {
       console.error('Error fetching product tiers:', err);
@@ -71,7 +74,7 @@ export const useProductTiers = (): UseProductTiersReturn => {
   const getTierByProductAndName = useCallback(
     (productId: string, tierName: string): ProductTier | undefined => {
       return tiers.find(
-        (tier) => tier.product_id === productId && tier.tier_name === tierName
+        tier => tier.product_id === productId && tier.tier_name === tierName
       );
     },
     [tiers]
@@ -79,7 +82,7 @@ export const useProductTiers = (): UseProductTiersReturn => {
 
   const getTiersByProduct = useCallback(
     (productId: string): ProductTier[] => {
-      return tiers.filter((tier) => tier.product_id === productId);
+      return tiers.filter(tier => tier.product_id === productId);
     },
     [tiers]
   );
@@ -123,10 +126,14 @@ export const useProductTier = (
     try {
       setLoading(true);
       setError(null);
-      
+
       const controller = apiHelpers.createAbortController();
-      const response = await apiHelpers.getProductTier(productId, tierName, controller.signal);
-      
+      const response = await apiHelpers.getProductTier(
+        productId,
+        tierName,
+        controller.signal
+      );
+
       setTier(response.data.tier);
     } catch (err: any) {
       console.error('Error fetching product tier:', err);
@@ -147,4 +154,4 @@ export const useProductTier = (
     error,
     refetch: fetchTier,
   };
-}; 
+};

@@ -57,7 +57,7 @@ const Navigation: React.FC = () => {
         </Typography>
         {token && (
           <>
-            {menuItems.map((item) => (
+            {menuItems.map(item => (
               <Button
                 key={item.path}
                 color="inherit"

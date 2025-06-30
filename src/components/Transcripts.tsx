@@ -157,7 +157,9 @@ interface TranscriptAnalysisResponse {
 
 const Transcripts: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [response, setResponse] = useState<TranscriptAnalysisResponse | null>(null);
+  const [response, setResponse] = useState<TranscriptAnalysisResponse | null>(
+    null
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
@@ -169,7 +171,12 @@ const Transcripts: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+      ];
       if (!allowedTypes.includes(file.type)) {
         setError('Please select a valid file type (PDF, JPG, JPEG, PNG)');
         setSelectedFile(null);
@@ -249,7 +256,11 @@ const Transcripts: React.FC = () => {
         <Typography variant="subtitle2" gutterBottom>
           {title}
         </Typography>
-        <TableContainer component={Paper} variant="outlined" data-testid={testId}>
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          data-testid={testId}
+        >
           <Table size="small">
             <TableBody>
               {entries.map(([key, value]) => (
@@ -257,9 +268,7 @@ const Transcripts: React.FC = () => {
                   <TableCell>
                     <strong>{formatFieldName(key)}</strong>
                   </TableCell>
-                  <TableCell>
-                    {renderValue(value)}
-                  </TableCell>
+                  <TableCell>{renderValue(value)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -297,20 +306,23 @@ const Transcripts: React.FC = () => {
 
     if (Array.isArray(value)) {
       if (value.length === 0) return 'None';
-      
+
       // If array contains objects, render as a list
       if (typeof value[0] === 'object' && value[0] !== null) {
         return (
           <Box>
             {value.map((item, index) => (
-              <Box key={index} sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Box
+                key={index}
+                sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}
+              >
                 {renderObjectValue(item)}
               </Box>
             ))}
           </Box>
         );
       }
-      
+
       // Simple array
       return value.join(', ');
     }
@@ -338,45 +350,54 @@ const Transcripts: React.FC = () => {
             <Typography variant="caption" color="text.secondary">
               {formatFieldName(key)}:
             </Typography>
-            <Typography variant="body2">
-              {renderValue(value)}
-            </Typography>
+            <Typography variant="body2">{renderValue(value)}</Typography>
           </Box>
         ))}
       </Box>
     );
   };
 
-  const renderDynamicAnalysis = (analysisData: any, passType: 'first' | 'final') => {
+  const renderDynamicAnalysis = (
+    analysisData: any,
+    passType: 'first' | 'final'
+  ) => {
     if (!analysisData || typeof analysisData !== 'object') return null;
 
     const sections = Object.entries(analysisData).filter(([key, value]) => {
       if (key.startsWith('_')) return false;
       if (value === null || value === undefined) return false;
-      if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+      if (typeof value === 'object' && Object.keys(value).length === 0)
+        return false;
       return true;
     });
 
     if (sections.length === 0) return null;
 
     return (
-      <Card data-testid={TestIds.transcripts.analysisResults[`${passType}PassContainer`]}>
+      <Card
+        data-testid={
+          TestIds.transcripts.analysisResults[`${passType}PassContainer`]
+        }
+      >
         <CardContent>
-          <Typography 
-            variant="h6" 
-            gutterBottom 
+          <Typography
+            variant="h6"
+            gutterBottom
             color={passType === 'first' ? 'primary' : 'success.main'}
           >
             {passType === 'first' ? 'First' : 'Final'} Pass Analysis
           </Typography>
           <Divider sx={{ mb: 2 }} />
-          
+
           {sections.map(([sectionKey, sectionData]) => (
             <Box key={sectionKey}>
               {renderDynamicTable(
-                sectionData, 
+                sectionData,
                 formatFieldName(sectionKey),
-                TestIds.transcripts.analysisResults.dynamicTable(passType, sectionKey)
+                TestIds.transcripts.analysisResults.dynamicTable(
+                  passType,
+                  sectionKey
+                )
               )}
             </Box>
           ))}
@@ -391,11 +412,14 @@ const Transcripts: React.FC = () => {
     const { first_pass, final_pass } = response.data.analysis_results;
 
     return (
-      <Box sx={{ mt: 3 }} data-testid={TestIds.transcripts.analysisResults.container}>
+      <Box
+        sx={{ mt: 3 }}
+        data-testid={TestIds.transcripts.analysisResults.container}
+      >
         <Typography variant="h5" gutterBottom>
           Analysis Results
         </Typography>
-        
+
         <Grid container spacing={3}>
           {/* First Pass */}
           <Grid item xs={12} md={6}>
@@ -424,11 +448,7 @@ const Transcripts: React.FC = () => {
           Selected File:
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Chip 
-            label={selectedFile.name} 
-            color="primary" 
-            variant="outlined"
-          />
+          <Chip label={selectedFile.name} color="primary" variant="outlined" />
           <Typography variant="body2" color="text.secondary">
             ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
           </Typography>
@@ -443,7 +463,10 @@ const Transcripts: React.FC = () => {
     const { file_info, processing_metadata } = response.data;
 
     return (
-      <Card sx={{ mt: 3, mb: 3 }} data-testid={TestIds.transcripts.processingInfo.container}>
+      <Card
+        sx={{ mt: 3, mb: 3 }}
+        data-testid={TestIds.transcripts.processingInfo.container}
+      >
         <CardContent>
           <Typography variant="h6" gutterBottom>
             Processing Information
@@ -453,14 +476,22 @@ const Transcripts: React.FC = () => {
               <Typography variant="subtitle2" color="text.secondary">
                 Job ID
               </Typography>
-              <Typography variant="body2" gutterBottom data-testid={TestIds.transcripts.processingInfo.jobId}>
+              <Typography
+                variant="body2"
+                gutterBottom
+                data-testid={TestIds.transcripts.processingInfo.jobId}
+              >
                 {response.data.job_id}
               </Typography>
-              
+
               <Typography variant="subtitle2" color="text.secondary">
                 Processing Time
               </Typography>
-              <Typography variant="body2" gutterBottom data-testid={TestIds.transcripts.processingInfo.processingTime}>
+              <Typography
+                variant="body2"
+                gutterBottom
+                data-testid={TestIds.transcripts.processingInfo.processingTime}
+              >
                 {file_info.total_processing_time_seconds} seconds
               </Typography>
             </Grid>
@@ -468,14 +499,26 @@ const Transcripts: React.FC = () => {
               <Typography variant="subtitle2" color="text.secondary">
                 First Pass Confidence
               </Typography>
-              <Typography variant="body2" gutterBottom data-testid={TestIds.transcripts.processingInfo.firstPassConfidence}>
+              <Typography
+                variant="body2"
+                gutterBottom
+                data-testid={
+                  TestIds.transcripts.processingInfo.firstPassConfidence
+                }
+              >
                 {(processing_metadata.first_pass_confidence * 100).toFixed(1)}%
               </Typography>
-              
+
               <Typography variant="subtitle2" color="text.secondary">
                 Final Pass Confidence
               </Typography>
-              <Typography variant="body2" gutterBottom data-testid={TestIds.transcripts.processingInfo.finalPassConfidence}>
+              <Typography
+                variant="body2"
+                gutterBottom
+                data-testid={
+                  TestIds.transcripts.processingInfo.finalPassConfidence
+                }
+              >
                 {(processing_metadata.final_pass_confidence * 100).toFixed(1)}%
               </Typography>
             </Grid>
@@ -492,7 +535,8 @@ const Transcripts: React.FC = () => {
       </Typography>
 
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Upload PDF, JPG, JPEG, or PNG files to analyze transcripts with AI-powered two-pass processing.
+        Upload PDF, JPG, JPEG, or PNG files to analyze transcripts with
+        AI-powered two-pass processing.
       </Typography>
 
       {error && (
@@ -533,7 +577,11 @@ const Transcripts: React.FC = () => {
                   Browse Files
                 </Button>
               </label>
-              <Typography variant="caption" display="block" color="text.secondary">
+              <Typography
+                variant="caption"
+                display="block"
+                color="text.secondary"
+              >
                 Supported formats: PDF, JPG, JPEG, PNG (Max size: 10MB)
               </Typography>
             </Box>
@@ -558,7 +606,7 @@ const Transcripts: React.FC = () => {
                   'Analyze Transcript'
                 )}
               </Button>
-              
+
               <Button
                 variant="outlined"
                 onClick={handleClear}
@@ -581,4 +629,4 @@ const Transcripts: React.FC = () => {
   );
 };
 
-export { Transcripts }; 
+export { Transcripts };

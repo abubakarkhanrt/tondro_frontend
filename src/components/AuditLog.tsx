@@ -110,7 +110,7 @@ const AuditLog: React.FC = () => {
       });
 
       setAuditLogs(response.data.items || []);
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
         total: response.data.total || 0,
       }));
@@ -126,7 +126,9 @@ const AuditLog: React.FC = () => {
     }
   };
 
-  const fetchAuditLogDetails = async (id: string): Promise<AuditLogType | null> => {
+  const fetchAuditLogDetails = async (
+    id: string
+  ): Promise<AuditLogType | null> => {
     try {
       const response = await apiHelpers.getAuditLog(id);
       return response.data;
@@ -142,8 +144,8 @@ const AuditLog: React.FC = () => {
   };
 
   const handleFilterChange = (field: string, value: string): void => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setPagination((prev) => ({ ...prev, page: 0 }));
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
   const handleClearFilters = (): void => {
@@ -151,17 +153,17 @@ const AuditLog: React.FC = () => {
       entity_type: '',
       action: '',
     });
-    setPagination((prev) => ({ ...prev, page: 0 }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
   const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handlePageSizeChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setPagination((prev) => ({
+    setPagination(prev => ({
       ...prev,
       pageSize: parseInt(event.target.value, 10),
       page: 0,
@@ -245,18 +247,54 @@ const AuditLog: React.FC = () => {
               <InputLabel>Entity Type</InputLabel>
               <Select
                 value={filters.entity_type}
-                onChange={(e) =>
+                onChange={e =>
                   handleFilterChange('entity_type', e.target.value)
                 }
                 label="Entity Type"
                 data-testid={TestIds.filterForm.entityType}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.entityTypeOptionAll}>All</MenuItem>
-                <MenuItem value="organization" data-testid={TestIds.filterForm.entityTypeOption('organization')}>Organization</MenuItem>
-                <MenuItem value="user" data-testid={TestIds.filterForm.entityTypeOption('user')}>User</MenuItem>
-                <MenuItem value="subscription" data-testid={TestIds.filterForm.entityTypeOption('subscription')}>Subscription</MenuItem>
-                <MenuItem value="product" data-testid={TestIds.filterForm.entityTypeOption('product')}>Product</MenuItem>
-                <MenuItem value="cv_analysis" data-testid={TestIds.filterForm.entityTypeOption('cv_analysis')}>CV Analysis</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.entityTypeOptionAll}
+                >
+                  All
+                </MenuItem>
+                <MenuItem
+                  value="organization"
+                  data-testid={TestIds.filterForm.entityTypeOption(
+                    'organization'
+                  )}
+                >
+                  Organization
+                </MenuItem>
+                <MenuItem
+                  value="user"
+                  data-testid={TestIds.filterForm.entityTypeOption('user')}
+                >
+                  User
+                </MenuItem>
+                <MenuItem
+                  value="subscription"
+                  data-testid={TestIds.filterForm.entityTypeOption(
+                    'subscription'
+                  )}
+                >
+                  Subscription
+                </MenuItem>
+                <MenuItem
+                  value="product"
+                  data-testid={TestIds.filterForm.entityTypeOption('product')}
+                >
+                  Product
+                </MenuItem>
+                <MenuItem
+                  value="cv_analysis"
+                  data-testid={TestIds.filterForm.entityTypeOption(
+                    'cv_analysis'
+                  )}
+                >
+                  CV Analysis
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -265,15 +303,40 @@ const AuditLog: React.FC = () => {
               <InputLabel>Action</InputLabel>
               <Select
                 value={filters.action}
-                onChange={(e) => handleFilterChange('action', e.target.value)}
+                onChange={e => handleFilterChange('action', e.target.value)}
                 label="Action"
                 data-testid={TestIds.filterForm.action}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.actionOptionAll}>All</MenuItem>
-                <MenuItem value="create" data-testid={TestIds.filterForm.actionOption('create')}>Create</MenuItem>
-                <MenuItem value="update" data-testid={TestIds.filterForm.actionOption('update')}>Update</MenuItem>
-                <MenuItem value="delete" data-testid={TestIds.filterForm.actionOption('delete')}>Delete</MenuItem>
-                <MenuItem value="login" data-testid={TestIds.filterForm.actionOption('login')}>Login</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.actionOptionAll}
+                >
+                  All
+                </MenuItem>
+                <MenuItem
+                  value="create"
+                  data-testid={TestIds.filterForm.actionOption('create')}
+                >
+                  Create
+                </MenuItem>
+                <MenuItem
+                  value="update"
+                  data-testid={TestIds.filterForm.actionOption('update')}
+                >
+                  Update
+                </MenuItem>
+                <MenuItem
+                  value="delete"
+                  data-testid={TestIds.filterForm.actionOption('delete')}
+                >
+                  Delete
+                </MenuItem>
+                <MenuItem
+                  value="login"
+                  data-testid={TestIds.filterForm.actionOption('login')}
+                >
+                  Login
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -327,7 +390,7 @@ const AuditLog: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {auditLogs.map((log) => (
+                  {auditLogs.map(log => (
                     <React.Fragment key={log.id}>
                       <TableRow>
                         <TableCell>
@@ -367,7 +430,9 @@ const AuditLog: React.FC = () => {
                             <IconButton
                               size="small"
                               onClick={() => setSelectedLog(log)}
-                              data-testid={TestIds.auditLog.viewDetails(String(log.id))}
+                              data-testid={TestIds.auditLog.viewDetails(
+                                String(log.id)
+                              )}
                             >
                               <VisibilityIcon />
                             </IconButton>
@@ -499,11 +564,11 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
     }
 
     let isMounted = true;
-    
+
     const loadDetails = async () => {
       setLoading(true);
       setDetailedLog(log); // Set initial data immediately
-      
+
       try {
         const freshLog = await onFetchDetails(String(log.id));
         if (isMounted && freshLog) {
@@ -533,8 +598,16 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
   if (!log) return null;
 
   return (
-    <Dialog open={!!log} onClose={onClose} maxWidth="md" fullWidth data-testid={TestIds.auditLog.viewDialog.container}>
-      <DialogTitle data-testid={TestIds.auditLog.viewDialog.title}>Audit Log Details: {detailedLog?.id || log.id}</DialogTitle>
+    <Dialog
+      open={!!log}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.auditLog.viewDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.auditLog.viewDialog.title}>
+        Audit Log Details: {detailedLog?.id || log.id}
+      </DialogTitle>
       <DialogContent>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -618,7 +691,12 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid={TestIds.auditLog.viewDialog.closeButton}>Close</Button>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.auditLog.viewDialog.closeButton}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );

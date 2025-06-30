@@ -80,7 +80,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  error => {
     return Promise.reject(error);
   }
 );
@@ -93,7 +93,7 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  (error) => {
+  error => {
     // Don't redirect on cancelled requests
     if (axios.isCancel(error)) {
       return Promise.reject(error);
@@ -167,7 +167,7 @@ export const apiHelpers = {
             // Apply status filter if provided
             if (status) {
               filteredOrganizations = filteredOrganizations.filter(
-                (org) => org.status.toLowerCase() === status.toLowerCase()
+                org => org.status.toLowerCase() === status.toLowerCase()
               );
             }
 
@@ -175,7 +175,7 @@ export const apiHelpers = {
             if (search) {
               const searchLower = search.toLowerCase();
               filteredOrganizations = filteredOrganizations.filter(
-                (org) =>
+                org =>
                   org.tenantName.toLowerCase().includes(searchLower) ||
                   org.organizationDomain.toLowerCase().includes(searchLower)
               );
@@ -612,8 +612,9 @@ export const apiHelpers = {
 
   getProductTiers: (
     signal?: AbortSignal
-  ): Promise<AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>> =>
-    api.get('/crm/product-tiers', { signal: signal as GenericAbortSignal }),
+  ): Promise<
+    AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
+  > => api.get('/crm/product-tiers', { signal: signal as GenericAbortSignal }),
 
   getProductTier: (
     productId: string,
@@ -632,7 +633,10 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<AuditLog>>> =>
-    api.get('/crm/audit-logs', { params, signal: signal as GenericAbortSignal }),
+    api.get('/crm/audit-logs', {
+      params,
+      signal: signal as GenericAbortSignal,
+    }),
 
   getAuditLog: (
     id: string,
@@ -682,44 +686,46 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ roles: string[] }>> =>
     api.get('/crm/users/user-roles', { signal: signal as GenericAbortSignal }),
-// ────────────────────────────────────────
+  // ────────────────────────────────────────
   // Transcript Analysis
   // ────────────────────────────────────────
 
   analyzeTranscript: (
     formData: FormData,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<{
-    success: boolean;
-    data?: {
-      job_id: string;
-      file_info: {
-        filename: string;
-        file_size: number;
-        file_type: string;
-        uploaded_at: string;
-        processing_started_at: string;
-        processing_completed_at: string;
-        total_processing_time_seconds: number;
+  ): Promise<
+    AxiosResponse<{
+      success: boolean;
+      data?: {
+        job_id: string;
+        file_info: {
+          filename: string;
+          file_size: number;
+          file_type: string;
+          uploaded_at: string;
+          processing_started_at: string;
+          processing_completed_at: string;
+          total_processing_time_seconds: number;
+        };
+        analysis_results: {
+          first_pass: any;
+          final_pass: any;
+        };
+        processing_metadata: {
+          first_pass_confidence: number;
+          final_pass_confidence: number;
+          improvement_score: number;
+          processing_warnings: string[];
+          extraction_quality_score: number;
+        };
       };
-      analysis_results: {
-        first_pass: any;
-        final_pass: any;
+      error?: {
+        code: string;
+        message: string;
+        details?: Record<string, any>;
       };
-      processing_metadata: {
-        first_pass_confidence: number;
-        final_pass_confidence: number;
-        improvement_score: number;
-        processing_warnings: string[];
-        extraction_quality_score: number;
-      };
-    };
-    error?: {
-      code: string;
-      message: string;
-      details?: Record<string, any>;
-    };
-  }>> => {
+    }>
+  > => {
     // Override Content-Type for multipart form data
     const config = {
       headers: {

@@ -335,7 +335,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
         <Table>
           <TableHead>
             <TableRow>
-              {columns.map((column) => (
+              {columns.map(column => (
                 <TableCell
                   key={column.key}
                   style={{ width: column.width }}
@@ -365,10 +365,10 @@ const EntityTable: React.FC<EntityTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              sortedData.map((row) => (
+              sortedData.map(row => (
                 <React.Fragment key={row.id}>
                   <TableRow>
-                    {columns.map((column) => (
+                    {columns.map(column => (
                       <TableCell key={column.key}>
                         {column.key === 'actions'
                           ? renderActions(row, column)
@@ -379,7 +379,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   {expandableRows &&
                     renderExpandableContent(
                       row,
-                      columns.find((col) => col.expandable)!
+                      columns.find(col => col.expandable)!
                     )}
                 </React.Fragment>
               ))

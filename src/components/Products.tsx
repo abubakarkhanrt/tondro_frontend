@@ -134,7 +134,7 @@ const Products: React.FC = () => {
 
       const response = await apiHelpers.getProducts(controller.signal);
       setProducts(response.data || []);
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
         total: response.data.length || 0,
       }));
@@ -201,13 +201,13 @@ const Products: React.FC = () => {
   };
 
   const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handlePageSizeChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setPagination((prev) => ({
+    setPagination(prev => ({
       ...prev,
       pageSize: parseInt(event.target.value, 10),
       page: 0,
@@ -290,7 +290,7 @@ const Products: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {products.map((product) => (
+                  {products.map(product => (
                     <TableRow key={product.id}>
                       <TableCell>
                         <Typography variant="subtitle2">
@@ -478,7 +478,7 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             fullWidth
             label="Product Name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
             margin="normal"
             required
             placeholder="Enter product name"
@@ -487,7 +487,7 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
             fullWidth
             label="Description"
             value={formData.description}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, description: e.target.value })
             }
             margin="normal"
@@ -627,7 +627,7 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             fullWidth
             label="Product Name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
             margin="normal"
             required
           />
@@ -635,7 +635,7 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
             fullWidth
             label="Description"
             value={formData.description}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, description: e.target.value })
             }
             margin="normal"

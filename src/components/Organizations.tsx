@@ -141,7 +141,7 @@ const Organizations: React.FC = () => {
     }
 
     const abortController = apiHelpers.createAbortController();
-    setOrganizations((prev) => ({
+    setOrganizations(prev => ({
       ...prev,
       loading: true,
       error: '',
@@ -162,14 +162,14 @@ const Organizations: React.FC = () => {
       );
       const data: OrganizationsResponse = response.data;
 
-      setOrganizations((prev) => ({
+      setOrganizations(prev => ({
         ...prev,
         organizations: data.organizations,
         loading: false,
         error: '',
       }));
 
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
         total: data.total,
         page: data.page - 1, // Convert back to 0-based for MUI
@@ -177,7 +177,7 @@ const Organizations: React.FC = () => {
     } catch (error: any) {
       if (!axios.isCancel(error)) {
         console.error('Error fetching organizations:', error);
-        setOrganizations((prev) => ({
+        setOrganizations(prev => ({
           ...prev,
           loading: false,
           error:
@@ -227,14 +227,14 @@ const Organizations: React.FC = () => {
   const handleFilterChange = useCallback(
     (newFilters: { status: string; search: string }): void => {
       setFilters(newFilters);
-      setPagination((prev) => ({ ...prev, page: 0 })); // Reset to first page
+      setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
     },
     [setFilters, setPagination]
   );
 
   const handlePageChange = useCallback(
     (_event: unknown, newPage: number): void => {
-      setPagination((prev) => ({ ...prev, page: newPage }));
+      setPagination(prev => ({ ...prev, page: newPage }));
     },
     [setPagination]
   );
@@ -242,7 +242,7 @@ const Organizations: React.FC = () => {
   const handlePageSizeChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newPageSize = parseInt(event.target.value, 10);
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
         pageSize: newPageSize,
         page: 0, // Reset to first page
@@ -283,7 +283,7 @@ const Organizations: React.FC = () => {
 
   const handleClearFilters = useCallback(() => {
     setFilters({ status: '', search: '' });
-    setPagination((prev) => ({ ...prev, page: 0 }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   }, []);
 
   // ────────────────────────────────────────
@@ -374,13 +374,13 @@ const Organizations: React.FC = () => {
                 fullWidth
                 label="Search"
                 value={localSearch}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Search organizations..."
                 inputRef={searchInputRef}
                 data-testid={TestIds.filterForm.search}
                 inputProps={{
                   'data-testid': TestIds.filterForm.search,
-                  'aria-label': 'Search organizations input'
+                  'aria-label': 'Search organizations input',
                 }}
               />
             </Grid>
@@ -389,20 +389,45 @@ const Organizations: React.FC = () => {
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={filters.status}
-                  onChange={(e) =>
+                  onChange={e =>
                     onFiltersChange({ ...filters, status: e.target.value })
                   }
                   label="Status"
-                  data-testid={TestIds.filterForm.statusTrigger}  
-                  inputProps={{                    
+                  data-testid={TestIds.filterForm.statusTrigger}
+                  inputProps={{
                     'aria-label': 'Status filter',
                   }}
                 >
-                  <MenuItem value="" data-testid={TestIds.filterForm.statusOptionAll}>All</MenuItem>
-                  <MenuItem value="Active" data-testid={TestIds.filterForm.statusOption('Active')}>Active</MenuItem>
-                  <MenuItem value="Suspended" data-testid={TestIds.filterForm.statusOption('Suspended')}>Suspended</MenuItem>
-                  <MenuItem value="Trial" data-testid={TestIds.filterForm.statusOption('Trial')}>Trial</MenuItem>
-                  <MenuItem value="Inactive" data-testid={TestIds.filterForm.statusOption('Inactive')}>Inactive</MenuItem>
+                  <MenuItem
+                    value=""
+                    data-testid={TestIds.filterForm.statusOptionAll}
+                  >
+                    All
+                  </MenuItem>
+                  <MenuItem
+                    value="Active"
+                    data-testid={TestIds.filterForm.statusOption('Active')}
+                  >
+                    Active
+                  </MenuItem>
+                  <MenuItem
+                    value="Suspended"
+                    data-testid={TestIds.filterForm.statusOption('Suspended')}
+                  >
+                    Suspended
+                  </MenuItem>
+                  <MenuItem
+                    value="Trial"
+                    data-testid={TestIds.filterForm.statusOption('Trial')}
+                  >
+                    Trial
+                  </MenuItem>
+                  <MenuItem
+                    value="Inactive"
+                    data-testid={TestIds.filterForm.statusOption('Inactive')}
+                  >
+                    Inactive
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -465,7 +490,7 @@ const Organizations: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {organizations.organizations.map((org) => (
+                  {organizations.organizations.map(org => (
                     <TableRow key={org.organizationId}>
                       <TableCell>
                         <Typography variant="subtitle2">
@@ -640,10 +665,10 @@ const Organizations: React.FC = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       >
         <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           data-testid={
             snackbar.severity === 'success'
@@ -704,7 +729,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
   };
 
   const getTierOptions = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return [];
 
     // Generate tier options based on product name
@@ -746,7 +771,13 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
       )}
 
       {subscriptions.map((subscription, index) => (
-        <Card key={index} sx={{ mb: 2, p: 2 }} data-testid={TestIds.organizations.subscriptionForm.subscriptionCard(index)}>
+        <Card
+          key={index}
+          sx={{ mb: 2, p: 2 }}
+          data-testid={TestIds.organizations.subscriptionForm.subscriptionCard(
+            index
+          )}
+        >
           <Box
             sx={{
               display: 'flex',
@@ -762,7 +793,9 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
               onClick={() => removeSubscription(index)}
               color="error"
               size="small"
-              data-testid={TestIds.organizations.subscriptionForm.removeButton(index)}
+              data-testid={TestIds.organizations.subscriptionForm.removeButton(
+                index
+              )}
             >
               <RemoveIcon />
             </IconButton>
@@ -774,21 +807,26 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 <InputLabel>Product</InputLabel>
                 <Select
                   value={subscription.product_id}
-                  onChange={(e) =>
+                  onChange={e =>
                     updateSubscription(index, 'product_id', e.target.value)
                   }
                   label="Product"
-                  data-testid={TestIds.organizations.subscriptionForm.productSelect(index)}
-                  inputProps={{                    
-                    'aria-label': 'Product selection'
+                  data-testid={TestIds.organizations.subscriptionForm.productSelect(
+                    index
+                  )}
+                  inputProps={{
+                    'aria-label': 'Product selection',
                   }}
                 >
-                  {products.map((product) => (
-                      <MenuItem
-                        key={product.id}
-                        value={product.id}
-                        data-testid={TestIds.organizations.subscriptionForm.productSelectOption(index, product.id)} // ✅ test ID for each item
-                      >
+                  {products.map(product => (
+                    <MenuItem
+                      key={product.id}
+                      value={product.id}
+                      data-testid={TestIds.organizations.subscriptionForm.productSelectOption(
+                        index,
+                        product.id
+                      )} // ✅ test ID for each item
+                    >
                       {product.name}
                     </MenuItem>
                   ))}
@@ -801,21 +839,26 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 <InputLabel>Tier</InputLabel>
                 <Select
                   value={subscription.tier_name}
-                  onChange={(e) =>
+                  onChange={e =>
                     updateSubscription(index, 'tier_name', e.target.value)
                   }
                   label="Tier"
                   disabled={!subscription.product_id}
-                  data-testid={TestIds.organizations.subscriptionForm.tierSelect(index)}
-                  inputProps={{                    
-                    'aria-label': 'Tier selection'
+                  data-testid={TestIds.organizations.subscriptionForm.tierSelect(
+                    index
+                  )}
+                  inputProps={{
+                    'aria-label': 'Tier selection',
                   }}
                 >
-                  {getTierOptions(subscription.product_id).map((tier) => (
+                  {getTierOptions(subscription.product_id).map(tier => (
                     <MenuItem
                       key={tier}
                       value={tier}
-                      data-testid={TestIds.organizations.subscriptionForm.tierSelectOption(index, tier)} // ✅ Unique per option
+                      data-testid={TestIds.organizations.subscriptionForm.tierSelectOption(
+                        index,
+                        tier
+                      )} // ✅ Unique per option
                     >
                       {formatTierName(tier)}
                     </MenuItem>
@@ -829,15 +872,18 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 label="Ends At"
                 type="date"
                 value={subscription.ends_at}
-                onChange={(e) =>
+                onChange={e =>
                   updateSubscription(index, 'ends_at', e.target.value)
                 }
                 fullWidth
                 placeholder="e.g., 2024-01-01"
-                data-testid={TestIds.organizations.subscriptionForm.endDate(index)}
+                data-testid={TestIds.organizations.subscriptionForm.endDate(
+                  index
+                )}
                 inputProps={{
-                  'data-testid': TestIds.organizations.subscriptionForm.endDate(index),
-                  'aria-label': 'Subscription end date input'
+                  'data-testid':
+                    TestIds.organizations.subscriptionForm.endDate(index),
+                  'aria-label': 'Subscription end date input',
                 }}
               />
             </Grid>
@@ -896,18 +942,18 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: keyof CreateOrganizationRequest, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
   const handleSubscriptionsChange = (
     subscriptions: ProductSubscriptionRequest[]
   ) => {
-    setFormData((prev) => ({ ...prev, initialSubscriptions: subscriptions }));
+    setFormData(prev => ({ ...prev, initialSubscriptions: subscriptions }));
   };
 
   const validateDomainName = (name: string): boolean => {
@@ -940,7 +986,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       newErrors.subscriptions = 'Please add at least one subscription';
     } else {
       const invalidSubscriptions = formData.initialSubscriptions.filter(
-        (sub) => !sub.product_id || !sub.tier_name
+        sub => !sub.product_id || !sub.tier_name
       );
 
       if (invalidSubscriptions.length > 0) {
@@ -978,12 +1024,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
 
       // Set specific field errors if available
       if (errorMessage.includes('domain') || errorMessage.includes('Domain')) {
-        setErrors((prev) => ({
+        setErrors(prev => ({
           ...prev,
           organizationDomain: userFriendlyMessage,
         }));
       } else {
-        setErrors((prev) => ({ ...prev, general: userFriendlyMessage }));
+        setErrors(prev => ({ ...prev, general: userFriendlyMessage }));
       }
     } finally {
       setLoading(false);
@@ -1003,12 +1049,24 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth data-testid={TestIds.organizations.createDialog.container}>
-      <DialogTitle data-testid={TestIds.organizations.createDialog.title}>Create New Organization</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.organizations.createDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.organizations.createDialog.title}>
+        Create New Organization
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           {errors.general && (
-            <Alert severity="error" sx={{ mb: 2 }} data-testid={TestIds.organizations.createDialog.error}>
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              data-testid={TestIds.organizations.createDialog.error}
+            >
               {errors.general}
             </Alert>
           )}
@@ -1016,7 +1074,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
           <TextField
             label="Tenant Name"
             value={formData.tenantName}
-            onChange={(e) => handleChange('tenantName', e.target.value)}
+            onChange={e => handleChange('tenantName', e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -1025,13 +1083,13 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             data-testid={TestIds.organizations.createDialog.tenantName}
             inputProps={{
               'data-testid': TestIds.organizations.createDialog.tenantName,
-              'aria-label': 'Tenant name input'
+              'aria-label': 'Tenant name input',
             }}
           />
           <TextField
             label="Organization Domain"
             value={formData.organizationDomain}
-            onChange={(e) => handleChange('organizationDomain', e.target.value)}
+            onChange={e => handleChange('organizationDomain', e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -1043,15 +1101,16 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             }
             data-testid={TestIds.organizations.createDialog.organizationDomain}
             inputProps={{
-              'data-testid': TestIds.organizations.createDialog.organizationDomain,
-              'aria-label': 'Organization domain input'
+              'data-testid':
+                TestIds.organizations.createDialog.organizationDomain,
+              'aria-label': 'Organization domain input',
             }}
           />
           <TextField
             label="Initial Admin Email"
             type="email"
             value={formData.initialAdminEmail}
-            onChange={(e) => handleChange('initialAdminEmail', e.target.value)}
+            onChange={e => handleChange('initialAdminEmail', e.target.value)}
             fullWidth
             margin="normal"
             required
@@ -1060,25 +1119,53 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             data-testid={TestIds.organizations.createDialog.adminEmail}
             inputProps={{
               'data-testid': TestIds.organizations.createDialog.adminEmail,
-              'aria-label': 'Admin email input'
+              'aria-label': 'Admin email input',
             }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Initial Status</InputLabel>
             <Select
               value={formData.initialStatus || 'Active'}
-              onChange={(e) => handleChange('initialStatus', e.target.value)}
+              onChange={e => handleChange('initialStatus', e.target.value)}
               label="Initial Status"
               data-testid={TestIds.organizations.createDialog.status}
               inputProps={{
                 'data-testid': TestIds.organizations.createDialog.status,
-                'aria-label': 'Initial status selection'
+                'aria-label': 'Initial status selection',
               }}
+            >
+              <MenuItem
+                value="Active"
+                data-testid={TestIds.organizations.createDialog.statusOption(
+                  'Active'
+                )}
               >
-              <MenuItem value="Active" data-testid={TestIds.organizations.createDialog.statusOption('Active')}>Active</MenuItem>
-              <MenuItem value="Suspended" data-testid={TestIds.organizations.createDialog.statusOption('Suspended')}>Suspended</MenuItem>
-              <MenuItem value="Trial" data-testid={TestIds.organizations.createDialog.statusOption('Trial')}>Trial</MenuItem>
-              <MenuItem value="Inactive" data-testid={TestIds.organizations.createDialog.statusOption('Inactive')}>Inactive</MenuItem>                       
+                Active
+              </MenuItem>
+              <MenuItem
+                value="Suspended"
+                data-testid={TestIds.organizations.createDialog.statusOption(
+                  'Suspended'
+                )}
+              >
+                Suspended
+              </MenuItem>
+              <MenuItem
+                value="Trial"
+                data-testid={TestIds.organizations.createDialog.statusOption(
+                  'Trial'
+                )}
+              >
+                Trial
+              </MenuItem>
+              <MenuItem
+                value="Inactive"
+                data-testid={TestIds.organizations.createDialog.statusOption(
+                  'Inactive'
+                )}
+              >
+                Inactive
+              </MenuItem>
             </Select>
           </FormControl>
 
@@ -1098,7 +1185,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} data-testid={TestIds.organizations.createDialog.cancel}>Cancel</Button>
+        <Button
+          onClick={handleClose}
+          data-testid={TestIds.organizations.createDialog.cancel}
+        >
+          Cancel
+        </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
@@ -1401,7 +1493,12 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid={TestIds.organizations.viewDialog.closeButton}>Close</Button>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.organizations.viewDialog.closeButton}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -1446,15 +1543,23 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   };
 
   return (
-    <Dialog open={!!organization} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.organizations.editDialog.container}>
-      <DialogTitle data-testid={TestIds.organizations.editDialog.title}>Edit Organization</DialogTitle>
+    <Dialog
+      open={!!organization}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.organizations.editDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.organizations.editDialog.title}>
+        Edit Organization
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
             fullWidth
             label="Tenant Name"
             value={formData.tenantName}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, tenantName: e.target.value })
             }
             margin="normal"
@@ -1462,29 +1567,30 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             data-testid={TestIds.organizations.editDialog.tenantName}
             inputProps={{
               'data-testid': TestIds.organizations.editDialog.tenantName,
-              'aria-label': 'Tenant name input'
+              'aria-label': 'Tenant name input',
             }}
           />
           <TextField
             fullWidth
             label="Organization Domain"
             value={formData.organizationDomain}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, organizationDomain: e.target.value })
             }
             margin="normal"
             required
             data-testid={TestIds.organizations.editDialog.organizationDomain}
             inputProps={{
-              'data-testid': TestIds.organizations.editDialog.organizationDomain,
-              'aria-label': 'Organization domain input'
+              'data-testid':
+                TestIds.organizations.editDialog.organizationDomain,
+              'aria-label': 'Organization domain input',
             }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
               value={formData.status || 'Active'}
-              onChange={(e) =>
+              onChange={e =>
                 setFormData({
                   ...formData,
                   status: e.target.value as
@@ -1498,21 +1604,58 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
               data-testid={TestIds.organizations.editDialog.status}
               inputProps={{
                 'data-testid': TestIds.organizations.editDialog.status,
-                'aria-label': 'Status selection'
+                'aria-label': 'Status selection',
               }}
             >
-              <MenuItem value="Active" data-testid={TestIds.organizations.editDialog.statusOption('Active')}>Active</MenuItem>
-              <MenuItem value="Suspended" data-testid={TestIds.organizations.editDialog.statusOption('Suspended')}>Suspended</MenuItem>
-              <MenuItem value="Trial" data-testid={TestIds.organizations.editDialog.statusOption('Trial')}>Trial</MenuItem>
-              <MenuItem value="Inactive" data-testid={TestIds.organizations.editDialog.statusOption('Inactive')}>Inactive</MenuItem>              
-
+              <MenuItem
+                value="Active"
+                data-testid={TestIds.organizations.editDialog.statusOption(
+                  'Active'
+                )}
+              >
+                Active
+              </MenuItem>
+              <MenuItem
+                value="Suspended"
+                data-testid={TestIds.organizations.editDialog.statusOption(
+                  'Suspended'
+                )}
+              >
+                Suspended
+              </MenuItem>
+              <MenuItem
+                value="Trial"
+                data-testid={TestIds.organizations.editDialog.statusOption(
+                  'Trial'
+                )}
+              >
+                Trial
+              </MenuItem>
+              <MenuItem
+                value="Inactive"
+                data-testid={TestIds.organizations.editDialog.statusOption(
+                  'Inactive'
+                )}
+              >
+                Inactive
+              </MenuItem>
             </Select>
           </FormControl>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid={TestIds.organizations.editDialog.cancel}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading} data-testid={TestIds.organizations.editDialog.submit}>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.organizations.editDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          data-testid={TestIds.organizations.editDialog.submit}
+        >
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>

@@ -221,7 +221,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
             </TableHead>
             <TableBody>
               {Array.isArray(domains) &&
-                domains.map((domain) => (
+                domains.map(domain => (
                   <TableRow key={domain.id}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -262,8 +262,8 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
                         <Tooltip title="Delete Domain">
                           {Boolean(domain.is_primary) &&
                           Array.isArray(domains) &&
-                          domains.filter((d) => Boolean(d.is_primary))
-                            .length === 1 ? (
+                          domains.filter(d => Boolean(d.is_primary)).length ===
+                            1 ? (
                             <span>
                               <IconButton size="small" disabled={true}>
                                 <DeleteIcon />
@@ -320,7 +320,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
           setEditDialogOpen(false);
           setSelectedDomain(null);
         }}
-        onSubmit={(data) => {
+        onSubmit={data => {
           if (selectedDomain) {
             return handleUpdateDomain(String(selectedDomain.id), data);
           }
@@ -334,11 +334,11 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
           severity={snackbar.severity}
         >
           {snackbar.message}
@@ -374,9 +374,9 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const [loading, setLoading] = useState(false);
 
   const handleChange = (field: keyof CreateDomainRequest, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -430,7 +430,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
               fullWidth
               label="Domain Name"
               value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={e => handleChange('name', e.target.value)}
               error={!!errors.name}
               helperText={
                 errors.name || 'Enter domain name (e.g., company.com)'
@@ -508,9 +508,9 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   }, [domain]);
 
   const handleChange = (field: keyof UpdateDomainRequest, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -555,7 +555,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
               fullWidth
               label="Domain Name"
               value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={e => handleChange('name', e.target.value)}
               error={!!errors.name}
               helperText={errors.name}
               disabled={loading}
@@ -566,7 +566,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
               control={
                 <Switch
                   checked={Boolean(formData.is_primary)}
-                  onChange={(e) => handleChange('is_primary', e.target.checked)}
+                  onChange={e => handleChange('is_primary', e.target.checked)}
                   disabled={loading}
                 />
               }
@@ -579,7 +579,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
               fullWidth
               label="Status"
               value={formData.status}
-              onChange={(e) => handleChange('status', e.target.value)}
+              onChange={e => handleChange('status', e.target.value)}
               disabled={loading}
             >
               <option value="active">Active</option>
