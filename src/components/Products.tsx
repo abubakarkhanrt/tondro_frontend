@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 20-06-2025
+ * Last Updated: 26-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -33,12 +33,10 @@ import {
   TablePagination,
   Snackbar,
   IconButton,
-  Chip,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
 import {
@@ -83,6 +81,7 @@ const Products: React.FC = () => {
   });
   const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
@@ -134,7 +133,7 @@ const Products: React.FC = () => {
 
       const response = await apiHelpers.getProducts(controller.signal);
       setProducts(response.data || []);
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
         total: response.data.length || 0,
       }));
@@ -178,36 +177,14 @@ const Products: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (): Promise<void> => {
-    if (!confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-
-    try {
-      // Note: The API doesn't have a delete endpoint for products, so we'll just show a message
-      setSnackbar({
-        open: true,
-        message: 'Product deletion not implemented in API',
-        severity: 'warning',
-      });
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete product',
-        severity: 'error',
-      });
-    }
-  };
-
   const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handlePageSizeChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setPagination((prev) => ({
+    setPagination(prev => ({
       ...prev,
       pageSize: parseInt(event.target.value, 10),
       page: 0,
@@ -283,14 +260,12 @@ const Products: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Description</TableCell>
-                    <TableCell>Price</TableCell>
-                    <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {products.map((product) => (
+                  {products.map(product => (
                     <TableRow key={product.id}>
                       <TableCell>
                         <Typography variant="subtitle2">
@@ -298,21 +273,6 @@ const Products: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>{product.description}</TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: product.currency || 'USD',
-                        }).format(product.price)}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={product.status}
-                          color={
-                            product.status === 'Active' ? 'success' : 'default'
-                          }
-                          size="small"
-                        />
-                      </TableCell>
                       <TableCell>
                         {new Date(product.created_at).toLocaleDateString()}
                       </TableCell>
@@ -322,6 +282,7 @@ const Products: React.FC = () => {
                             size="small"
                             onClick={() => {
                               setSelectedProduct(product);
+                              setEditMode(false);
                             }}
                             data-testid={TestIds.products.viewDetails(
                               product.id
@@ -333,18 +294,11 @@ const Products: React.FC = () => {
                             size="small"
                             onClick={() => {
                               setSelectedProduct(product);
+                              setEditMode(true);
                             }}
                             data-testid={TestIds.products.edit(product.id)}
                           >
                             <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={handleDeleteProduct}
-                            data-testid={TestIds.products.delete(product.id)}
-                          >
-                            <DeleteIcon />
                           </IconButton>
                         </Box>
                       </TableCell>
@@ -396,16 +350,29 @@ const Products: React.FC = () => {
 
       {selectedProduct && (
         <>
-          <ViewProductDialog
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-            onUpdate={fetchProducts}
-          />
-          <EditProductDialog
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-            onSubmit={handleUpdateProduct}
-          />
+          {!editMode && (
+            <ViewProductDialog
+              product={selectedProduct}
+              onClose={() => {
+                setSelectedProduct(null);
+                setEditMode(false);
+              }}
+              onEdit={() => {
+                setSelectedProduct(selectedProduct);
+                setEditMode(true);
+              }}
+            />
+          )}
+          {editMode && (
+            <EditProductDialog
+              product={selectedProduct}
+              onClose={() => {
+                setSelectedProduct(null);
+                setEditMode(false);
+              }}
+              onSubmit={handleUpdateProduct}
+            />
+          )}
         </>
       )}
 
@@ -470,36 +437,64 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New Product</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.products.createDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.products.createDialog.title}>
+        Create New Product
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
             fullWidth
             label="Product Name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
             margin="normal"
             required
             placeholder="Enter product name"
+            data-testid={TestIds.products.createDialog.name}
+            inputProps={{
+              'data-testid': TestIds.products.createDialog.name,
+              'aria-label': 'Product name input',
+            }}
           />
           <TextField
             fullWidth
             label="Description"
             value={formData.description}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, description: e.target.value })
             }
             margin="normal"
             multiline
             rows={3}
             placeholder="Enter product description"
+            data-testid={TestIds.products.createDialog.description}
+            inputProps={{
+              'data-testid': TestIds.products.createDialog.description,
+              'aria-label': 'Product description input',
+            }}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.products.createDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          data-testid={TestIds.products.createDialog.submit}
+        >
           {loading ? 'Creating...' : 'Create'}
         </Button>
       </DialogActions>
@@ -514,17 +509,25 @@ const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
 interface ViewProductDialogProps {
   product: Product;
   onClose: () => void;
-  onUpdate: () => void;
+  onEdit: () => void;
 }
 
 const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
   product,
   onClose,
-  onUpdate,
+  onEdit,
 }) => {
   return (
-    <Dialog open={!!product} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Product Details: {product?.name}</DialogTitle>
+    <Dialog
+      open={!!product}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.products.viewDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.products.viewDialog.title}>
+        Product Details: {product?.name}
+      </DialogTitle>
       <DialogContent>
         {product && (
           <Box sx={{ pt: 1 }}>
@@ -574,8 +577,18 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onUpdate}>Edit</Button>
-        <Button onClick={onClose}>Close</Button>
+        <Button
+          onClick={onEdit}
+          data-testid={TestIds.products.viewDialog.editButton}
+        >
+          Edit
+        </Button>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.products.viewDialog.closeButton}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -619,34 +632,62 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   return (
-    <Dialog open={!!product} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Product</DialogTitle>
+    <Dialog
+      open={!!product}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.products.editDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.products.editDialog.title}>
+        Edit Product
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <TextField
             fullWidth
             label="Product Name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
             margin="normal"
             required
+            data-testid={TestIds.products.editDialog.name}
+            inputProps={{
+              'data-testid': TestIds.products.editDialog.name,
+              'aria-label': 'Product name input',
+            }}
           />
           <TextField
             fullWidth
             label="Description"
             value={formData.description}
-            onChange={(e) =>
+            onChange={e =>
               setFormData({ ...formData, description: e.target.value })
             }
             margin="normal"
             multiline
             rows={3}
+            data-testid={TestIds.products.editDialog.description}
+            inputProps={{
+              'data-testid': TestIds.products.editDialog.description,
+              'aria-label': 'Product description input',
+            }}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.products.editDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          data-testid={TestIds.products.editDialog.submit}
+        >
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>

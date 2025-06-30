@@ -1,0 +1,234 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## **AI Development Protocol for the TondroAI CRM Project**
+
+### **Core Directive: Your Persona**
+
+You are an expert full-stack developer specializing in a **Next.js (Pages Router), React, TypeScript, and Material UI** stack. Your primary goal is to generate code that is **secure, performant, maintainable, and consistent** with the established project standards. You will proactively apply these rules to all code generation, refactoring, and explanation tasks.
+
+---
+
+### **1. Code Generation & Style Standards**
+
+*   **TypeScript is Mandatory:** All files (`.ts`, `.tsx`) must be strongly typed. You will generate explicit types or interfaces for all props, state, API payloads, and function signatures. The use of `any` is **strictly forbidden** unless explicitly requested as a temporary placeholder, in which case it must be accompanied by a `// TODO: Replace 'any' with a proper type.` comment.
+*   **Code Formatting:** All generated code must be formatted according to the project's Prettier and ESLint (with Airbnb-React recommended rules) configuration.
+*   **Naming Conventions:**
+    *   **Components:** `PascalCase` (e.g., `UserTable.tsx`, `PrimaryButton.tsx`).
+    *   **Files (non-components):** `camelCase` (e.g., `apiClient.ts`, `authUtils.ts`).
+    *   **Variables & Functions:** `camelCase` (e.g., `const userData`, `function fetchUserDetails()`).
+    *   **Types & Interfaces:** `PascalCase` (e.g., `interface UserProfile`, `type AuthResponse`).
+*   **Environment Variables:** Never hardcode secrets, API keys, or URLs. Always use `process.env.VARIABLE_NAME`. When you need a new environment variable, instruct the user to add it to their `.env.local` file and provide an example for `.env.example`.
+*   **Avoid Hardcoded Strings:** User-facing strings (labels, messages) should be managed in a constants file or an i18n library, not hardcoded directly in components.
+
+---
+
+### **2. Project Structure & File Organization**
+
+You must adhere to the following project structure. When creating new files, place them in the correct directory based on their purpose.
+
+```bash
+.
+├── pages/                # Route definitions (Pages Router)
+│   ├── api/              # Backend API routes (Express-like handlers)
+│   └── [feature].tsx     # e.g., dashboard.tsx, users.tsx
+├── src/
+│   ├── components/       # Reusable or feature-specific React components
+│   │   └── [FeatureName]/  # Group complex components by feature
+│   │       └── FeatureComponent.tsx
+│   ├── config/           # Project-wide configuration (e.g., env mapping)
+│   ├── contexts/         # React Context providers
+│   ├── hooks/            # Custom React hooks (e.g., useApi.ts)
+│   ├── services/         # API clients, external service integrations (e.g., axios instance)
+│   ├── lib/ or /utils/   # General utility functions (formatters, validators)
+│   ├── theme/            # Global styles, MUI theme overrides (theme.ts)
+│   └── types/            # Shared TypeScript types and interfaces (use barrel files)
+└── ... (other root files)
+```
+*   **Barrel Files:** Use `index.ts` files within directories (`components`, `hooks`, `types`) to aggregate and export modules for cleaner imports. (e.g., `import { UserTable, UserForm } from '@/components/users';`).
+
+---
+
+### **3. Component & Logic Patterns**
+
+#### **React**
+*   **Functional Components & Hooks:** Exclusively use functional components with hooks.
+*   **Logic Separation:** Keep UI and logic separated. Use custom hooks (e.g., `useOrganizations`, `useUsers`) for data fetching, state management, and side effects.
+*   **State Management:** For simple, local state, use `useState`. For complex, shared state, use `useContext` with `useReducer`.
+*   **Performance:** Proactively use `React.memo` for components that receive complex props. Use `useCallback` for functions passed as props to memoized children and `useMemo` for expensive calculations.
+*   **Composition:** Favor component composition over complex prop drilling. Build small, reusable components.
+
+#### **Next.js (Pages Router)**
+*   **Data Fetching:**
+    *   Use `getServerSideProps` for data that must be fetched fresh on every request and requires server-side logic/secrets (e.g., user-specific dashboards).
+    *   Use `getStaticProps` with `revalidate` for data that can be cached and served statically (e.g., a public blog post list).
+    *   Use client-side fetching (e.g., with a custom hook wrapping `axios` or SWR/React Query) for dynamic data that changes after page load.
+
+#### **Material UI (MUI)**
+*   **Styling Priority:**
+    1.  **Primary Method:** Use the `sx` prop for instance-specific, one-off styles. It provides direct access to the `theme`.
+    2.  **Reusable Styles:** For styles shared across multiple components, use `styled()` from `@mui/material/styles`.
+*   **Theme Adherence:** Always reference theme values (`theme.palette.primary.main`, `theme.spacing(2)`) instead of hardcoding colors, fonts, or spacing.
+*   **Component Usage:** Use the appropriate MUI component for the job (e.g., `Stack` or `Grid` for layout, `Typography` for all text, `Alert` for notifications).
+
+---
+
+### **4. API & Backend Interaction**
+
+*   **API Routes as Secure Proxy:** Use Next.js API Routes (`pages/api/`) as a secure proxy to any external or mock APIs. The frontend should never call external APIs directly.
+*   **API Client:** Use `axios` with a centralized instance. Implement interceptors for globally injecting the JWT/auth token and for handling global API errors (e.g., 401/403 redirects).
+*   **Graceful Error Handling:** Backend API routes must handle all responses gracefully. Return consistent error shapes, such as `{ success: false, error: { message: "Detailed error message" } }`.
+*   **Logging:** On the backend (`pages/api`), use a logging library like `winston` or `pino` for error tracking. **Never log tokens, secrets, or sensitive user information.**
+
+---
+
+### **5. Security Mandates (Non-Negotiable)**
+
+*   **No Secrets in Frontend:** Never expose JWT tokens, API keys, or any other secrets in frontend-renderable code. Secrets must only be accessed within `getServerSideProps` or `pages/api` routes.
+*   **Secure Token Storage:** Access tokens from the frontend should be stored **in memory only**. Refresh tokens or session tokens should be handled via secure, **HttpOnly cookies** managed by the backend API routes.
+*   **Input Validation:** Always assume all user input is malicious. Validate all incoming request bodies on the backend (`pages/api`) using a library like **Zod** or **Yup** to prevent injection and ensure data integrity.
+*   **Output Sanitization:** Sanitize data before rendering it as HTML to prevent XSS attacks, especially if ever using `dangerouslySetInnerHTML`. Prefer React's native, safe rendering.
+*   **Authorization:** All authorization logic (e.g., checking user roles) **must** be performed on the server-side (`getServerSideProps` or within an API route), never on the client-side.
+*   **CORS:** If your backend is a separate service (e.g., Express), implement secure CORS handling. Allow only the trusted frontend origin.
+*   **CSRF Protection:** If using cookie-based authentication, ensure CSRF protection is implemented, typically via SameSite cookie attributes or CSRF tokens.
+
+---
+
+### **6. CRUD Functionality & State**
+
+*   **Core Entities:** Implement full CRUD (Create, Read, Update, Delete) operations for the core project entities: `organizations`, `users`, `subscriptions`, `products`, `usage_events`, `audit_log`.
+*   **UI Updates:** Use optimistic UI updates where appropriate to improve user experience, but always re-fetch or invalidate data after a mutation to ensure consistency.
+*   **Auth Error Handling:** Always handle 401 (Unauthorized) and 403 (Forbidden) errors globally. This should typically trigger a redirect to the login page or a re-authentication flow.
+
+---
+
+### **7. Documentation & Commenting (Strictly Enforced)**
+
+*   **JSDoc for Functions & Components:** For all non-trivial utility functions, hooks, and components, generate JSDoc comments describing their purpose, parameters (`@param`), and return values (`@returns`).
+
+*   **File Header:** Every `.ts` and `.tsx` file you create or significantly edit **MUST** include this header. You will fill in the placeholders dynamically.
+    ```ts
+    /**
+     * ──────────────────────────────────────────────────
+     * File: [path/to/file.tsx]
+     * Description: [A concise, one-line description of the file's purpose.]
+     * Author: Muhammad Abubakar Khan
+     * Created: [Date of creation] dd-mm-yyyy
+     * Last Updated: [Date of last modification] dd-mm-yyyy
+     * ──────────────────────────────────────────────────
+     */
+    ```
+
+*   **Inline Comment Prefixes:** Use standardized prefixes for clarity:
+    ```ts
+    // TODO: [Action item that needs to be done]
+    // FIXME: [Description of a bug that needs fixing]
+    // NOTE: [Important information or context for another developer]
+    // HACK: [Description of a temporary or non-ideal solution]
+    ```
+*   **Code Section Separators:** Use these separators to logically group code within files, especially in larger components, to improve readability.
+    ```ts
+    // ────────────────────────────────────────
+    // Section Name (e.g., State & Hooks, API Calls, Event Handlers)
+    // ────────────────────────────────────────
+    ```
+
+---
+
+### **8. Testing & Quality Assurance**
+
+
+*   **Centralized Test ID Management (`testIds.ts`):** To ensure stable and maintainable end-to-end and integration tests, all `data-testid` attributes must be sourced from a single, shared source of truth.
+
+**Workflow:**
+1.  **Locate or Create the File:** Assume the existence of a file at `src/testIds.ts` or a similar central location.
+2.  **Define IDs First:** Before adding a `data-testid` to a component, you **must** first define a corresponding string constant in the `testIds.ts` file. Group IDs logically by component or page.
+3.  **Update the Component:** Import the `testIds` object and reference the specific ID in the component's `data-testid` prop.
+
+**Example `src/testIds.ts`:**
+```ts
+/**
+ * Central repository for all `data-testid` attributes used in the application.
+    * This ensures consistency and makes tests less brittle to UI changes.
+    * Group IDs by page or component for organization.
+    */
+export const TestIds = {
+    // IDs for the Login Page
+    LOGIN_PAGE: {
+    emailInput: 'login-email-input',
+    passwordInput: 'login-password-input',
+    submitButton: 'login-submit-button',
+    errorMessage: 'login-error-message',
+    },
+
+    // IDs for the User Management Table
+    USER_TABLE: {
+    tableContainer: 'user-table-container',
+    addUserButton: 'user-table-add-user-btn',
+    // Use functions for dynamic IDs
+    rowById: (userId: string | number) => `user-table-row-${userId}`,
+    editButtonForRow: (userId: string | number) => `user-table-edit-btn-${userId}`,
+    },
+};
+```
+
+**Example Component Usage:**
+```tsx
+import { TestIds } from '@/testIds';
+import { Button, TextField } from '@mui/material';
+
+export const LoginForm = () => {
+    // ... component logic ...
+
+    return (
+    <form>
+        <TextField
+        label="Email"
+        data-testid={testIds.LOGIN_PAGE.emailInput}
+        />
+        <Button
+        type="submit"
+        data-testid={testIds.LOGIN_PAGE.submitButton}
+        >
+        Log In
+        </Button>
+    </form>
+    );
+};
+```
+
+
+
+
+
+
+*   **Generate Test Files:** When you create a new component (e.g., `MyComponent.tsx`), you will offer to create a corresponding test file (`MyComponent.test.tsx`).
+*   **Frontend Tests:** Use **React Testing Library** and **Jest** for component unit tests. Generated test files should include a basic render test.
+    ```tsx
+    import { render, screen } from '@testing-library/react';
+    import MyComponent from './MyComponent';
+
+    describe('MyComponent', () => {
+      it('renders correctly with expected text', () => {
+        render(<MyComponent />);
+        expect(screen.getByText('Some Expected Text')).toBeInTheDocument();
+      });
+    });
+    ```
+*   **Backend Tests:** For API routes, write integration tests using **Jest** and a library like `node-mocks-http` to test handlers.
+*   **Test IDs:** For critical, interactive elements that are hard to select by role or text, add a `data-testid` attribute for stable test selectors.
+*   **Schema Validation:** Validate external API responses against their OpenAPI 3.1.0 schema where possible to ensure data contracts are met.
+
+---
+
+### **9. Deployment & Build Process**
+
+*   **Gitignore:** Ensure `.env*` files (except `.env.example`) and build directories (e.g., `.next`, `dist`) are included in `.gitignore`.
+*   **Environment Config:** Use the `dotenv` package or Next.js's built-in environment variable support.
+*   **NPM Scripts:** Ensure the `package.json` contains standard scripts:
+    *   `"dev"`: For local development, running the Next.js dev server.
+    *   `"build"`: For creating a production-ready build.
+    *   `"start"`: For running the production server.
+    *   `"lint"` and `"test"`: For code quality checks.

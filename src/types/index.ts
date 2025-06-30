@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 25-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -97,7 +97,7 @@ export interface OrganizationsResponse {
 export interface InitialSubscription {
   product_id: string;
   tier: string;
-  usage_limit?: number;
+  max_limit?: number;
   auto_renewal?: boolean;
 }
 
@@ -219,6 +219,7 @@ export interface Subscription {
     | 'suspended';
   tier_name: string;
   current_usage: number;
+  max_limit: number;
   auto_renewal: boolean;
   starts_at: string;
   ends_at: string | null;
@@ -329,6 +330,34 @@ export interface UpdateProductRequest {
 }
 
 // ────────────────────────────────────────
+// Product Tier Types
+// ────────────────────────────────────────
+
+export interface ProductTier {
+  id: string;
+  product_id: string;
+  tier_name: string;
+  display_name: string;
+  max_limit: number;
+  price: number;
+  currency: string;
+  status: 'Active' | 'Inactive';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductTiersResponse {
+  total: number;
+  page: number;
+  limit: number;
+  tiers: ProductTier[];
+}
+
+export interface ProductTierResponse {
+  tier: ProductTier;
+}
+
+// ────────────────────────────────────────
 // Usage Event Types
 // ────────────────────────────────────────
 
@@ -354,16 +383,12 @@ export interface CreateUsageEventRequest {
 // ────────────────────────────────────────
 
 export interface AuditLog {
-  id: string;
-  organization_id: string;
-  user_id: string;
+  id: string | number;
+  entity_type: string;
+  entity_id: string;
   action: string;
-  resource_type: string;
-  resource_id: string;
+  performed_by: string;
   details: Record<string, unknown>;
-  ip_address: string;
-  user_agent: string;
-  timestamp: string;
   created_at: string;
 }
 

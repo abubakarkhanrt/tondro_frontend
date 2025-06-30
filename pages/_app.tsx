@@ -30,7 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   const showError = (message: string): void => {
     setError(message);
-    setTimeout(() => setError(''), 5000);
+    setTimeout(() => setError(''), 10000);
   };
 
   const showSuccess = (message: string): void => {
@@ -54,7 +54,7 @@ export default function App({ Component, pageProps }: AppProps) {
         </Container>
       </Box>
       {/* Global Error/Success Messages */}
-      <Snackbar open={!!error} autoHideDuration={5000} onClose={() => setError('')}>
+      <Snackbar open={!!error} autoHideDuration={10000} onClose={() => setError('')}>
         <Alert onClose={() => setError('')} severity="error" style={{ width: '100%' }} data-testid={TestIds.common.errorAlert}>
           {error}
         </Alert>
