@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -91,7 +91,7 @@ const Products: React.FC = () => {
   useEffect(() => {
     // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         fetchProducts();
       } else {
@@ -124,7 +124,7 @@ const Products: React.FC = () => {
 
     try {
       // Double-check token before making request
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         setError('Authentication token not found. Please login again.');
         setLoading(false);

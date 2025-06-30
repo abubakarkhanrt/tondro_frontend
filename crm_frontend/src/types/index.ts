@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -461,15 +461,18 @@ export interface TableProps<T> {
 // ────────────────────────────────────────
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface LoginResponse {
-  token: string;
-  token_type?: string;
+  access_token: string;
+  token_type: string;
   expires_in: number;
-  user?: User;
+  user: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface AuthContextType {

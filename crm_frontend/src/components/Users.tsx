@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 27-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -163,7 +163,7 @@ const Users: React.FC = () => {
   // This runs only once when component mounts
   useEffect(() => {
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         fetchUsers();
         fetchOrganizations(); // Only called once
@@ -183,7 +183,7 @@ const Users: React.FC = () => {
 
   // This runs only when filters/pagination change
   useEffect(() => {
-    const token = localStorage.getItem('jwt_token');
+    const token = localStorage.getItem('access_token');
     if (token) {
       fetchUsers(); // Only fetch users, not organizations
     }
@@ -198,7 +198,7 @@ const Users: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         setError('Authentication token not found. Please login again.');
         setLoading(false);

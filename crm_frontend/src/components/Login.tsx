@@ -4,7 +4,7 @@
  * Description: Authentication component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -73,26 +73,39 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      // Simulate login validation (you can add actual validation logic here)
-      // For now, we'll just check if credentials are provided and then use mock token
-      console.log('Login attempt with:', {
+      // Use proper login API
+      console.log('🔐 Attempting login with credentials:', {
         username: formData.username,
-        password: '***',
+        password: '***' // Don't log actual password
+      });
+      
+      const response = await apiHelpers.login({
+        username: formData.username,
+        password: formData.password,
       });
 
-      // Use the same mock token logic as the original button
-      const response = await apiHelpers.getMockToken();
-      localStorage.setItem('jwt_token', response.data.token);
-      localStorage.setItem('user_email', formData.username); // Store the email for display
+      console.log('✅ Login successful! Response:', response.data);
+
+      // Store token and user info in new format
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('token_type', response.data.token_type);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('user_email', formData.username); // Keep for backward compatibility
+
       (window as any).showSuccess?.(`Welcome, ${formData.username}!`);
 
       // Trigger a storage event to notify Navigation component
       window.dispatchEvent(new Event('storage'));
 
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('Login failed. Please check your credentials and try again.');
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      const errorMessage = error.response?.data?.detail?.[0]?.msg || 
+                          error.response?.data?.message || 
+                          'Login failed. Please check your credentials and try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -131,7 +144,7 @@ const Login: React.FC = () => {
           <Box component="form" onSubmit={handleFormSubmit}>
             <TextField
               fullWidth
-              label="Username or Email"
+              label="Username"
               name="username"
               value={formData.username}
               onChange={handleInputChange}
@@ -142,7 +155,7 @@ const Login: React.FC = () => {
               data-testid={TestIds.login.username}
               inputProps={{
                 'data-testid': TestIds.login.username,
-                'aria-label': 'Username or Email input'
+                'aria-label': 'Username input'
               }}
             />
             <TextField

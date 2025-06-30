@@ -4,7 +4,7 @@
  * Description: Environment configuration for TondroAI CRM Next.js app
  * Author: Muhammad Abubakar Khan
  * Created: 19-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -37,7 +37,7 @@ export const ENV_CONFIG = {
 
   // Default Values
   DEFAULT_PAGE_SIZE: 10,
-  DEFAULT_TIMEOUT: 10000,
+  DEFAULT_TIMEOUT: 100000,
 } as const;
 
 // ────────────────────────────────────────

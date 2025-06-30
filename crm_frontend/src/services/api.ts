@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 30-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -66,7 +66,16 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
+    // Don't add Authorization header for login endpoint
+    if (config.url === '/crm/auth/login') {
+      return config;
+    }
+
+    const accessToken = localStorage.getItem('access_token');
+    const tokenType = localStorage.getItem('token_type') || 'bearer';
+
+    // Use the new token format if available, fallback to old format for backward compatibility
+    const token = accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
 
     // Only use valid tokens, fallback to test token if needed
     const validToken =
@@ -75,7 +84,7 @@ api.interceptors.request.use(
         : 'valid_test_token';
 
     if (config.headers) {
-      config.headers.Authorization = `Bearer ${validToken}`;
+      config.headers.Authorization = `${tokenType} ${validToken}`;
     }
     return config;
   },
@@ -99,7 +108,10 @@ api.interceptors.response.use(
     }
 
     if (error.response && error.response.status === 401) {
-      // Clear token and user data
+      // Clear all token formats for backward compatibility
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token_type');
+      localStorage.removeItem('user');
       localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
       localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
 
@@ -525,14 +537,16 @@ export const apiHelpers = {
   // Authentication
   // ────────────────────────────────────────
 
-  getMockToken: (signal?: AbortSignal): Promise<AxiosResponse<LoginResponse>> =>
-    api.get('/crm/mock-token', { signal }),
-
   login: (
     credentials: LoginRequest,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<LoginResponse>> =>
-    api.post('/crm/login', credentials, { signal }),
+  ): Promise<AxiosResponse<LoginResponse>> => {
+    console.log('📡 API Login Request:', {
+      url: '/crm/auth/login',
+      credentials: { ...credentials, password: '***' }
+    });
+    return api.post('/crm/auth/login', credentials, { signal });
+  },
 
   // ────────────────────────────────────────
   // Health checks
