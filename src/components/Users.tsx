@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 27-06-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -163,13 +163,13 @@ const Users: React.FC = () => {
     severity: 'success',
   });
 
+  // This runs only once when component mounts
   useEffect(() => {
-    // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
       const token = localStorage.getItem('jwt_token');
       if (token) {
         fetchUsers();
-        fetchOrganizations();
+        fetchOrganizations(); // Only called once
       } else {
         setError('No authentication token found. Please login again.');
         setLoading(false);
@@ -182,6 +182,14 @@ const Users: React.FC = () => {
         abortController.abort();
       }
     };
+  }, []); // Empty dependency array
+
+  // This runs only when filters/pagination change
+  useEffect(() => {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      fetchUsers(); // Only fetch users, not organizations
+    }
   }, [filters, pagination.page, pagination.pageSize]);
 
   const fetchUsers = async (): Promise<void> => {
@@ -323,11 +331,18 @@ const Users: React.FC = () => {
     try {
       const response = await apiHelpers.getOrganizations();
       const orgs = response.data.organizations || [];
-      setOrganizations(orgs);
+
+      // Remove duplicate organizations based on organizationId
+      const uniqueOrgs = orgs.filter(
+        (org, index, self) =>
+          index === self.findIndex(o => o.organizationId === org.organizationId)
+      );
+
+      setOrganizations(uniqueOrgs);
 
       // Fetch domains for each organization
       const domainsData: Record<string, Domain[]> = {};
-      for (const org of orgs) {
+      for (const org of uniqueOrgs) {
         try {
           const domainsResponse = await apiHelpers.getUserDomains(
             org.organizationId
@@ -484,6 +499,7 @@ const Users: React.FC = () => {
         handleDeleteUser={handleDeleteUser}
         setSelectedUser={setSelectedUser}
         setCreateDialogOpen={setCreateDialogOpen}
+        setEditMode={setEditMode}
       />
 
       <CreateUserDialog
@@ -643,10 +659,24 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 }
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
+                inputProps={{
+                  'aria-label': 'Organization filter',
+                }}
               >
-                <MenuItem value="">All Organizations</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.organizationOptionAll}
+                >
+                  All Organizations
+                </MenuItem>
                 {organizations.map(org => (
-                  <MenuItem key={org.organizationId} value={org.organizationId}>
+                  <MenuItem
+                    key={org.organizationId}
+                    value={org.organizationId}
+                    data-testid={TestIds.filterForm.organizationOption(
+                      org.organizationId
+                    )}
+                  >
                     {org.tenantName}
                   </MenuItem>
                 ))}
@@ -663,10 +693,22 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 }
                 label="Role"
                 data-testid={TestIds.filterForm.role}
+                inputProps={{
+                  'aria-label': 'Role filter',
+                }}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.roleOptionAll}
+                >
+                  All
+                </MenuItem>
                 {userRoles.map(role => (
-                  <MenuItem key={role} value={role}>
+                  <MenuItem
+                    key={role}
+                    value={role}
+                    data-testid={TestIds.filterForm.roleOption(role)}
+                  >
                     {role
                       .replace('_', ' ')
                       .replace(/\b\w/g, l => l.toUpperCase())}
@@ -685,11 +727,34 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 }
                 label="Status"
                 data-testid={TestIds.filterForm.status}
+                inputProps={{
+                  'aria-label': 'Status filter',
+                }}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="invited">Invited</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.statusOptionAll}
+                >
+                  All
+                </MenuItem>
+                <MenuItem
+                  value="active"
+                  data-testid={TestIds.filterForm.statusOption('active')}
+                >
+                  Active
+                </MenuItem>
+                <MenuItem
+                  value="inactive"
+                  data-testid={TestIds.filterForm.statusOption('inactive')}
+                >
+                  Inactive
+                </MenuItem>
+                <MenuItem
+                  value="invited"
+                  data-testid={TestIds.filterForm.statusOption('invited')}
+                >
+                  Invited
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -702,6 +767,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               placeholder="Search users by email or name..."
               inputRef={searchInputRef}
               data-testid={TestIds.filterForm.search}
+              inputProps={{
+                'data-testid': TestIds.filterForm.search,
+                'aria-label': 'Search users input',
+              }}
             />
           </Grid>
         </Grid>
@@ -732,6 +801,7 @@ interface UsersTableProps {
   handleDeleteUser: (id: string) => void;
   setSelectedUser: (user: User) => void;
   setCreateDialogOpen: (open: boolean) => void;
+  setEditMode: (edit: boolean) => void;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
@@ -746,6 +816,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   handleDeleteUser,
   setSelectedUser,
   setCreateDialogOpen,
+  setEditMode,
 }) => {
   return (
     <Card data-testid={TestIds.users.table}>
@@ -842,6 +913,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                             size="small"
                             onClick={() => {
                               setSelectedUser(user);
+                              setEditMode(false);
                             }}
                             data-testid={TestIds.users.viewDetails(user.id)}
                           >
@@ -851,6 +923,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                             size="small"
                             onClick={() => {
                               setSelectedUser(user);
+                              setEditMode(true);
                             }}
                             data-testid={TestIds.users.edit(user.id)}
                           >
@@ -942,15 +1015,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       // Find the primary domain and set it as default
       const primaryDomain = domainsData.find(domain => domain.is_primary);
       if (primaryDomain) {
-        setFormData(prev => ({
-          ...prev,
-          domain_id: Number(primaryDomain.id),
-        }));
+        setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
       } else if (domainsData.length > 0) {
         // If no primary domain found, select the first domain
         setFormData(prev => ({
           ...prev,
-          domain_id: Number(domainsData[0]?.id ?? 0),
+          domain_id: Number(domainsData[0].id),
         }));
       } else {
         // No domains available
@@ -1041,8 +1111,16 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New User</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.users.createDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.users.createDialog.title}>
+        Create New User
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <FormControl
@@ -1058,9 +1136,19 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 setFormData({ ...formData, organization_id: e.target.value })
               }
               label="Organization"
+              data-testid={TestIds.users.createDialog.organization}
+              inputProps={{
+                'aria-label': 'Organization selection',
+              }}
             >
               {organizations.map(org => (
-                <MenuItem key={org.organizationId} value={org.organizationId}>
+                <MenuItem
+                  key={org.organizationId}
+                  value={org.organizationId}
+                  data-testid={TestIds.users.createDialog.organizationOption(
+                    org.organizationId
+                  )}
+                >
                   {org.tenantName}
                 </MenuItem>
               ))}
@@ -1095,6 +1183,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               }
               label="Domain"
               disabled={!formData.organization_id || domainsLoading}
+              data-testid={TestIds.users.createDialog.domain}
+              inputProps={{
+                'aria-label': 'Domain selection',
+              }}
             >
               {domainsLoading ? (
                 <MenuItem disabled>
@@ -1107,10 +1199,14 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 <MenuItem disabled>No domains available</MenuItem>
               ) : (
                 domains.map(domain => (
-                  <MenuItem key={domain.id} value={domain.id}>
+                  <MenuItem
+                    key={domain.id}
+                    value={domain.id}
+                    data-testid={TestIds.users.createDialog.domainOption(
+                      domain.id
+                    )}
+                  >
                     {(() => {
-                      // Get the domain name from either domain_name or name field
-
                       let domainName = '';
                       if (
                         domain.domain_name &&
@@ -1123,9 +1219,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                       ) {
                         domainName = domain.name;
                       }
-                      // log the domain name
-                      console.log('Domain name:', domainName);
-                      // Simple domain name cleaning - just trim whitespace
                       const cleanDomainName = domainName.trim();
 
                       return (
@@ -1156,6 +1249,11 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             required
             error={!!errors.email}
             helperText={errors.email}
+            data-testid={TestIds.users.createDialog.email}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.email,
+              'aria-label': 'User email input',
+            }}
           />
 
           <TextField
@@ -1166,6 +1264,11 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             onChange={e =>
               setFormData({ ...formData, first_name: e.target.value })
             }
+            data-testid={TestIds.users.createDialog.firstName}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.firstName,
+              'aria-label': 'User first name input',
+            }}
           />
 
           <TextField
@@ -1176,6 +1279,11 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             onChange={e =>
               setFormData({ ...formData, last_name: e.target.value })
             }
+            data-testid={TestIds.users.createDialog.lastName}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.lastName,
+              'aria-label': 'User last name input',
+            }}
           />
 
           <FormControl fullWidth margin="normal" required>
@@ -1195,9 +1303,17 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 })
               }
               label="Role"
+              data-testid={TestIds.users.createDialog.role}
+              inputProps={{
+                'aria-label': 'Role selection',
+              }}
             >
               {availableRoles.map(role => (
-                <MenuItem key={role} value={role}>
+                <MenuItem
+                  key={role}
+                  value={role}
+                  data-testid={TestIds.users.createDialog.roleOption(role)}
+                >
                   {getRoleDisplayName(role)}
                 </MenuItem>
               ))}
@@ -1206,14 +1322,18 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+        <Button
+          onClick={handleClose}
+          disabled={loading}
+          data-testid={TestIds.users.createDialog.cancel}
+        >
           Cancel
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
-          data-testid={TestIds.users.createButton}
+          data-testid={TestIds.users.createDialog.submit}
         >
           {loading ? <CircularProgress size={20} /> : 'Create User'}
         </Button>
@@ -1244,8 +1364,14 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
   setEditMode,
 }) => {
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.users.viewDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.users.viewDialog.title}>
         User Details: {user?.first_name} {user?.last_name}
       </DialogTitle>
       <DialogContent>
@@ -1345,10 +1471,16 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
             // Set edit mode to true to switch to edit dialog
             setEditMode(true);
           }}
+          data-testid={TestIds.users.viewDialog.editButton}
         >
           Edit
         </Button>
-        <Button onClick={onClose}>Close</Button>
+        <Button
+          onClick={onClose}
+          data-testid={TestIds.users.viewDialog.closeButton}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -1436,24 +1568,40 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   };
 
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit User</DialogTitle>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.users.editDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.users.editDialog.title}>
+        Edit User
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Organization</InputLabel>
             <Select
-              value={formData.organization_id ?? ''}
+              value={formData.organization_id}
               onChange={e =>
-                setFormData({
-                  ...formData,
-                  organization_id: e.target.value as string,
-                })
+                setFormData({ ...formData, organization_id: e.target.value })
               }
               label="Organization"
+              data-testid={TestIds.users.editDialog.organization}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.organization,
+                'aria-label': 'Organization selection',
+              }}
             >
               {organizations.map(org => (
-                <MenuItem key={org.organizationId} value={org.organizationId}>
+                <MenuItem
+                  key={org.organizationId}
+                  value={org.organizationId}
+                  data-testid={TestIds.users.editDialog.organizationOption(
+                    org.organizationId
+                  )}
+                >
                   {org.tenantName}
                 </MenuItem>
               ))}
@@ -1470,6 +1618,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               }}
               label="Domain"
               disabled={availableDomains.length === 0}
+              data-testid={TestIds.users.editDialog.domain}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.domain,
+                'aria-label': 'Domain selection',
+              }}
             >
               {availableDomains.map(domain => (
                 <MenuItem key={domain.id} value={String(domain.id)}>
@@ -1508,6 +1661,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             onChange={e => setFormData({ ...formData, email: e.target.value })}
             margin="normal"
             required
+            data-testid={TestIds.users.editDialog.email}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.email,
+              'aria-label': 'User email input',
+            }}
           />
           <TextField
             fullWidth
@@ -1517,6 +1675,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               setFormData({ ...formData, first_name: e.target.value })
             }
             margin="normal"
+            data-testid={TestIds.users.editDialog.firstName}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.firstName,
+              'aria-label': 'User first name input',
+            }}
           />
           <TextField
             fullWidth
@@ -1526,6 +1689,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               setFormData({ ...formData, last_name: e.target.value })
             }
             margin="normal"
+            data-testid={TestIds.users.editDialog.lastName}
+            inputProps={{
+              'data-testid': TestIds.users.editDialog.lastName,
+              'aria-label': 'User last name input',
+            }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Role</InputLabel>
@@ -1544,9 +1712,18 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 })
               }
               label="Role"
+              data-testid={TestIds.users.editDialog.role}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.role,
+                'aria-label': 'Role selection',
+              }}
             >
               {userRoles.map(role => (
-                <MenuItem key={role} value={role}>
+                <MenuItem
+                  key={role}
+                  value={role}
+                  data-testid={TestIds.users.editDialog.roleOption(role)}
+                >
                   {getRoleDisplayName(role)}
                 </MenuItem>
               ))}
@@ -1568,17 +1745,44 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 })
               }
               label="Status"
+              data-testid={TestIds.users.editDialog.status}
+              inputProps={{
+                'data-testid': TestIds.users.editDialog.status,
+                'aria-label': 'Status selection',
+              }}
             >
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
-              <MenuItem value="invited">Invited</MenuItem>
+              <MenuItem
+                value="active"
+                data-testid={TestIds.users.editDialog.statusOption('active')}
+              >
+                Active
+              </MenuItem>
+              <MenuItem
+                value="inactive"
+                data-testid={TestIds.users.editDialog.statusOption('inactive')}
+              >
+                Inactive
+              </MenuItem>
+              <MenuItem
+                value="invited"
+                data-testid={TestIds.users.editDialog.statusOption('invited')}
+              >
+                Invited
+              </MenuItem>
             </Select>
           </FormControl>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button onClick={onClose} data-testid={TestIds.users.editDialog.cancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          data-testid={TestIds.users.editDialog.submit}
+        >
           {loading ? 'Updating...' : 'Update'}
         </Button>
       </DialogActions>
