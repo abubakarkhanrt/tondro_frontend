@@ -92,15 +92,20 @@ const CreateSubscriptionDialog = ({
   const tierOptions = getTierOptions(form.product_id);
 
   const handleChange = (field: keyof CreateSubscriptionRequest, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm(prev => ({ ...prev, [field]: value }));
     // Clear tier when product changes
     if (field === 'product_id') {
-      setForm((prev) => ({ ...prev, tier_name: '' }));
+      setForm(prev => ({ ...prev, tier_name: '' }));
     }
   };
 
   const handleSubmit = async () => {
-    if (!form.organization_id || !form.product_id || !form.tier_name || !form.starts_at) {
+    if (
+      !form.organization_id ||
+      !form.product_id ||
+      !form.tier_name ||
+      !form.starts_at
+    ) {
       setError('Please fill in all required fields');
       return;
     }
@@ -120,7 +125,7 @@ const CreateSubscriptionDialog = ({
         starts_at: `${form.starts_at}T00:00:00`,
         ends_at: endDate.toISOString().split('T')[0] + 'T00:00:00',
       };
-      
+
       await onSubmit(formattedData);
       onClose();
     } catch (e: any) {
@@ -145,8 +150,16 @@ const CreateSubscriptionDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth data-testid={TestIds.subscriptions.createDialog.container}>
-      <DialogTitle data-testid={TestIds.subscriptions.createDialog.title}>Create New Subscription</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.subscriptions.createDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.subscriptions.createDialog.title}>
+        Create New Subscription
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
@@ -155,62 +168,85 @@ const CreateSubscriptionDialog = ({
                 <InputLabel>Organization *</InputLabel>
                 <Select
                   value={form.organization_id || ''}
-                  onChange={(e) => handleChange('organization_id', Number(e.target.value))}
+                  onChange={e =>
+                    handleChange('organization_id', Number(e.target.value))
+                  }
                   label="Organization *"
                   data-testid={TestIds.subscriptions.createDialog.organization}
                 >
-                  {organizations.map((org) => (
-                    <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)} data-testid={TestIds.subscriptions.createDialog.organizationOption(org.organizationId)}>
+                  {organizations.map(org => (
+                    <MenuItem
+                      key={org.organizationId}
+                      value={parseInt(
+                        org.organizationId.replace('org_', ''),
+                        10
+                      )}
+                      data-testid={TestIds.subscriptions.createDialog.organizationOption(
+                        org.organizationId
+                      )}
+                    >
                       {org.tenantName}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>Product *</InputLabel>
                 <Select
                   value={form.product_id}
-                  onChange={(e) => handleChange('product_id', e.target.value)}
+                  onChange={e => handleChange('product_id', e.target.value)}
                   label="Product *"
                   data-testid={TestIds.subscriptions.createDialog.product}
                 >
-                  {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id} data-testid={TestIds.subscriptions.createDialog.productOption(product.id)}>
+                  {products.map(product => (
+                    <MenuItem
+                      key={product.id}
+                      value={product.id}
+                      data-testid={TestIds.subscriptions.createDialog.productOption(
+                        product.id
+                      )}
+                    >
                       {product.name}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>Tier *</InputLabel>
                 <Select
                   value={form.tier_name}
-                  onChange={(e) => handleChange('tier_name', e.target.value)}
+                  onChange={e => handleChange('tier_name', e.target.value)}
                   label="Tier *"
                   disabled={!form.product_id}
                   data-testid={TestIds.subscriptions.createDialog.tier}
                 >
-                  {tierOptions.map((tier) => (
-                    <MenuItem key={tier} value={tier} data-testid={TestIds.subscriptions.createDialog.tierOption(tier)}>
+                  {tierOptions.map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.subscriptions.createDialog.tierOption(
+                        tier
+                      )}
+                    >
                       {formatTierName(tier)}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Start Date *"
                 type="date"
                 value={form.starts_at ? form.starts_at.slice(0, 10) : ''}
-                onChange={(e) => handleChange('starts_at', e.target.value)}
+                onChange={e => handleChange('starts_at', e.target.value)}
                 fullWidth
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
@@ -218,19 +254,36 @@ const CreateSubscriptionDialog = ({
                 data-testid={TestIds.subscriptions.createDialog.startDate}
                 inputProps={{
                   'data-testid': TestIds.subscriptions.createDialog.startDate,
-                  'aria-label': 'Subscription start date input'
+                  'aria-label': 'Subscription start date input',
                 }}
               />
             </Grid>
           </Grid>
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }} data-testid={TestIds.subscriptions.createDialog.error}>{error}</Alert>
+            <Alert
+              severity="error"
+              sx={{ mt: 2 }}
+              data-testid={TestIds.subscriptions.createDialog.error}
+            >
+              {error}
+            </Alert>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={submitting} data-testid={TestIds.subscriptions.createDialog.cancel}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={submitting} data-testid={TestIds.subscriptions.createDialog.submit}>
+        <Button
+          onClick={handleClose}
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.createDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.createDialog.submit}
+        >
           {submitting ? 'Creating...' : 'Create Subscription'}
         </Button>
       </DialogActions>
@@ -259,7 +312,7 @@ const EditSubscriptionDialog = ({
   const tierOptions = getTierOptions(subscription.product_id);
 
   const handleChange = (field: keyof UpdateSubscriptionRequest, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
@@ -276,8 +329,16 @@ const EditSubscriptionDialog = ({
   };
 
   return (
-    <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth data-testid={TestIds.subscriptions.editDialog.container}>
-      <DialogTitle data-testid={TestIds.subscriptions.editDialog.title}>Edit Subscription</DialogTitle>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.subscriptions.editDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.subscriptions.editDialog.title}>
+        Edit Subscription
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
@@ -286,12 +347,18 @@ const EditSubscriptionDialog = ({
                 <InputLabel>Tier</InputLabel>
                 <Select
                   value={form.tier_name}
-                  onChange={(e) => handleChange('tier_name', e.target.value)}
+                  onChange={e => handleChange('tier_name', e.target.value)}
                   label="Tier"
                   data-testid={TestIds.subscriptions.editDialog.tier}
                 >
-                  {tierOptions.map((tier) => (
-                    <MenuItem key={tier} value={tier} data-testid={TestIds.subscriptions.editDialog.tierOption(tier)}>
+                  {tierOptions.map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.subscriptions.editDialog.tierOption(
+                        tier
+                      )}
+                    >
                       {formatTierName(tier)}
                     </MenuItem>
                   ))}
@@ -303,24 +370,55 @@ const EditSubscriptionDialog = ({
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={form.status}
-                  onChange={(e) => handleChange('status', e.target.value)}
+                  onChange={e => handleChange('status', e.target.value)}
                   label="Status"
                   data-testid={TestIds.subscriptions.editDialog.status}
                 >
-                  <MenuItem value="active" data-testid={TestIds.subscriptions.editDialog.statusOption('active')}>Active</MenuItem>
-                  <MenuItem value="inactive" data-testid={TestIds.subscriptions.editDialog.statusOption('inactive')}>Inactive</MenuItem>
+                  <MenuItem
+                    value="active"
+                    data-testid={TestIds.subscriptions.editDialog.statusOption(
+                      'active'
+                    )}
+                  >
+                    Active
+                  </MenuItem>
+                  <MenuItem
+                    value="inactive"
+                    data-testid={TestIds.subscriptions.editDialog.statusOption(
+                      'inactive'
+                    )}
+                  >
+                    Inactive
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
           </Grid>
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }} data-testid={TestIds.subscriptions.editDialog.error}>{error}</Alert>
+            <Alert
+              severity="error"
+              sx={{ mt: 2 }}
+              data-testid={TestIds.subscriptions.editDialog.error}
+            >
+              {error}
+            </Alert>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={submitting} data-testid={TestIds.subscriptions.editDialog.cancel}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={submitting} data-testid={TestIds.subscriptions.editDialog.submit}>
+        <Button
+          onClick={onClose}
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.editDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.editDialog.submit}
+        >
           {submitting ? 'Saving...' : 'Save'}
         </Button>
       </DialogActions>
@@ -444,7 +542,7 @@ const Subscriptions: React.FC = () => {
       };
 
       // Remove empty filters
-      Object.keys(params).forEach((key) => {
+      Object.keys(params).forEach(key => {
         if (params[key as keyof typeof params] === '')
           delete params[key as keyof typeof params];
       });
@@ -455,7 +553,7 @@ const Subscriptions: React.FC = () => {
       );
       const data: PaginatedSubscriptionsResponse = response.data;
       setSubscriptions(data.items || []);
-      setPagination((prev) => ({ ...prev, total: data.total || 0 }));
+      setPagination(prev => ({ ...prev, total: data.total || 0 }));
     } catch (error: any) {
       // Don't show error for cancelled requests
       if (axios.isCancel(error)) {
@@ -546,17 +644,19 @@ const Subscriptions: React.FC = () => {
 
   const getTierOptions = (productId: string): string[] => {
     if (!productId) return [];
-    
+
     // Get tiers for the specific product from API data
-    const productTiersForProduct = productTiers.filter(tier => tier.product_id === productId);
-    
+    const productTiersForProduct = productTiers.filter(
+      tier => tier.product_id === productId
+    );
+
     if (productTiersForProduct.length > 0) {
       // Return tier names from API data
       return productTiersForProduct.map(tier => tier.tier_name);
     }
-    
+
     // Fallback to hardcoded values if no API data available
-    const product = products.find((p) => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (!product) return [];
 
     const productName = product.name.toLowerCase();
@@ -569,12 +669,12 @@ const Subscriptions: React.FC = () => {
   };
 
   const handleFilterChange = (field: string, value: string): void => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setPagination((prev) => ({ ...prev, page: 0 })); // Reset to first page
-    
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
+
     // Clear tier filter when product changes
     if (field === 'product_id') {
-      setFilters((prev) => ({ ...prev, tier_name: '' }));
+      setFilters(prev => ({ ...prev, tier_name: '' }));
     }
   };
 
@@ -585,18 +685,18 @@ const Subscriptions: React.FC = () => {
       status: '',
       tier_name: '',
     });
-    setPagination((prev) => ({ ...prev, page: 0 }));
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
   const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handlePageSizeChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const newPageSize = parseInt(event.target.value, 10);
-    setPagination((prev) => ({
+    setPagination(prev => ({
       ...prev,
       pageSize: newPageSize,
       page: 0, // Reset to first page
@@ -609,13 +709,13 @@ const Subscriptions: React.FC = () => {
 
   const getOrganizationName = (organizationId: number): string => {
     const org = organizations.find(
-      (o) => o.organizationId === getOrganizationIdString(organizationId)
+      o => o.organizationId === getOrganizationIdString(organizationId)
     );
     return org ? org.tenantName : `Organization ${organizationId}`;
   };
 
   const getProductName = (productId: string): string => {
-    const product = products.find((p) => p.id === productId);
+    const product = products.find(p => p.id === productId);
     return product ? product.name : `Product ${productId}`;
   };
 
@@ -661,14 +761,19 @@ const Subscriptions: React.FC = () => {
   const FilterSection: React.FC = () => (
     <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
       <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
           <Typography variant="h6" gutterBottom>
             Filters
           </Typography>
-          <Button 
-            variant="outlined" 
-            color="secondary" 
-            onClick={handleClearFilters} 
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleClearFilters}
             data-testid={TestIds.filterForm.clearButton}
           >
             Clear
@@ -680,15 +785,26 @@ const Subscriptions: React.FC = () => {
               <InputLabel>Organization</InputLabel>
               <Select
                 value={filters.organization_id}
-                onChange={(e) =>
+                onChange={e =>
                   handleFilterChange('organization_id', e.target.value)
                 }
                 label="Organization"
                 data-testid={TestIds.filterForm.organization}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.organizationOptionAll}>All Organizations</MenuItem>
-                {organizations.map((org) => (
-                  <MenuItem key={org.organizationId} value={parseInt(org.organizationId.replace('org_', ''), 10)} data-testid={TestIds.filterForm.organizationOption(org.organizationId)}>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.organizationOptionAll}
+                >
+                  All Organizations
+                </MenuItem>
+                {organizations.map(org => (
+                  <MenuItem
+                    key={org.organizationId}
+                    value={parseInt(org.organizationId.replace('org_', ''), 10)}
+                    data-testid={TestIds.filterForm.organizationOption(
+                      org.organizationId
+                    )}
+                  >
                     {org.tenantName}
                   </MenuItem>
                 ))}
@@ -700,15 +816,22 @@ const Subscriptions: React.FC = () => {
               <InputLabel>Product</InputLabel>
               <Select
                 value={filters.product_id}
-                onChange={(e) =>
-                  handleFilterChange('product_id', e.target.value)
-                }
+                onChange={e => handleFilterChange('product_id', e.target.value)}
                 label="Product"
                 data-testid={TestIds.filterForm.product}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.productOptionAll}>All Products</MenuItem>
-                {products.map((product) => (
-                  <MenuItem key={product.id} value={product.id} data-testid={TestIds.filterForm.productOption(product.id)}>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.productOptionAll}
+                >
+                  All Products
+                </MenuItem>
+                {products.map(product => (
+                  <MenuItem
+                    key={product.id}
+                    value={product.id}
+                    data-testid={TestIds.filterForm.productOption(product.id)}
+                  >
                     {product.name}
                   </MenuItem>
                 ))}
@@ -720,13 +843,28 @@ const Subscriptions: React.FC = () => {
               <InputLabel>Status</InputLabel>
               <Select
                 value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                onChange={e => handleFilterChange('status', e.target.value)}
                 label="Status"
                 data-testid={TestIds.filterForm.status}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.statusOptionAll}>All</MenuItem>
-                <MenuItem value="active" data-testid={TestIds.filterForm.statusOption('active')}>Active</MenuItem>
-                <MenuItem value="inactive" data-testid={TestIds.filterForm.statusOption('inactive')}>Inactive</MenuItem>
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.statusOptionAll}
+                >
+                  All
+                </MenuItem>
+                <MenuItem
+                  value="active"
+                  data-testid={TestIds.filterForm.statusOption('active')}
+                >
+                  Active
+                </MenuItem>
+                <MenuItem
+                  value="inactive"
+                  data-testid={TestIds.filterForm.statusOption('inactive')}
+                >
+                  Inactive
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -735,19 +873,27 @@ const Subscriptions: React.FC = () => {
               <InputLabel>Tier</InputLabel>
               <Select
                 value={filters.tier_name}
-                onChange={(e) =>
-                  handleFilterChange('tier_name', e.target.value)
-                }
+                onChange={e => handleFilterChange('tier_name', e.target.value)}
                 label="Tier"
                 disabled={!filters.product_id}
                 data-testid={TestIds.filterForm.tier}
               >
-                <MenuItem value="" data-testid={TestIds.filterForm.tierOptionAll}>All</MenuItem>
-                {filters.product_id && getTierOptions(filters.product_id).map((tier) => (
-                  <MenuItem key={tier} value={tier} data-testid={TestIds.filterForm.tierOption(tier)}>
-                    {formatTierName(tier)}
-                  </MenuItem>
-                ))}
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.tierOptionAll}
+                >
+                  All
+                </MenuItem>
+                {filters.product_id &&
+                  getTierOptions(filters.product_id).map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.filterForm.tierOption(tier)}
+                    >
+                      {formatTierName(tier)}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>
@@ -811,7 +957,7 @@ const Subscriptions: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {subscriptions.map((subscription) => (
+                  {subscriptions.map(subscription => (
                     <TableRow key={subscription.id}>
                       <TableCell>
                         {getOrganizationName(subscription.organization_id)}
@@ -844,10 +990,9 @@ const Subscriptions: React.FC = () => {
                           : `${subscription.current_usage}`}
                       </TableCell>
                       <TableCell>
-                        {subscription.ends_at 
+                        {subscription.ends_at
                           ? new Date(subscription.ends_at).toLocaleDateString()
-                          : 'No end date'
-                        }
+                          : 'No end date'}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -918,29 +1063,29 @@ const Subscriptions: React.FC = () => {
   }) => {
     const getOrganizationName = (organizationId: number): string => {
       const org = organizations.find(
-        (o) => o.organizationId === `org_${organizationId.toString().padStart(6, '0')}`
+        o =>
+          o.organizationId ===
+          `org_${organizationId.toString().padStart(6, '0')}`
       );
       return org ? org.tenantName : `Organization ${organizationId}`;
     };
 
     const getProductName = (productId: string): string => {
-      const product = products.find((p) => p.id === productId);
+      const product = products.find(p => p.id === productId);
       return product ? product.name : `Product ${productId}`;
     };
 
     // Use max_limit directly from subscription data
     const currentUsage = subscription.current_usage;
     const maxLimit = subscription.max_limit;
-    
-    const usageDisplay = maxLimit 
+
+    const usageDisplay = maxLimit
       ? `${currentUsage}/${maxLimit}`
       : `${currentUsage}`;
 
     return (
       <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Subscription Details
-        </DialogTitle>
+        <DialogTitle>Subscription Details</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={3}>
@@ -952,7 +1097,7 @@ const Subscriptions: React.FC = () => {
                   {getOrganizationName(subscription.organization_id)}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Product
@@ -961,7 +1106,7 @@ const Subscriptions: React.FC = () => {
                   {getProductName(subscription.product_id)}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Status
@@ -969,14 +1114,16 @@ const Subscriptions: React.FC = () => {
                 <Chip
                   label={subscription.status}
                   style={{
-                    backgroundColor: getStatusBackgroundColor(subscription.status),
+                    backgroundColor: getStatusBackgroundColor(
+                      subscription.status
+                    ),
                     color: '#ffffff',
                   }}
                   size="small"
                   sx={{ mb: 2 }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Tier
@@ -988,7 +1135,7 @@ const Subscriptions: React.FC = () => {
                   sx={{ mb: 2 }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Current Usage / Max Limit
@@ -997,7 +1144,7 @@ const Subscriptions: React.FC = () => {
                   {usageDisplay}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Auto Renewal
@@ -1006,7 +1153,7 @@ const Subscriptions: React.FC = () => {
                   {subscription.auto_renewal ? 'Yes' : 'No'}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Start Date
@@ -1015,40 +1162,42 @@ const Subscriptions: React.FC = () => {
                   {new Date(subscription.starts_at).toLocaleDateString()}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   End Date
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {subscription.ends_at 
+                  {subscription.ends_at
                     ? new Date(subscription.ends_at).toLocaleDateString()
-                    : 'No end date'
-                  }
+                    : 'No end date'}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Billing Period Start
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {new Date(subscription.billing_period_start).toLocaleDateString()}
+                  {new Date(
+                    subscription.billing_period_start
+                  ).toLocaleDateString()}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Billing Period End
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {subscription.billing_period_end 
-                    ? new Date(subscription.billing_period_end).toLocaleDateString()
-                    : 'No end date'
-                  }
+                  {subscription.billing_period_end
+                    ? new Date(
+                        subscription.billing_period_end
+                      ).toLocaleDateString()
+                    : 'No end date'}
                 </Typography>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Last Updated
@@ -1061,7 +1210,12 @@ const Subscriptions: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} data-testid={TestIds.subscriptions.viewDialog.closeButton}>Close</Button>
+          <Button
+            onClick={onClose}
+            data-testid={TestIds.subscriptions.viewDialog.closeButton}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     );

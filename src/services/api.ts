@@ -76,7 +76,8 @@ api.interceptors.request.use(
     const tokenType = localStorage.getItem('token_type') || 'bearer';
 
     // Use the new token format if available, fallback to old format for backward compatibility
-    const token = accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
+    const token =
+      accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
 
     // Only use valid tokens, fallback to test token if needed
     const validToken =
@@ -668,9 +669,11 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<LoginResponse>> => {
     console.log('📡 API Login Request:', {
       url: '/crm/auth/login',
-      credentials: { ...credentials, password: '***' }
+      credentials: { ...credentials, password: '***' },
     });
-    return api.post('/crm/auth/login', credentials, { signal: signal as GenericAbortSignal });
+    return api.post('/crm/auth/login', credentials, {
+      signal: signal as GenericAbortSignal,
+    });
   },
 
   // ────────────────────────────────────────

@@ -8,7 +8,7 @@
  * ──────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
@@ -183,12 +183,12 @@ const Dashboard: React.FC = () => {
       setLoading(false);
       setAbortController(null);
     }
-  } ;
+  };
 
   useEffect(() => {
     // Add a longer delay to ensure token is available after login
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (token && token !== 'undefined' && token !== 'null') {
         fetchSummaryData();
       } else {

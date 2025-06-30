@@ -50,7 +50,8 @@ const Navigation: React.FC = () => {
     { text: 'Audit Log', path: '/audit-log' },
   ];
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
   return (
     <AppBar position="static">

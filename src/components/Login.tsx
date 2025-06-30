@@ -76,9 +76,9 @@ const Login: React.FC = () => {
       // Use proper login API
       console.log('🔐 Attempting login with credentials:', {
         username: formData.username,
-        password: '***' // Don't log actual password
+        password: '***', // Don't log actual password
       });
-      
+
       const response = await apiHelpers.login({
         username: formData.username,
         password: formData.password,
@@ -102,9 +102,10 @@ const Login: React.FC = () => {
       console.error('❌ Login error:', error);
       console.error('❌ Error response:', error.response?.data);
       console.error('❌ Error status:', error.response?.status);
-      const errorMessage = error.response?.data?.detail?.[0]?.msg || 
-                          error.response?.data?.message || 
-                          'Login failed. Please check your credentials and try again.';
+      const errorMessage =
+        error.response?.data?.detail?.[0]?.msg ||
+        error.response?.data?.message ||
+        'Login failed. Please check your credentials and try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -155,7 +156,7 @@ const Login: React.FC = () => {
               data-testid={TestIds.login.username}
               inputProps={{
                 'data-testid': TestIds.login.username,
-                'aria-label': 'Username input'
+                'aria-label': 'Username input',
               }}
             />
             <TextField
