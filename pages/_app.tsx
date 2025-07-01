@@ -4,7 +4,7 @@
  * Description: Next.js App component with global theme and message handling
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 01-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -13,7 +13,7 @@ import { ThemeProvider, CssBaseline, Box, Container, Alert, Snackbar } from '@mu
 import { useState, useEffect } from 'react';
 import theme from '../src/theme';
 import { TestIds } from '../src/testIds';
-import { validateEnvironment } from '../src/config/env';
+import { validateEnvironment } from '../src/utils/envValidation';
 import Navigation from '../src/components/Navigation';
 
 // Extend Window interface to include our custom properties
@@ -22,6 +22,11 @@ declare global {
     showError: (message: string) => void;
     showSuccess: (message: string) => void;
   }
+}
+
+// Validate environment on app startup
+if (typeof window !== 'undefined') {
+  validateEnvironment();
 }
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -41,7 +46,6 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     window.showError = showError;
     window.showSuccess = showSuccess;
-    validateEnvironment();
   }, []);
 
   return (

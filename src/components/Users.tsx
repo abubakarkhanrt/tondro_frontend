@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 01-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -67,10 +67,13 @@ import { debounce } from 'lodash';
 const getRoleColor = (
   role: string
 ): 'error' | 'warning' | 'info' | 'default' => {
-  switch (role) {
-    case 'Super Admin':
+  // Handle both backend format and display format
+  const normalizedRole = role.toLowerCase().replace('_', ' ');
+  
+  switch (normalizedRole) {
+    case 'super admin':
       return 'error';
-    case 'Tenant Admin':
+    case 'tenant admin':
       return 'warning';
     default:
       return 'default';
@@ -82,6 +85,10 @@ const getRoleDisplayName = (role: string): string => {
     case 'super_admin':
       return 'Super Admin';
     case 'tenant_admin':
+      return 'Tenant Admin';
+    case 'Super Admin':
+      return 'Super Admin';
+    case 'Tenant Admin':
       return 'Tenant Admin';
     default:
       return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -887,7 +894,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                       <TableCell>{getDomainName(user, domains)}</TableCell>
                       <TableCell>
                         <Chip
-                          label={user.role}
+                          label={getRoleDisplayName(user.role)}
                           color={getRoleColor(user.role)}
                           size="small"
                         />
@@ -1069,14 +1076,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id and display name for role
       const apiData = {
-        organization_id: convertOrgIdToInteger(
-          formData.organization_id
-        ).toString(),
+        organization_id: convertOrgIdToInteger(formData.organization_id).toString(),
         domain_id: formData.domain_id,
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        role: formData.role ? getRoleDisplayName(formData.role) : undefined, // Convert internal value to display name
+        role: formData.role,
       };
 
       await onSubmit(apiData as unknown as CreateUserRequest);
@@ -1293,13 +1298,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               onChange={e =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as
-                    | 'admin'
-                    | 'user'
-                    | 'viewer'
-                    | 'tenant_admin'
-                    | 'tenant_support'
-                    | 'tenant_user',
+                  role: e.target.value as 'super_admin' | 'tenant_admin',
                 })
               }
               label="Role"
@@ -1427,7 +1426,7 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
                   Role
                 </Typography>
                 <Chip
-                  label={user.role}
+                  label={getRoleDisplayName(user.role)}
                   color={getRoleColor(user.role)}
                   size="small"
                 />
@@ -1702,13 +1701,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               onChange={e =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as
-                    | 'admin'
-                    | 'user'
-                    | 'viewer'
-                    | 'tenant_admin'
-                    | 'tenant_support'
-                    | 'tenant_user',
+                  role: e.target.value as 'super_admin' | 'tenant_admin',
                 })
               }
               label="Role"

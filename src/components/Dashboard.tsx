@@ -4,7 +4,7 @@
  * Description: Main dashboard with entity summaries for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 01-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -288,6 +288,9 @@ const Dashboard: React.FC = () => {
     // Special handling for organizations API error
     const isOrganizationsError = title === 'Organizations' && isError;
 
+    // Check if this card should show the View Details button
+    const shouldShowViewDetails = !['API Status', 'Health Check', 'Service Info'].includes(title);
+
     return (
       <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <CardContent
@@ -409,16 +412,19 @@ const Dashboard: React.FC = () => {
             </Box>
           )}
 
-          <Button
-            variant="outlined"
-            color={color}
-            onClick={() => handleViewDetails(path)}
-            sx={{ mt: 'auto', alignSelf: 'flex-start' }}
-            disabled={loading}
-            data-testid={`dashboard-${title.toLowerCase()}-view-details`}
-          >
-            View Details
-          </Button>
+          {/* Conditionally render the View Details button */}
+          {shouldShowViewDetails && (
+            <Button
+              variant="outlined"
+              color={color}
+              onClick={() => handleViewDetails(path)}
+              sx={{ mt: 'auto', alignSelf: 'flex-start' }}
+              disabled={loading}
+              data-testid={`dashboard-${title.toLowerCase()}-view-details`}
+            >
+              View Details
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
