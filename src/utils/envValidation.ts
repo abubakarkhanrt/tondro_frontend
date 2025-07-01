@@ -16,9 +16,7 @@ export const validateEnvironment = (): void => {
     'NEXT_PUBLIC_API_BASE_PATH',
   ];
 
-  const missingVars = requiredVars.filter(
-    varName => !process.env[varName]
-  );
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
   if (missingVars.length > 0) {
     console.warn(
@@ -37,4 +35,4 @@ export const validateEnvironment = (): void => {
       ENABLE_DEBUG_LOGGING: ENV_CONFIG.ENABLE_DEBUG_LOGGING,
     });
   }
-}; 
+};

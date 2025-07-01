@@ -69,7 +69,7 @@ const getRoleColor = (
 ): 'error' | 'warning' | 'info' | 'default' => {
   // Handle both backend format and display format
   const normalizedRole = role.toLowerCase().replace('_', ' ');
-  
+
   switch (normalizedRole) {
     case 'super admin':
       return 'error';
@@ -1076,7 +1076,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id and display name for role
       const apiData = {
-        organization_id: convertOrgIdToInteger(formData.organization_id).toString(),
+        organization_id: convertOrgIdToInteger(
+          formData.organization_id
+        ).toString(),
         domain_id: formData.domain_id,
         email: formData.email,
         first_name: formData.first_name,

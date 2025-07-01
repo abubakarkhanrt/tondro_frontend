@@ -58,36 +58,46 @@ const CRM_BASE = ENV_CONFIG.API_BASE_PATH;
 
 // Helper functions to build CRM endpoints
 const buildCrmEndpoint = (path: string): string => `${CRM_BASE}${path}`;
-const buildCrmEndpointWithId = (path: string) => (id: string): string => `${CRM_BASE}${path}/${id}`;
+const buildCrmEndpointWithId =
+  (path: string) =>
+  (id: string): string =>
+    `${CRM_BASE}${path}/${id}`;
 
 const API_ENDPOINTS = {
   // Base paths
   CRM: CRM_BASE,
-  
+
   // Authentication
   AUTH: {
     LOGIN: buildCrmEndpoint('/auth/login'),
   },
-  
+
   // Organizations
   ORGANIZATIONS: {
     BASE: buildCrmEndpoint('/organizations'),
     BY_ID: buildCrmEndpointWithId('/organizations'),
-    STATUS: (id: string): string => buildCrmEndpoint(`/organizations/${id}/status`),
-    METRICS: (id: string): string => buildCrmEndpoint(`/organizations/${id}/metrics`),
-    USERS: (id: string): string => buildCrmEndpoint(`/organizations/${id}/users`),
-    SUBSCRIPTIONS: (id: string, activeOnly: boolean = false): string => 
-      buildCrmEndpoint(`/organizations/${id}/subscriptions?active_only=${activeOnly}`),
-    DOMAINS: (id: string): string => buildCrmEndpoint(`/organizations/${id}/domains`),
+    STATUS: (id: string): string =>
+      buildCrmEndpoint(`/organizations/${id}/status`),
+    METRICS: (id: string): string =>
+      buildCrmEndpoint(`/organizations/${id}/metrics`),
+    USERS: (id: string): string =>
+      buildCrmEndpoint(`/organizations/${id}/users`),
+    SUBSCRIPTIONS: (id: string, activeOnly: boolean = false): string =>
+      buildCrmEndpoint(
+        `/organizations/${id}/subscriptions?active_only=${activeOnly}`
+      ),
+    DOMAINS: (id: string): string =>
+      buildCrmEndpoint(`/organizations/${id}/domains`),
   },
-  
+
   // Domains
   DOMAINS: {
     BASE: buildCrmEndpoint('/domains'),
     BY_ID: buildCrmEndpointWithId('/domains'),
-    SUBDOMAINS: (parentId: string): string => buildCrmEndpoint(`/domains/${parentId}/subdomains`),
+    SUBDOMAINS: (parentId: string): string =>
+      buildCrmEndpoint(`/domains/${parentId}/subdomains`),
   },
-  
+
   // Users
   USERS: {
     BASE: buildCrmEndpoint('/users'),
@@ -96,46 +106,52 @@ const API_ENDPOINTS = {
     STATUS: (id: string): string => buildCrmEndpoint(`/users/${id}/status`),
     LOGIN: (id: string): string => buildCrmEndpoint(`/users/${id}/login`),
     USER_ROLES: buildCrmEndpoint('/users/user-roles'),
-    DOMAINS: (organizationId: string): string => buildCrmEndpoint(`/users/domains/${organizationId}`),
+    DOMAINS: (organizationId: string): string =>
+      buildCrmEndpoint(`/users/domains/${organizationId}`),
   },
-  
+
   // Subscriptions
   SUBSCRIPTIONS: {
     BASE: buildCrmEndpoint('/subscriptions'),
     BY_ID: buildCrmEndpointWithId('/subscriptions'),
-    STATUS: (id: string): string => buildCrmEndpoint(`/subscriptions/${id}/status`),
-    USAGE: (id: string): string => buildCrmEndpoint(`/subscriptions/${id}/usage`),
-    USAGE_SUMMARY: (id: string, periodDays: number = 30): string => 
-      buildCrmEndpoint(`/subscriptions/${id}/usage/summary?period_days=${periodDays}`),
-    USAGE_CHECK: (id: string): string => buildCrmEndpoint(`/subscriptions/${id}/usage/check`),
+    STATUS: (id: string): string =>
+      buildCrmEndpoint(`/subscriptions/${id}/status`),
+    USAGE: (id: string): string =>
+      buildCrmEndpoint(`/subscriptions/${id}/usage`),
+    USAGE_SUMMARY: (id: string, periodDays: number = 30): string =>
+      buildCrmEndpoint(
+        `/subscriptions/${id}/usage/summary?period_days=${periodDays}`
+      ),
+    USAGE_CHECK: (id: string): string =>
+      buildCrmEndpoint(`/subscriptions/${id}/usage/check`),
   },
-  
+
   // Products
   PRODUCTS: {
     BASE: buildCrmEndpoint('/products'),
     BY_ID: buildCrmEndpointWithId('/products'),
   },
-  
+
   // Product Tiers
   PRODUCT_TIERS: {
     BASE: buildCrmEndpoint('/product-tiers'),
-    BY_PRODUCT_AND_TIER: (productId: string, tierName: string): string => 
+    BY_PRODUCT_AND_TIER: (productId: string, tierName: string): string =>
       buildCrmEndpoint(`/product-tiers/${productId}/${tierName}`),
   },
-  
+
   // Audit Logs
   AUDIT_LOGS: {
     BASE: buildCrmEndpoint('/audit-logs'),
     BY_ID: buildCrmEndpointWithId('/audit-logs'),
   },
-  
+
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
     HEALTH: '/api/proxy/health',
     ROOT: '/',
   },
-  
+
   // Transcript Analysis
   TRANSCRIPTS: {
     ANALYZE: buildCrmEndpoint('/cv/analyze'),
@@ -477,19 +493,26 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<DomainResponse>> =>
-    api.get(API_ENDPOINTS.DOMAINS.BASE, { params, signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.DOMAINS.BASE, {
+      params,
+      signal: signal as GenericAbortSignal,
+    }),
 
   createDomain: (
     data: CreateDomainRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.post(API_ENDPOINTS.DOMAINS.BASE, data, { signal: signal as GenericAbortSignal }),
+    api.post(API_ENDPOINTS.DOMAINS.BASE, data, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   getDomain: (
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Domain>> =>
-    api.get(API_ENDPOINTS.DOMAINS.BY_ID(id), { signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.DOMAINS.BY_ID(id), {
+      signal: signal as GenericAbortSignal,
+    }),
 
   updateDomain: (
     id: string,
@@ -504,7 +527,9 @@ export const apiHelpers = {
     id: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(API_ENDPOINTS.DOMAINS.BY_ID(id), { signal: signal as GenericAbortSignal }),
+    api.delete(API_ENDPOINTS.DOMAINS.BY_ID(id), {
+      signal: signal as GenericAbortSignal,
+    }),
 
   createSubdomain: (
     parentId: string,
@@ -543,16 +568,23 @@ export const apiHelpers = {
     params: ApiParams = {},
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<User>>> =>
-    api.get(API_ENDPOINTS.USERS.BASE, { params, signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.USERS.BASE, {
+      params,
+      signal: signal as GenericAbortSignal,
+    }),
 
   createUser: (
     data: CreateUserRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
-    api.post(API_ENDPOINTS.USERS.BASE, data, { signal: signal as GenericAbortSignal }),
+    api.post(API_ENDPOINTS.USERS.BASE, data, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   getUser: (id: string, signal?: AbortSignal): Promise<AxiosResponse<User>> =>
-    api.get(API_ENDPOINTS.USERS.BY_ID(id), { signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.USERS.BY_ID(id), {
+      signal: signal as GenericAbortSignal,
+    }),
 
   updateUser: (
     id: string,
@@ -648,9 +680,12 @@ export const apiHelpers = {
     reason?: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(`${API_ENDPOINTS.SUBSCRIPTIONS.BY_ID(id)}${reason ? `?reason=${reason}` : ''}`, {
-      signal: signal as GenericAbortSignal,
-    }),
+    api.delete(
+      `${API_ENDPOINTS.SUBSCRIPTIONS.BY_ID(id)}${reason ? `?reason=${reason}` : ''}`,
+      {
+        signal: signal as GenericAbortSignal,
+      }
+    ),
 
   updateSubscriptionStatus: (
     id: string,
@@ -693,13 +728,17 @@ export const apiHelpers = {
   // ────────────────────────────────────────
 
   getProducts: (signal?: AbortSignal): Promise<AxiosResponse<Product[]>> =>
-    api.get(API_ENDPOINTS.PRODUCTS.BASE, { signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.PRODUCTS.BASE, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   createProduct: (
     data: CreateProductRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
-    api.post(API_ENDPOINTS.PRODUCTS.BASE, data, { signal: signal as GenericAbortSignal }),
+    api.post(API_ENDPOINTS.PRODUCTS.BASE, data, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   updateProduct: (
     id: string,
@@ -718,16 +757,22 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<
     AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
-  > => api.get(API_ENDPOINTS.PRODUCT_TIERS.BASE, { signal: signal as GenericAbortSignal }),
+  > =>
+    api.get(API_ENDPOINTS.PRODUCT_TIERS.BASE, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   getProductTier: (
     productId: string,
     tierName: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ tier: any }>> =>
-    api.get(API_ENDPOINTS.PRODUCT_TIERS.BY_PRODUCT_AND_TIER(productId, tierName), {
-      signal: signal as GenericAbortSignal,
-    }),
+    api.get(
+      API_ENDPOINTS.PRODUCT_TIERS.BY_PRODUCT_AND_TIER(productId, tierName),
+      {
+        signal: signal as GenericAbortSignal,
+      }
+    ),
 
   // ────────────────────────────────────────
   // Audit Log
@@ -777,7 +822,9 @@ export const apiHelpers = {
     }),
 
   getStatus: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
-    api.get(API_ENDPOINTS.STATUS.CRM_STATUS, { signal: signal as GenericAbortSignal }),
+    api.get(API_ENDPOINTS.STATUS.CRM_STATUS, {
+      signal: signal as GenericAbortSignal,
+    }),
 
   getRoot: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
     axios.get(API_ENDPOINTS.STATUS.ROOT, {
@@ -794,7 +841,7 @@ export const apiHelpers = {
     // Use environment configuration to decide whether to use static roles
     if (ENV_CONFIG.USE_STATIC_ROLES) {
       const staticRoles = ['super_admin', 'tenant_admin'];
-      
+
       const mockResponse: AxiosResponse<{ roles: string[] }> = {
         data: { roles: staticRoles },
         status: 200,
@@ -802,12 +849,14 @@ export const apiHelpers = {
         headers: {},
         config: {} as any,
       };
-      
+
       return Promise.resolve(mockResponse);
     }
-    
+
     // Otherwise, make the actual API call
-    return api.get(API_ENDPOINTS.USERS.USER_ROLES, { signal: signal as GenericAbortSignal });
+    return api.get(API_ENDPOINTS.USERS.USER_ROLES, {
+      signal: signal as GenericAbortSignal,
+    });
   },
 
   // ────────────────────────────────────────

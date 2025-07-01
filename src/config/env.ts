@@ -43,7 +43,7 @@ export const ENV_CONFIG = {
 
   // Authentication
   JWT_STORAGE_KEY: 'access_token',
-  //JWT_STORAGE_KEY: 'jwt_token',  
+  //JWT_STORAGE_KEY: 'jwt_token',
   USER_EMAIL_STORAGE_KEY: 'user_email',
 
   // Default Values

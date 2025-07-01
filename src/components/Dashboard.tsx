@@ -289,7 +289,11 @@ const Dashboard: React.FC = () => {
     const isOrganizationsError = title === 'Organizations' && isError;
 
     // Check if this card should show the View Details button
-    const shouldShowViewDetails = !['API Status', 'Health Check', 'Service Info'].includes(title);
+    const shouldShowViewDetails = ![
+      'API Status',
+      'Health Check',
+      'Service Info',
+    ].includes(title);
 
     return (
       <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
