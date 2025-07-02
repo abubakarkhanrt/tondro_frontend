@@ -59,7 +59,6 @@ import {
 // Use environment-based CRM base path
 const CRM_BASE = ENV_CONFIG.API_BASE_PATH;
 
-
 // Helper functions to build CRM endpoints
 const buildCrmEndpoint = (path: string): string => `${CRM_BASE}${path}`;
 const buildCrmEndpointWithId =
@@ -731,7 +730,9 @@ export const apiHelpers = {
   // Products
   // ────────────────────────────────────────
 
-  getProducts: (signal?: AbortSignal): Promise<AxiosResponse<Product[] | ProductsResponse>> =>
+  getProducts: (
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<Product[] | ProductsResponse>> =>
     api.get(API_ENDPOINTS.PRODUCTS.BASE, {
       signal: signal as GenericAbortSignal,
     }),

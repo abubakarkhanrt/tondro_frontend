@@ -167,7 +167,9 @@ const CreateSubscriptionDialog = ({
             <Grid item xs={12} sm={6}>
               <OrganizationsDropdown
                 value={form.organization_id || ''}
-                onChange={(value) => handleChange('organization_id', Number(value))}
+                onChange={value =>
+                  handleChange('organization_id', Number(value))
+                }
                 label="Organization"
                 required={true}
                 testIdPrefix="subscriptions-create-organization"
@@ -782,7 +784,7 @@ const Subscriptions: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <OrganizationsDropdown
               value={filters.organization_id}
-              onChange={(value) => handleFilterChange('organization_id', value)}
+              onChange={value => handleFilterChange('organization_id', value)}
               label="Organization"
               testIdPrefix="subscriptions-filter-organization"
               showAllOption={true}

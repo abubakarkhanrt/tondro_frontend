@@ -100,7 +100,7 @@ const Login: React.FC = () => {
       router.push('/dashboard');
     } catch (error: unknown) {
       console.error('❌ Login error:', error);
-      
+
       // Type-safe error handling
       const axiosError = error as {
         response?: {
@@ -111,10 +111,10 @@ const Login: React.FC = () => {
           status?: number;
         };
       };
-      
+
       console.error('❌ Error response:', axiosError.response?.data);
       console.error('❌ Error status:', axiosError.response?.status);
-      
+
       const errorMessage =
         axiosError.response?.data?.detail?.[0]?.msg ||
         axiosError.response?.data?.message ||

@@ -134,12 +134,16 @@ const Products: React.FC = () => {
 
       const response = await apiHelpers.getProducts(controller.signal);
       const responseData = response.data;
-      
+
       let productsArray: Product[];
       let totalCount: number;
-      
+
       // Check if response is in new format (has success property)
-      if (responseData && typeof responseData === 'object' && 'success' in responseData) {
+      if (
+        responseData &&
+        typeof responseData === 'object' &&
+        'success' in responseData
+      ) {
         const productsResponse = responseData as ProductsResponse;
         productsArray = productsResponse.products || [];
         totalCount = productsResponse.total || 0;
@@ -148,7 +152,7 @@ const Products: React.FC = () => {
         productsArray = responseData as Product[];
         totalCount = productsArray.length;
       }
-      
+
       setProducts(productsArray);
       setPagination(prev => ({
         ...prev,

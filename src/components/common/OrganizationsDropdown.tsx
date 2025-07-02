@@ -19,10 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { apiHelpers } from '../../services/api';
-import {
-  type Organization,
-  type OrganizationV2,
-} from '../../types';
+import { type Organization, type OrganizationV2 } from '../../types';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -53,52 +50,52 @@ const getOrganizationId = (org: Organization | OrganizationV2): string => {
 interface OrganizationsDropdownProps {
   /** Current selected value */
   value: string | number;
-  
+
   /** Callback when selection changes */
   onChange: (value: string | number) => void;
-  
+
   /** Label for the dropdown */
   label?: string;
-  
+
   /** Whether to show "All Organizations" option */
   showAllOption?: boolean;
-  
+
   /** Text for "All Organizations" option */
   allOptionText?: string;
-  
+
   /** Whether the field is required */
   required?: boolean;
-  
+
   /** Whether the field is disabled */
   disabled?: boolean;
-  
+
   /** Whether to show loading state */
   loading?: boolean;
-  
+
   /** Custom error state */
   error?: boolean;
-  
+
   /** Error message */
   errorMessage?: string;
-  
+
   /** Custom test ID prefix */
   testIdPrefix?: string;
-  
+
   /** Whether to convert organization ID to numeric format (for subscriptions) */
   convertToNumeric?: boolean;
-  
+
   /** Custom organizations data (if not fetching from API) */
   organizations?: (Organization | OrganizationV2)[];
-  
+
   /** Whether to fetch organizations from API */
   fetchFromApi?: boolean;
-  
+
   /** Additional CSS classes */
   className?: string;
-  
+
   /** Additional styles */
   sx?: any;
-  
+
   /** Margin for the FormControl (normal, dense, none) */
   margin?: 'normal' | 'dense' | 'none';
 }
@@ -130,7 +127,9 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // State Management
   // ────────────────────────────────────────
 
-  const [organizations, setOrganizations] = useState<(Organization | OrganizationV2)[]>([]);
+  const [organizations, setOrganizations] = useState<
+    (Organization | OrganizationV2)[]
+  >([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string>('');
 
@@ -146,10 +145,10 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
 
     try {
       const response = await apiHelpers.getOrganizations();
-      
+
       // Handle both response formats
       let orgs: (Organization | OrganizationV2)[] = [];
-      
+
       if (response.data.items) {
         // New format (V2)
         orgs = response.data.items;
@@ -162,12 +161,10 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       }
 
       // Remove duplicate organizations based on organizationId/name
-      const uniqueOrgs = orgs.filter(
-        (org, index, self) => {
-          const orgId = getOrganizationId(org);
-          return index === self.findIndex(o => getOrganizationId(o) === orgId);
-        }
-      );
+      const uniqueOrgs = orgs.filter((org, index, self) => {
+        const orgId = getOrganizationId(org);
+        return index === self.findIndex(o => getOrganizationId(o) === orgId);
+      });
 
       setOrganizations(uniqueOrgs);
     } catch (error) {
@@ -184,15 +181,18 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
 
   useEffect(() => {
     console.log('🔄 OrganizationsDropdown useEffect triggered');
-    console.log('📦 External organizations:', externalOrganizations?.length || 0);
+    console.log(
+      '📦 External organizations:',
+      externalOrganizations?.length || 0
+    );
     console.log('🌐 Fetch from API:', fetchFromApi);
-    
+
     if (externalOrganizations && externalOrganizations.length > 0) {
       console.log('✅ Using external organizations data');
       setOrganizations(externalOrganizations);
       return;
     }
-    
+
     if (fetchFromApi && !externalOrganizations) {
       console.log('🌐 Fetching organizations from API');
       fetchOrganizations();
@@ -212,14 +212,16 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // Value Conversion
   // ────────────────────────────────────────
 
-  const getDisplayValue = (org: Organization | OrganizationV2): string | number => {
+  const getDisplayValue = (
+    org: Organization | OrganizationV2
+  ): string | number => {
     const orgId = getOrganizationId(org);
-    
+
     if (convertToNumeric) {
       // Convert org_000001 format to numeric for subscriptions
       return parseInt(orgId.replace('org_', ''), 10);
     }
-    
+
     return orgId;
   };
 
@@ -277,44 +279,34 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
         }}
       >
         {showAllOption && (
-          <MenuItem
-            value=""
-            data-testid={`${testIdPrefix}-option-all`}
-          >
+          <MenuItem value="" data-testid={`${testIdPrefix}-option-all`}>
             {allOptionText}
           </MenuItem>
         )}
-        
-        {isLoading && (
-          <MenuItem disabled>
-            {renderLoadingState()}
-          </MenuItem>
-        )}
-        
-        {hasError && (
-          <MenuItem disabled>
-            {renderErrorState()}
-          </MenuItem>
-        )}
-        
+
+        {isLoading && <MenuItem disabled>{renderLoadingState()}</MenuItem>}
+
+        {hasError && <MenuItem disabled>{renderErrorState()}</MenuItem>}
+
         {!isLoading && !hasError && !hasOrganizations && (
-          <MenuItem disabled>
-            {renderEmptyState()}
-          </MenuItem>
+          <MenuItem disabled>{renderEmptyState()}</MenuItem>
         )}
-        
-        {!isLoading && !hasError && hasOrganizations && organizations.map(org => (
-          <MenuItem
-            key={getOrganizationId(org)}
-            value={getDisplayValue(org)}
-            data-testid={`${testIdPrefix}-option-${getOrganizationId(org)}`}
-          >
-            {getOrganizationName(org)}
-          </MenuItem>
-        ))}
+
+        {!isLoading &&
+          !hasError &&
+          hasOrganizations &&
+          organizations.map(org => (
+            <MenuItem
+              key={getOrganizationId(org)}
+              value={getDisplayValue(org)}
+              data-testid={`${testIdPrefix}-option-${getOrganizationId(org)}`}
+            >
+              {getOrganizationName(org)}
+            </MenuItem>
+          ))}
       </Select>
     </FormControl>
   );
 };
 
-export default OrganizationsDropdown; 
+export default OrganizationsDropdown;

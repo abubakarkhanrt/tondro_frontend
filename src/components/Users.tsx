@@ -165,7 +165,9 @@ const getOrganizationId = (org: Organization | OrganizationV2): string => {
 const Users: React.FC = () => {
   const { userRoles } = useUserRoles();
   const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<(Organization | OrganizationV2)[]>([]);
+  const [organizations, setOrganizations] = useState<
+    (Organization | OrganizationV2)[]
+  >([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -364,10 +366,10 @@ const Users: React.FC = () => {
   const fetchOrganizations = async (): Promise<void> => {
     try {
       const response = await apiHelpers.getOrganizations();
-      
+
       // Handle both response formats
       let orgs: (Organization | OrganizationV2)[] = [];
-      
+
       if (response.data.items) {
         // New format (V2)
         orgs = response.data.items;
@@ -380,23 +382,21 @@ const Users: React.FC = () => {
       }
 
       // Remove duplicate organizations based on organizationId/name
-      const uniqueOrgs = orgs.filter(
-        (org, index, self) => {
-          const orgId = getOrganizationId(org);
-          return index === self.findIndex(o => getOrganizationId(o) === orgId);
-        }
-      );
+      const uniqueOrgs = orgs.filter((org, index, self) => {
+        const orgId = getOrganizationId(org);
+        return index === self.findIndex(o => getOrganizationId(o) === orgId);
+      });
 
       setOrganizations(uniqueOrgs);
 
       // Fetch domains in parallel
-      const domainsPromises = uniqueOrgs.map(async (org) => {
+      const domainsPromises = uniqueOrgs.map(async org => {
         try {
           const orgId = getOrganizationId(org);
           const domainsResponse = await apiHelpers.getUserDomains(orgId);
           return {
             orgId: orgId,
-            domains: domainsResponse.data.domains || []
+            domains: domainsResponse.data.domains || [],
           };
         } catch (error) {
           console.error(
@@ -405,14 +405,14 @@ const Users: React.FC = () => {
           );
           return {
             orgId: getOrganizationId(org),
-            domains: []
+            domains: [],
           };
         }
       });
 
       const domainsResults = await Promise.all(domainsPromises);
       const domainsData: Record<string, Domain[]> = {};
-      
+
       domainsResults.forEach(result => {
         domainsData[result.orgId] = result.domains;
       });
@@ -713,7 +713,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <Grid item xs={12} sm={3}>
             <OrganizationsDropdown
               value={filters.organization_id}
-              onChange={(value) => handleFilterChange('organization_id', value)}
+              onChange={value => handleFilterChange('organization_id', value)}
               label="Organization"
               testIdPrefix="filter-form-organization"
               showAllOption={true}
@@ -922,11 +922,15 @@ const UsersTable: React.FC<UsersTableProps> = ({
                           org =>
                             getOrganizationId(org) ===
                             convertOrgIdToString(user.organization_id)
-                        ) ? getOrganizationName(organizations.find(
-                          org =>
-                            getOrganizationId(org) ===
-                            convertOrgIdToString(user.organization_id)
-                        )!) : 'Unknown'}
+                        )
+                          ? getOrganizationName(
+                              organizations.find(
+                                org =>
+                                  getOrganizationId(org) ===
+                                  convertOrgIdToString(user.organization_id)
+                              )!
+                            )
+                          : 'Unknown'}
                       </TableCell>
                       <TableCell>{getDomainName(user, domains)}</TableCell>
                       <TableCell>
@@ -1172,10 +1176,12 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             margin="normal"
             required
             error={!!errors.organization_id}
-          >            
+          >
             <OrganizationsDropdown
               value={formData.organization_id}
-              onChange={(value) => setFormData({ ...formData, organization_id: value })}
+              onChange={value =>
+                setFormData({ ...formData, organization_id: value })
+              }
               label="Organization"
               required={true}
               testIdPrefix="users-create-organization"
@@ -1436,11 +1442,15 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
                     org =>
                       getOrganizationId(org) ===
                       convertOrgIdToString(user.organization_id)
-                  ) ? getOrganizationName(organizations.find(
-                    org =>
-                      getOrganizationId(org) ===
-                      convertOrgIdToString(user.organization_id)
-                  )!) : 'Unknown'}
+                  )
+                    ? getOrganizationName(
+                        organizations.find(
+                          org =>
+                            getOrganizationId(org) ===
+                            convertOrgIdToString(user.organization_id)
+                        )!
+                      )
+                    : 'Unknown'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
