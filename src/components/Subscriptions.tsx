@@ -4,7 +4,7 @@
  * Description: Subscriptions management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -58,6 +58,7 @@ import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
 import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { useProductTiers } from '../hooks/useProductTiers';
+import OrganizationsDropdown from './common/OrganizationsDropdown';
 
 // Stub for current user ID (replace with real user context if available)
 // const currentUserId = 'demo-user-id';
@@ -164,32 +165,18 @@ const CreateSubscriptionDialog = ({
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Organization *</InputLabel>
-                <Select
-                  value={form.organization_id || ''}
-                  onChange={e =>
-                    handleChange('organization_id', Number(e.target.value))
-                  }
-                  label="Organization *"
-                  data-testid={TestIds.subscriptions.createDialog.organization}
-                >
-                  {organizations.map(org => (
-                    <MenuItem
-                      key={org.organizationId}
-                      value={parseInt(
-                        org.organizationId.replace('org_', ''),
-                        10
-                      )}
-                      data-testid={TestIds.subscriptions.createDialog.organizationOption(
-                        org.organizationId
-                      )}
-                    >
-                      {org.tenantName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <OrganizationsDropdown
+                value={form.organization_id || ''}
+                onChange={(value) => handleChange('organization_id', Number(value))}
+                label="Organization"
+                required={true}
+                testIdPrefix="subscriptions-create-organization"
+                showAllOption={false}
+                convertToNumeric={true}
+                margin="normal"
+                organizations={organizations}
+                fetchFromApi={false}
+              />
             </Grid>
 
             <Grid item xs={12} sm={6}>
@@ -511,6 +498,14 @@ const Subscriptions: React.FC = () => {
         abortController.abort();
       }
     };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Add separate useEffect for filters/pagination changes
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      fetchSubscriptions();
+    }
   }, [filters, pagination.page, pagination.pageSize]);
 
   const fetchSubscriptions = async (): Promise<void> => {
@@ -661,6 +656,10 @@ const Subscriptions: React.FC = () => {
 
     const productName = product.name.toLowerCase();
     if (productName.includes('transcript')) {
+      return ['Trans 200', 'Trans 500', 'Trans 1000'];
+    } else if (productName.includes('admission')) {
+      return ['Admis 200', 'Admis 500', 'Admis 1000'];
+    } else if (productName.includes('transcript')) {
       return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
     } else if (productName.includes('admission')) {
       return ['admissions_200', 'admissions_500', 'admissions_1000'];
@@ -781,35 +780,18 @@ const Subscriptions: React.FC = () => {
         </Box>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Organization</InputLabel>
-              <Select
-                value={filters.organization_id}
-                onChange={e =>
-                  handleFilterChange('organization_id', e.target.value)
-                }
-                label="Organization"
-                data-testid={TestIds.filterForm.organization}
-              >
-                <MenuItem
-                  value=""
-                  data-testid={TestIds.filterForm.organizationOptionAll}
-                >
-                  All Organizations
-                </MenuItem>
-                {organizations.map(org => (
-                  <MenuItem
-                    key={org.organizationId}
-                    value={parseInt(org.organizationId.replace('org_', ''), 10)}
-                    data-testid={TestIds.filterForm.organizationOption(
-                      org.organizationId
-                    )}
-                  >
-                    {org.tenantName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <OrganizationsDropdown
+              value={filters.organization_id}
+              onChange={(value) => handleFilterChange('organization_id', value)}
+              label="Organization"
+              testIdPrefix="subscriptions-filter-organization"
+              showAllOption={true}
+              allOptionText="All Organizations"
+              convertToNumeric={true}
+              organizations={organizations}
+              fetchFromApi={false}
+              margin="none"
+            />
           </Grid>
           <Grid item xs={12} sm={3}>
             <FormControl fullWidth>

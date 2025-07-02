@@ -185,27 +185,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    // Add a longer delay to ensure token is available after login
-    const timer = setTimeout(() => {
-      const token = localStorage.getItem('access_token');
-      if (token && token !== 'undefined' && token !== 'null') {
-        fetchSummaryData();
-      } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
-      }
-    }, 500); // Increased delay to ensure token is set
-
-    return () => {
-      clearTimeout(timer);
-      // Cancel any ongoing requests when component unmounts
-      if (abortController) {
-        abortController.abort();
-      }
-    };
-  }, []);
-
   const handleViewDetails = (path: string): void => {
     router.push(path);
   };

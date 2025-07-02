@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -384,6 +384,13 @@ export const TestIds = {
   deleteDomainButton: 'delete-domain-button',
   addSubdomainButton: 'add-subdomain-button',
   domainManagementSection: 'domain-management-section',
+
+  // Organizations Dropdown
+  organizationsDropdown: {
+    select: 'organizations-dropdown-select',
+    optionAll: 'organizations-dropdown-option-all',
+    option: (orgId: string) => `organizations-dropdown-option-${orgId}`,
+  },
 };
 
 // ──────────────────────────────────────────────────

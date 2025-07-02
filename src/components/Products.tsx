@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 01-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -43,6 +43,7 @@ import {
   type Product,
   type CreateProductRequest,
   type UpdateProductRequest,
+  type ProductsResponse,
 } from '../types';
 import axios from 'axios';
 import { TestIds } from '../testIds';
@@ -132,10 +133,26 @@ const Products: React.FC = () => {
       }
 
       const response = await apiHelpers.getProducts(controller.signal);
-      setProducts(response.data || []);
+      const responseData = response.data;
+      
+      let productsArray: Product[];
+      let totalCount: number;
+      
+      // Check if response is in new format (has success property)
+      if (responseData && typeof responseData === 'object' && 'success' in responseData) {
+        const productsResponse = responseData as ProductsResponse;
+        productsArray = productsResponse.products || [];
+        totalCount = productsResponse.total || 0;
+      } else {
+        // Legacy format - direct array
+        productsArray = responseData as Product[];
+        totalCount = productsArray.length;
+      }
+      
+      setProducts(productsArray);
       setPagination(prev => ({
         ...prev,
-        total: response.data.length || 0,
+        total: totalCount,
       }));
     } catch (error: any) {
       // Don't show error for cancelled requests
@@ -272,7 +289,9 @@ const Products: React.FC = () => {
                           {product.name}
                         </Typography>
                       </TableCell>
-                      <TableCell>{product.description}</TableCell>
+                      <TableCell>
+                        {product.description || 'No description provided'}
+                      </TableCell>
                       <TableCell>
                         {new Date(product.created_at).toLocaleDateString()}
                       </TableCell>
@@ -526,7 +545,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
       data-testid={TestIds.products.viewDialog.container}
     >
       <DialogTitle data-testid={TestIds.products.viewDialog.title}>
-        Product Details: {product?.name}
+        Product Details: {product?.display_name || product?.name}
       </DialogTitle>
       <DialogContent>
         {product && (
@@ -556,6 +575,16 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
                   {product.description || 'No description provided'}
                 </Typography>
               </Grid>
+              {product.price !== undefined && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Price
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {product.price} {product.currency || 'USD'}
+                  </Typography>
+                </Grid>
+              )}
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Created

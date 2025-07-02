@@ -4,7 +4,7 @@
  * Description: Authentication component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 30-06-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -98,13 +98,26 @@ const Login: React.FC = () => {
       window.dispatchEvent(new Event('storage'));
 
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Login error:', error);
-      console.error('❌ Error response:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
+      
+      // Type-safe error handling
+      const axiosError = error as {
+        response?: {
+          data?: {
+            detail?: Array<{ msg: string }>;
+            message?: string;
+          };
+          status?: number;
+        };
+      };
+      
+      console.error('❌ Error response:', axiosError.response?.data);
+      console.error('❌ Error status:', axiosError.response?.status);
+      
       const errorMessage =
-        error.response?.data?.detail?.[0]?.msg ||
-        error.response?.data?.message ||
+        axiosError.response?.data?.detail?.[0]?.msg ||
+        axiosError.response?.data?.message ||
         'Login failed. Please check your credentials and try again.';
       setError(errorMessage);
     } finally {
@@ -150,7 +163,6 @@ const Login: React.FC = () => {
               value={formData.username}
               onChange={handleInputChange}
               margin="normal"
-              required
               disabled={loading}
               autoComplete="username"
               data-testid={TestIds.login.username}
@@ -167,7 +179,6 @@ const Login: React.FC = () => {
               value={formData.password}
               onChange={handleInputChange}
               margin="normal"
-              required
               disabled={loading}
               autoComplete="current-password"
               data-testid={TestIds.login.password}

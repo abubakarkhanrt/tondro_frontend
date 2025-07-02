@@ -141,6 +141,27 @@ export interface OrganizationMetrics {
   error?: string;
 }
 
+// New interface for the updated organization format
+export interface OrganizationV2 {
+  id: number;
+  name: string;
+  domain: string | null;
+  status: 'active' | 'inactive' | 'pending';
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
+}
+
+export interface OrganizationsV2Response {
+  items: OrganizationV2[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
 // ────────────────────────────────────────
 // User Roles Types
 // ────────────────────────────────────────
@@ -286,12 +307,18 @@ export interface PaginatedSubscriptionsResponse {
 // ────────────────────────────────────────
 
 export interface Product {
-  id: string;
+  id: string | number;
   name: string;
-  description: string;
-  price: number;
-  currency: string;
-  status: 'Active' | 'Inactive';
+  display_name?: string; // Optional for backward compatibility
+  product_type?: string; // Optional for backward compatibility
+  description: string | null;
+  is_active?: boolean; // Optional for backward compatibility
+  features?: any[]; // Optional for backward compatibility
+  settings?: Record<string, any>; // Optional for backward compatibility
+  // Keep existing fields for backward compatibility
+  price?: number;
+  currency?: string;
+  status?: 'Active' | 'Inactive';
   created_at: string;
   updated_at: string;
 }
@@ -570,3 +597,14 @@ export interface SummaryCardProps {
 // ──────────────────────────────────────────────────
 // End of File: client/src/types/index.ts
 // ──────────────────────────────────────────────────
+
+// Add new interface for the products API response
+export interface ProductsResponse {
+  success: boolean;
+  message: string;
+  products: Product[];
+  total: number;
+}
+
+// Add legacy response type for backward compatibility
+export interface ProductsLegacyResponse extends Array<Product> {}

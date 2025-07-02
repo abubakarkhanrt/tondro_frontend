@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 01-07-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -49,6 +49,7 @@ import axios from 'axios';
 import {
   type User,
   type Organization,
+  type OrganizationV2,
   type CreateUserRequest,
   type UpdateUserRequest,
   type SnackbarState,
@@ -59,6 +60,7 @@ import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
 import { useUserRoles } from '../contexts/UserRolesContext';
 import { debounce } from 'lodash';
+import OrganizationsDropdown from './common/OrganizationsDropdown';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -137,6 +139,25 @@ const getDomainName = (
 // Get available roles that match the expected role values
 const availableRoles = ['super_admin', 'tenant_admin'];
 
+// New helper function to handle both organization formats
+const getOrganizationName = (org: Organization | OrganizationV2): string => {
+  // Check if it's the new format (V2)
+  if ('name' in org && typeof org.id === 'number') {
+    return org.name;
+  }
+  // Old format
+  return org.tenantName;
+};
+
+const getOrganizationId = (org: Organization | OrganizationV2): string => {
+  // Check if it's the new format (V2)
+  if ('name' in org && typeof org.id === 'number') {
+    return `org_${org.id.toString().padStart(6, '0')}`;
+  }
+  // Old format
+  return org.organizationId;
+};
+
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
@@ -144,8 +165,8 @@ const availableRoles = ['super_admin', 'tenant_admin'];
 const Users: React.FC = () => {
   const { userRoles } = useUserRoles();
   const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [domains, setDomains] = useState<Record<string, Domain[]>>({}); // Store domains by organization ID
+  const [organizations, setOrganizations] = useState<(Organization | OrganizationV2)[]>([]);
+  const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [abortController, setAbortController] =
@@ -170,13 +191,16 @@ const Users: React.FC = () => {
     severity: 'success',
   });
 
-  // This runs only once when component mounts
+  const initialLoadRef = useRef<boolean>(false);
+
+  // Single useEffect for initial load
   useEffect(() => {
     const timer = setTimeout(() => {
       const token = localStorage.getItem('access_token');
       if (token) {
         fetchUsers();
-        fetchOrganizations(); // Only called once
+        fetchOrganizations();
+        initialLoadRef.current = true;
       } else {
         setError('No authentication token found. Please login again.');
         setLoading(false);
@@ -191,11 +215,14 @@ const Users: React.FC = () => {
     };
   }, []); // Empty dependency array
 
-  // This runs only when filters/pagination change
+  // Separate useEffect for filters/pagination changes
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      fetchUsers(); // Only fetch users, not organizations
+    // Only run if initial load is complete
+    if (initialLoadRef.current) {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        fetchUsers();
+      }
     }
   }, [filters, pagination.page, pagination.pageSize]);
 
@@ -337,32 +364,59 @@ const Users: React.FC = () => {
   const fetchOrganizations = async (): Promise<void> => {
     try {
       const response = await apiHelpers.getOrganizations();
-      const orgs = response.data.organizations || [];
+      
+      // Handle both response formats
+      let orgs: (Organization | OrganizationV2)[] = [];
+      
+      if (response.data.items) {
+        // New format (V2)
+        orgs = response.data.items;
+      } else if (response.data.organizations) {
+        // Old format
+        orgs = response.data.organizations;
+      } else {
+        // Fallback: assume it's an array
+        orgs = Array.isArray(response.data) ? response.data : [];
+      }
 
-      // Remove duplicate organizations based on organizationId
+      // Remove duplicate organizations based on organizationId/name
       const uniqueOrgs = orgs.filter(
-        (org, index, self) =>
-          index === self.findIndex(o => o.organizationId === org.organizationId)
+        (org, index, self) => {
+          const orgId = getOrganizationId(org);
+          return index === self.findIndex(o => getOrganizationId(o) === orgId);
+        }
       );
 
       setOrganizations(uniqueOrgs);
 
-      // Fetch domains for each organization
-      const domainsData: Record<string, Domain[]> = {};
-      for (const org of uniqueOrgs) {
+      // Fetch domains in parallel
+      const domainsPromises = uniqueOrgs.map(async (org) => {
         try {
-          const domainsResponse = await apiHelpers.getUserDomains(
-            org.organizationId
-          );
-          domainsData[org.organizationId] = domainsResponse.data.domains || [];
+          const orgId = getOrganizationId(org);
+          const domainsResponse = await apiHelpers.getUserDomains(orgId);
+          return {
+            orgId: orgId,
+            domains: domainsResponse.data.domains || []
+          };
         } catch (error) {
           console.error(
-            `Error fetching domains for organization ${org.organizationId}:`,
+            `Error fetching domains for organization ${getOrganizationId(org)}:`,
             error
           );
-          domainsData[org.organizationId] = [];
+          return {
+            orgId: getOrganizationId(org),
+            domains: []
+          };
         }
-      }
+      });
+
+      const domainsResults = await Promise.all(domainsPromises);
+      const domainsData: Record<string, Domain[]> = {};
+      
+      domainsResults.forEach(result => {
+        domainsData[result.orgId] = result.domains;
+      });
+
       setDomains(domainsData);
     } catch (error) {
       console.error('Error fetching organizations:', error);
@@ -587,7 +641,7 @@ interface FilterSectionProps {
     status: string;
     search: string;
   };
-  organizations: Organization[];
+  organizations: (Organization | OrganizationV2)[];
   userRoles: string[];
   handleFilterChange: (field: string, value: string) => void;
   handleClearFilters: () => void;
@@ -657,38 +711,17 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Box>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Organization</InputLabel>
-              <Select
-                value={filters.organization_id}
-                onChange={e =>
-                  handleFilterChange('organization_id', e.target.value)
-                }
-                label="Organization"
-                data-testid={TestIds.filterForm.organization}
-                inputProps={{
-                  'aria-label': 'Organization filter',
-                }}
-              >
-                <MenuItem
-                  value=""
-                  data-testid={TestIds.filterForm.organizationOptionAll}
-                >
-                  All Organizations
-                </MenuItem>
-                {organizations.map(org => (
-                  <MenuItem
-                    key={org.organizationId}
-                    value={org.organizationId}
-                    data-testid={TestIds.filterForm.organizationOption(
-                      org.organizationId
-                    )}
-                  >
-                    {org.tenantName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <OrganizationsDropdown
+              value={filters.organization_id}
+              onChange={(value) => handleFilterChange('organization_id', value)}
+              label="Organization"
+              testIdPrefix="filter-form-organization"
+              showAllOption={true}
+              allOptionText="All Organizations"
+              margin="none"
+              organizations={organizations}
+              fetchFromApi={true}
+            />
           </Grid>
           <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
@@ -792,7 +825,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
 interface UsersTableProps {
   users: User[];
-  organizations: Organization[];
+  organizations: (Organization | OrganizationV2)[];
   domains: Record<string, Domain[]>;
   loading: boolean;
   error: string;
@@ -887,9 +920,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
                       <TableCell>
                         {organizations.find(
                           org =>
-                            org.organizationId ===
+                            getOrganizationId(org) ===
                             convertOrgIdToString(user.organization_id)
-                        )?.tenantName || 'Unknown'}
+                        ) ? getOrganizationName(organizations.find(
+                          org =>
+                            getOrganizationId(org) ===
+                            convertOrgIdToString(user.organization_id)
+                        )!) : 'Unknown'}
                       </TableCell>
                       <TableCell>{getDomainName(user, domains)}</TableCell>
                       <TableCell>
@@ -977,7 +1014,7 @@ interface CreateUserDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CreateUserRequest) => Promise<void>;
-  organizations: Organization[];
+  organizations: (Organization | OrganizationV2)[];
   userRoles: string[];
 }
 
@@ -1135,31 +1172,18 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             margin="normal"
             required
             error={!!errors.organization_id}
-          >
-            <InputLabel>Organization</InputLabel>
-            <Select
+          >            
+            <OrganizationsDropdown
               value={formData.organization_id}
-              onChange={e =>
-                setFormData({ ...formData, organization_id: e.target.value })
-              }
+              onChange={(value) => setFormData({ ...formData, organization_id: value })}
               label="Organization"
-              data-testid={TestIds.users.createDialog.organization}
-              inputProps={{
-                'aria-label': 'Organization selection',
-              }}
-            >
-              {organizations.map(org => (
-                <MenuItem
-                  key={org.organizationId}
-                  value={org.organizationId}
-                  data-testid={TestIds.users.createDialog.organizationOption(
-                    org.organizationId
-                  )}
-                >
-                  {org.tenantName}
-                </MenuItem>
-              ))}
-            </Select>
+              required={true}
+              testIdPrefix="users-create-organization"
+              showAllOption={false}
+              organizations={organizations}
+              fetchFromApi={true}
+              margin="none"
+            />
             {errors.organization_id && (
               <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                 {errors.organization_id}
@@ -1351,7 +1375,7 @@ interface ViewUserDialogProps {
   user: User;
   onClose: () => void;
   onUpdate: () => void;
-  organizations: Organization[];
+  organizations: (Organization | OrganizationV2)[];
   domains: Record<string, Domain[]>;
   setEditMode: (edit: boolean) => void;
 }
@@ -1410,9 +1434,13 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
                 <Typography variant="body1" gutterBottom>
                   {organizations.find(
                     org =>
-                      org.organizationId ===
+                      getOrganizationId(org) ===
                       convertOrgIdToString(user.organization_id)
-                  )?.tenantName || 'Unknown'}
+                  ) ? getOrganizationName(organizations.find(
+                    org =>
+                      getOrganizationId(org) ===
+                      convertOrgIdToString(user.organization_id)
+                  )!) : 'Unknown'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1495,7 +1523,7 @@ interface EditUserDialogProps {
   user: User;
   onClose: () => void;
   onSubmit: (data: UpdateUserRequest) => Promise<void>;
-  organizations: Organization[];
+  organizations: (Organization | OrganizationV2)[];
   domains: Record<string, Domain[]>;
   userRoles: string[];
 }
@@ -1597,13 +1625,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             >
               {organizations.map(org => (
                 <MenuItem
-                  key={org.organizationId}
-                  value={org.organizationId}
+                  key={getOrganizationId(org)}
+                  value={getOrganizationId(org)}
                   data-testid={TestIds.users.editDialog.organizationOption(
-                    org.organizationId
+                    getOrganizationId(org)
                   )}
                 >
-                  {org.tenantName}
+                  {getOrganizationName(org)}
                 </MenuItem>
               ))}
             </Select>

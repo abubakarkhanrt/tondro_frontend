@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 01-07-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -47,6 +47,9 @@ import {
   type UsageResponse,
   type UsageSummaryResponse,
   type UsageLimitsResponse,
+  type ProductsResponse,
+  //Important to uncomment below on workstation.
+  //type ProductsLegacyResponse,
 } from '../types';
 
 // ────────────────────────────────────────
@@ -55,6 +58,7 @@ import {
 
 // Use environment-based CRM base path
 const CRM_BASE = ENV_CONFIG.API_BASE_PATH;
+
 
 // Helper functions to build CRM endpoints
 const buildCrmEndpoint = (path: string): string => `${CRM_BASE}${path}`;
@@ -727,7 +731,7 @@ export const apiHelpers = {
   // Products
   // ────────────────────────────────────────
 
-  getProducts: (signal?: AbortSignal): Promise<AxiosResponse<Product[]>> =>
+  getProducts: (signal?: AbortSignal): Promise<AxiosResponse<Product[] | ProductsResponse>> =>
     api.get(API_ENDPOINTS.PRODUCTS.BASE, {
       signal: signal as GenericAbortSignal,
     }),

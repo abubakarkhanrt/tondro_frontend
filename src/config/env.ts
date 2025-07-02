@@ -14,7 +14,7 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081',
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
   API_BASE_PATH: process.env.NEXT_PUBLIC_API_BASE_PATH || '/crm',
 
