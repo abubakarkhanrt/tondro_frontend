@@ -197,7 +197,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       console.log('🌐 Fetching organizations from API');
       fetchOrganizations();
     }
-  }, []); // Remove fetchFromApi dependency
+  }, [fetchOrganizations]); // Remove fetchFromApi dependency
 
   // ────────────────────────────────────────
   // Event Handlers

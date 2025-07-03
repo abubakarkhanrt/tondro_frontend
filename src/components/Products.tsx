@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 01-07-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -216,7 +216,9 @@ const Products: React.FC = () => {
     formData: UpdateProductRequest
   ): Promise<void> => {
     if (!selectedProduct) return;
-
+    // log formdata and selectedProduct
+    console.log('formData', formData);
+    console.log('selectedProduct', selectedProduct);
     try {
       await apiHelpers.updateProduct(selectedProduct.id, formData);
       setSnackbar({

@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 01-07-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -72,18 +72,27 @@ export interface OrganizationDomainsResponse {
 }
 
 export interface Organization {
-  organizationId: string;
-  tenantName: string;
-  organizationDomain: string;
-  status: 'Active' | 'Suspended' | 'Trial' | 'Inactive';
-  subscriptionTier: string;
-  subscriptions: Subscription[];
-  contractAnniversaryDate: string;
-  totalUsers: number;
-  totalJobs: number;
-  usageAgainstLimit: string;
-  createdAt: string;
+  // Old format fields (for backward compatibility)
+  organizationId?: string;
+  tenantName?: string;
+  organizationDomain?: string;
+  status: 'Active' | 'Suspended' | 'Trial' | 'Inactive' | 'active' | 'inactive' | 'pending';
+  subscriptionTier?: string;
+  subscriptions?: Subscription[];
+  contractAnniversaryDate?: string;
+  totalUsers?: number;
+  totalJobs?: number;
+  usageAgainstLimit?: string;
+  createdAt?: string;
   domains?: Domain[];
+  
+  // New format fields
+  id?: number;
+  name?: string;
+  domain?: string | null;
+  subscription_count?: number;
+  user_count?: number;
+  created_at?: string;
 }
 
 export interface OrganizationsResponse {
@@ -220,9 +229,13 @@ export interface Subscription {
     | 'expired'
     | 'cancelled'
     | 'suspended';
-  tier_name: string;
+  // Support both old and new field names for backward compatibility
+  tier_name?: string;
+  tier?: string;
   current_usage: number;
-  max_limit: number;
+  // Support both old and new field names for backward compatibility
+  max_limit?: number;
+  usage_limit?: number;
   auto_renewal: boolean;
   starts_at: string;
   ends_at: string | null;
@@ -235,7 +248,7 @@ export interface Subscription {
 export interface CreateSubscriptionRequest {
   organization_id: number;
   product_id: string;
-  tier_name: string;
+  tier: string;
   auto_renewal: boolean;
   starts_at?: string;
   ends_at?: string | null;
@@ -249,7 +262,7 @@ export interface UpdateSubscriptionRequest {
     | 'expired'
     | 'cancelled'
     | 'suspended';
-  tier_name?: string;
+  tier?: string;
   auto_renewal?: boolean;
   ends_at?: string | null;
 }

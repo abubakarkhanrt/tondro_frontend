@@ -82,7 +82,7 @@ const CreateSubscriptionDialog = ({
   const [form, setForm] = useState<CreateSubscriptionRequest>({
     organization_id: 0,
     product_id: '',
-    tier_name: '',
+    tier: '',
     auto_renewal: true,
     starts_at: new Date().toISOString().split('T')[0],
     ends_at: null,
@@ -96,7 +96,7 @@ const CreateSubscriptionDialog = ({
     setForm(prev => ({ ...prev, [field]: value }));
     // Clear tier when product changes
     if (field === 'product_id') {
-      setForm(prev => ({ ...prev, tier_name: '' }));
+      setForm(prev => ({ ...prev, tier: '' }));
     }
   };
 
@@ -104,7 +104,7 @@ const CreateSubscriptionDialog = ({
     if (
       !form.organization_id ||
       !form.product_id ||
-      !form.tier_name ||
+      !form.tier ||
       !form.starts_at
     ) {
       setError('Please fill in all required fields');
@@ -142,7 +142,7 @@ const CreateSubscriptionDialog = ({
     setForm({
       organization_id: 0,
       product_id: '',
-      tier_name: '',
+      tier: '',
       auto_renewal: true,
       starts_at: new Date().toISOString().split('T')[0],
       ends_at: null,
@@ -209,8 +209,8 @@ const CreateSubscriptionDialog = ({
               <FormControl fullWidth margin="normal">
                 <InputLabel>Tier *</InputLabel>
                 <Select
-                  value={form.tier_name}
-                  onChange={e => handleChange('tier_name', e.target.value)}
+                  value={form.tier}
+                  onChange={e => handleChange('tier', e.target.value)}
                   label="Tier *"
                   disabled={!form.product_id}
                   data-testid={TestIds.subscriptions.createDialog.tier}
@@ -280,6 +280,16 @@ const CreateSubscriptionDialog = ({
   );
 };
 
+// Add helper functions to handle both field formats
+const getTierName = (subscription: Subscription): string => {
+  return subscription.tier || '';
+};
+
+const getMaxLimit = (subscription: Subscription): number | null => {
+  return subscription.max_limit !== undefined ? subscription.max_limit : subscription.usage_limit || null;
+};
+
+// Update the EditSubscriptionDialog to use the helper function
 const EditSubscriptionDialog = ({
   subscription,
   onClose,
@@ -293,7 +303,7 @@ const EditSubscriptionDialog = ({
 }) => {
   const [form, setForm] = useState<UpdateSubscriptionRequest>({
     status: subscription.status,
-    tier_name: subscription.tier_name,
+    tier: getTierName(subscription),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,8 +345,8 @@ const EditSubscriptionDialog = ({
               <FormControl fullWidth margin="normal">
                 <InputLabel>Tier</InputLabel>
                 <Select
-                  value={form.tier_name}
-                  onChange={e => handleChange('tier_name', e.target.value)}
+                  value={form.tier}
+                  onChange={e => handleChange('tier', e.target.value)}
                   label="Tier"
                   data-testid={TestIds.subscriptions.editDialog.tier}
                 >
@@ -423,7 +433,7 @@ interface FiltersState {
   organization_id: string;
   product_id: string;
   status: string;
-  tier_name: string; // Updated from tier
+  tier: string;
 }
 
 interface PaginationState {
@@ -460,7 +470,7 @@ const Subscriptions: React.FC = () => {
     organization_id: '',
     product_id: '',
     status: '',
-    tier_name: '', // Updated from tier
+    tier: '',
   });
   const [pagination, setPagination] = useState<PaginationState>({
     page: 0,
@@ -548,9 +558,28 @@ const Subscriptions: React.FC = () => {
         params,
         controller.signal
       );
-      const data: PaginatedSubscriptionsResponse = response.data;
-      setSubscriptions(data.items || []);
-      setPagination(prev => ({ ...prev, total: data.total || 0 }));
+      
+      // Handle both paginated and direct array response formats
+      let subscriptionsData: Subscription[] = [];
+      let totalCount = 0;
+      
+      if (Array.isArray(response.data)) {
+        // Direct array format (new backend format)
+        subscriptionsData = response.data;
+        totalCount = response.data.length;
+      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+        // Paginated format (old backend format)
+        const data: PaginatedSubscriptionsResponse = response.data;
+        subscriptionsData = data.items || [];
+        totalCount = data.total || 0;
+      } else {
+        console.warn('Unexpected subscriptions response format:', response.data);
+        subscriptionsData = [];
+        totalCount = 0;
+      }
+      
+      setSubscriptions(subscriptionsData);
+      setPagination(prev => ({ ...prev, total: totalCount }));
     } catch (error: any) {
       // Don't show error for cancelled requests
       if (axios.isCancel(error)) {
@@ -603,7 +632,22 @@ const Subscriptions: React.FC = () => {
       }
 
       const response = await apiHelpers.getProducts();
-      setProducts(Array.isArray(response.data) ? response.data : []);
+      
+      // Handle both response formats
+      let productsData: Product[] = [];
+      
+      if (Array.isArray(response.data)) {
+        // Legacy format: direct array of products
+        productsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'products' in response.data) {
+        // New format: { success: boolean, message: string, products: Product[], total: number }
+        productsData = response.data.products || [];
+      } else {
+        console.warn('Unexpected products response format:', response.data);
+        productsData = [];
+      }
+      
+      setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
       const err = error as any;
@@ -656,7 +700,8 @@ const Subscriptions: React.FC = () => {
     const product = products.find(p => p.id === productId);
     if (!product) return [];
 
-    const productName = product.name.toLowerCase();
+    // Use name field instead of display_name
+    const productName = (product.name || '').toLowerCase();
     if (productName.includes('transcript')) {
       return ['Trans 200', 'Trans 500', 'Trans 1000'];
     } else if (productName.includes('admission')) {
@@ -675,7 +720,7 @@ const Subscriptions: React.FC = () => {
 
     // Clear tier filter when product changes
     if (field === 'product_id') {
-      setFilters(prev => ({ ...prev, tier_name: '' }));
+      setFilters(prev => ({ ...prev, tier: '' }));
     }
   };
 
@@ -684,7 +729,7 @@ const Subscriptions: React.FC = () => {
       organization_id: '',
       product_id: '',
       status: '',
-      tier_name: '',
+      tier: '',
     });
     setPagination(prev => ({ ...prev, page: 0 }));
   };
@@ -717,7 +762,10 @@ const Subscriptions: React.FC = () => {
 
   const getProductName = (productId: string): string => {
     const product = products.find(p => p.id === productId);
-    return product ? product.name : `Product ${productId}`;
+    if (!product) return `Product ${productId}`;
+    
+    // Use name field instead of display_name
+    return product.name || `Product ${productId}`;
   };
 
   const handleUpdateSubscription = async (
@@ -856,8 +904,8 @@ const Subscriptions: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Tier</InputLabel>
               <Select
-                value={filters.tier_name}
-                onChange={e => handleFilterChange('tier_name', e.target.value)}
+                value={filters.tier}
+                onChange={e => handleFilterChange('tier', e.target.value)}
                 label="Tier"
                 disabled={!filters.product_id}
                 data-testid={TestIds.filterForm.tier}
@@ -963,14 +1011,14 @@ const Subscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={formatTierName(subscription.tier_name)}
-                          color={getTierColor(subscription.tier_name)}
+                          label={formatTierName(getTierName(subscription))}
+                          color={getTierColor(getTierName(subscription))}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
-                        {subscription.max_limit
-                          ? `${subscription.current_usage}/${subscription.max_limit}`
+                        {getMaxLimit(subscription)
+                          ? `${subscription.current_usage}/${getMaxLimit(subscription)}`
                           : `${subscription.current_usage}`}
                       </TableCell>
                       <TableCell>
@@ -1056,16 +1104,19 @@ const Subscriptions: React.FC = () => {
 
     const getProductName = (productId: string): string => {
       const product = products.find(p => p.id === productId);
-      return product ? product.name : `Product ${productId}`;
+      if (!product) return `Product ${productId}`;
+      
+      // Use name field instead of display_name
+      return product.name || `Product ${productId}`;
     };
 
-    // Use max_limit directly from subscription data
-    const currentUsage = subscription.current_usage;
-    const maxLimit = subscription.max_limit;
+    // Use helper functions for tier and limit
+    const tierName = getTierName(subscription);
+    const maxLimit = getMaxLimit(subscription);
 
     const usageDisplay = maxLimit
-      ? `${currentUsage}/${maxLimit}`
-      : `${currentUsage}`;
+      ? `${subscription.current_usage}/${maxLimit}`
+      : `${subscription.current_usage}`;
 
     return (
       <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
@@ -1113,8 +1164,8 @@ const Subscriptions: React.FC = () => {
                   Tier
                 </Typography>
                 <Chip
-                  label={formatTierName(subscription.tier_name)}
-                  color={getTierColor(subscription.tier_name)}
+                  label={formatTierName(tierName)}
+                  color={getTierColor(tierName)}
                   size="small"
                   sx={{ mb: 2 }}
                 />

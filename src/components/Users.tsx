@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -278,7 +278,7 @@ const Users: React.FC = () => {
           ...prev,
           total:
             response.data.total ||
-            (response.data.items ? response.data.items.length : 0),
+            (response.data.items ? response.data.items.length : usersData.length),
         }));
       } catch (error: any) {
         // If API filtering fails, fall back to frontend filtering
@@ -568,7 +568,6 @@ const Users: React.FC = () => {
         onClose={() => setCreateDialogOpen(false)}
         onSubmit={handleCreateUser}
         organizations={organizations}
-        userRoles={userRoles}
       />
 
       {selectedUser && (
@@ -649,8 +648,7 @@ interface FilterSectionProps {
 
 const FilterSection: React.FC<FilterSectionProps> = ({
   filters,
-  organizations,
-  userRoles,
+  organizations,  
   handleFilterChange,
   handleClearFilters,
 }) => {
@@ -710,7 +708,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </Button>
         </Box>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <OrganizationsDropdown
               value={filters.organization_id}
               onChange={value => handleFilterChange('organization_id', value)}
@@ -720,44 +718,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               allOptionText="All Organizations"
               margin="none"
               organizations={organizations}
-              fetchFromApi={true}
+              fetchFromApi={false}
             />
           </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>Role</InputLabel>
-              <Select
-                value={filters.role}
-                onChange={e =>
-                  handleFilterChange('role', e.target.value as string)
-                }
-                label="Role"
-                data-testid={TestIds.filterForm.role}
-                inputProps={{
-                  'aria-label': 'Role filter',
-                }}
-              >
-                <MenuItem
-                  value=""
-                  data-testid={TestIds.filterForm.roleOptionAll}
-                >
-                  All
-                </MenuItem>
-                {userRoles.map(role => (
-                  <MenuItem
-                    key={role}
-                    value={role}
-                    data-testid={TestIds.filterForm.roleOption(role)}
-                  >
-                    {role
-                      .replace('_', ' ')
-                      .replace(/\b\w/g, l => l.toUpperCase())}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
@@ -798,7 +762,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               label="Search"
@@ -1019,7 +983,6 @@ interface CreateUserDialogProps {
   onClose: () => void;
   onSubmit: (data: CreateUserRequest) => Promise<void>;
   organizations: (Organization | OrganizationV2)[];
-  userRoles: string[];
 }
 
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
@@ -1027,7 +990,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   onClose,
   onSubmit,
   organizations,
-  // userRoles,
 }) => {
   const [formData, setFormData] = useState<CreateUserRequest>({
     organization_id: '',
@@ -1187,7 +1149,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               testIdPrefix="users-create-organization"
               showAllOption={false}
               organizations={organizations}
-              fetchFromApi={true}
+              fetchFromApi={false}
               margin="none"
             />
             {errors.organization_id && (

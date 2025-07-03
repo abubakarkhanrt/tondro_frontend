@@ -4,7 +4,7 @@
  * Description: Main dashboard with entity summaries for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 01-07-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -73,19 +73,16 @@ const Dashboard: React.FC = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Add a longer delay to ensure token is available after login
-    const timer = setTimeout(() => {
-      const token = localStorage.getItem('access_token');
-      if (token && token !== 'undefined' && token !== 'null') {
-        fetchSummaryData();
-      } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
-      }
-    }, 500); // Increased delay to ensure token is set
+    // Remove the artificial delay - token is available immediately after login
+    const token = localStorage.getItem('access_token');
+    if (token && token !== 'undefined' && token !== 'null') {
+      fetchSummaryData();
+    } else {
+      setError('No authentication token found. Please login again.');
+      setLoading(false);
+    }
 
     return () => {
-      clearTimeout(timer);
       // Cancel any ongoing requests when component unmounts
       if (abortController) {
         abortController.abort();

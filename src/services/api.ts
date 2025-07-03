@@ -108,7 +108,7 @@ const API_ENDPOINTS = {
     ROLE: (id: string): string => buildCrmEndpoint(`/users/${id}/role`),
     STATUS: (id: string): string => buildCrmEndpoint(`/users/${id}/status`),
     LOGIN: (id: string): string => buildCrmEndpoint(`/users/${id}/login`),
-    USER_ROLES: buildCrmEndpoint('/users/user-roles'),
+    USER_ROLES: buildCrmEndpoint('/users'),
     DOMAINS: (organizationId: string): string =>
       buildCrmEndpoint(`/users/domains/${organizationId}`),
   },
@@ -222,6 +222,11 @@ api.interceptors.response.use(
     }
 
     if (error.response && error.response.status === 401) {
+      // Don't redirect if we're already on the login page
+      if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+        return Promise.reject(error);
+      }
+
       // Clear all token formats for backward compatibility
       localStorage.removeItem('access_token');
       localStorage.removeItem('token_type');
@@ -264,6 +269,40 @@ export const apiHelpers = {
           params,
           signal: signal as GenericAbortSignal,
         });
+        
+        // Check if response is in new format and transform if needed
+        const data = response.data;
+        if (data.items && Array.isArray(data.items)) {
+          // New format detected - transform to expected format
+          const transformedData: OrganizationsResponse = {
+            total: data.total || 0,
+            page: data.page || 1,
+            limit: data.page_size || 10,
+            organizations: data.items.map((org: any) => ({
+              organizationId: String(org.id),
+              tenantName: org.name,
+              organizationDomain: org.domain || '',
+              status: org.status === 'active' ? 'Active' : 
+                     org.status === 'inactive' ? 'Inactive' : 
+                     org.status === 'pending' ? 'Pending' : 'Inactive',
+              subscriptionTier: 'Tier 1', // Default value
+              contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
+              totalUsers: org.user_count || 0,
+              totalJobs: 0, // Default value
+              usageAgainstLimit: '0%', // Default value
+              createdAt: org.created_at,
+              // Keep new format fields for backward compatibility
+              id: org.id,
+              name: org.name,
+              domain: org.domain,
+              subscription_count: org.subscription_count,
+              user_count: org.user_count,
+              created_at: org.created_at,
+            })),
+          };
+          return { ...response, data: transformedData };
+        }
+        
         return response;
       } catch (error: unknown) {
         // If filters fail with 500 error, fall back to frontend filtering
@@ -328,10 +367,45 @@ export const apiHelpers = {
 
     // If no filters, proceed normally
     try {
-      return await api.get(API_ENDPOINTS.ORGANIZATIONS.BASE, {
+      const response = await api.get(API_ENDPOINTS.ORGANIZATIONS.BASE, {
         params,
         signal: signal as GenericAbortSignal,
       });
+      
+      // Check if response is in new format and transform if needed
+      const data = response.data;
+      if (data.items && Array.isArray(data.items)) {
+        // New format detected - transform to expected format
+        const transformedData: OrganizationsResponse = {
+          total: data.total || 0,
+          page: data.page || 1,
+          limit: data.page_size || 10,
+          organizations: data.items.map((org: any) => ({
+            organizationId: String(org.id),
+            tenantName: org.name,
+            organizationDomain: org.domain || '',
+            status: org.status === 'active' ? 'Active' : 
+                   org.status === 'inactive' ? 'Inactive' : 
+                   org.status === 'pending' ? 'Pending' : 'Inactive',
+            subscriptionTier: 'Tier 1', // Default value
+            contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
+            totalUsers: org.user_count || 0,
+            totalJobs: 0, // Default value
+            usageAgainstLimit: '0%', // Default value
+            createdAt: org.created_at,
+            // Keep new format fields for backward compatibility
+            id: org.id,
+            name: org.name,
+            domain: org.domain,
+            subscription_count: org.subscription_count,
+            user_count: org.user_count,
+            created_at: org.created_at,
+          })),
+        };
+        return { ...response, data: transformedData };
+      }
+      
+      return response;
     } catch (error: unknown) {
       // Temporary fallback: try with old API structure if new one fails
       if (
@@ -421,10 +495,20 @@ export const apiHelpers = {
   createOrganization: (
     data: CreateOrganizationRequest,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<CreateOrganizationResponse>> =>
-    api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, data, {
+  ): Promise<AxiosResponse<CreateOrganizationResponse>> => {
+    // Transform camelCase field names to snake_case for the API
+    const transformedData = {
+      name: data.tenantName,
+      domain: data.organizationDomain,
+      initial_admin_email: data.initialAdminEmail,
+      initial_subscriptions: data.initialSubscriptions,
+      initial_status: data.initialStatus,
+    };
+    
+    return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, transformedData, {
       signal: signal as GenericAbortSignal,
-    }),
+    });
+  },
 
   getOrganization: (
     id: string,
@@ -750,7 +834,7 @@ export const apiHelpers = {
     data: UpdateProductRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
-    api.patch(API_ENDPOINTS.PRODUCTS.BY_ID(id), data, {
+    api.put(API_ENDPOINTS.PRODUCTS.BY_ID(id), data, {
       signal: signal as GenericAbortSignal,
     }),
 

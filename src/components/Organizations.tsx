@@ -4,7 +4,7 @@
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 27-06-2025
+ * Last Updated: 02-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -60,6 +60,7 @@ import {
   type Product,
   ERROR_MESSAGES,
   type ProductSubscriptionRequest,
+  type Subscription,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
@@ -129,6 +130,7 @@ const Organizations: React.FC = () => {
   const [editMode, setEditMode] = useState<boolean>(false);
   const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
 
   // ────────────────────────────────────────
   // API Functions
@@ -190,11 +192,61 @@ const Organizations: React.FC = () => {
   const fetchProducts = useCallback(async (): Promise<void> => {
     try {
       const response = await apiHelpers.getProducts();
-      setProducts(Array.isArray(response.data) ? response.data : []);
+      
+      // Handle both response formats
+      let productsData: Product[] = [];
+      
+      if (Array.isArray(response.data)) {
+        // Legacy format: direct array of products
+        productsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'products' in response.data) {
+        // New format: { success: boolean, message: string, products: Product[], total: number }
+        productsData = response.data.products || [];
+      } else {
+        console.warn('Unexpected products response format:', response.data);
+        productsData = [];
+      }
+      
+      setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
   }, []);
+
+  const fetchAllSubscriptions = useCallback(async (): Promise<void> => {
+    try {
+      const response = await apiHelpers.getSubscriptions();
+      
+      // Handle both response formats
+      let subscriptionsData: Subscription[] = [];
+      
+      if (Array.isArray(response.data)) {
+        // Direct array format (new backend format)
+        subscriptionsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+        // Paginated format (old backend format)
+        subscriptionsData = response.data.items || [];
+      } else {
+        console.warn('Unexpected subscriptions response format:', response.data);
+        subscriptionsData = [];
+      }
+      
+      setAllSubscriptions(subscriptionsData);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      setAllSubscriptions([]);
+    }
+  }, []);
+
+  // Helper function to get subscriptions for a specific organization
+  const getSubscriptionsForOrganization = useCallback((organizationId: string): Subscription[] => {
+    // Convert organization ID format for comparison
+    const numericOrgId = parseInt(organizationId.replace('org_', ''), 10);
+    
+    return allSubscriptions.filter(subscription => 
+      subscription.organization_id === numericOrgId
+    );
+  }, [allSubscriptions]);
 
   const handleCreateOrganization = useCallback(
     async (formData: CreateOrganizationRequest): Promise<void> => {
@@ -292,7 +344,8 @@ const Organizations: React.FC = () => {
 
   useEffect(() => {
     fetchOrganizations();
-  }, [fetchOrganizations]);
+    fetchAllSubscriptions(); // Fetch all subscriptions once
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -490,118 +543,127 @@ const Organizations: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {organizations.organizations.map(org => (
-                    <TableRow key={org.organizationId}>
-                      <TableCell>
-                        <Typography variant="subtitle2">
-                          {org.tenantName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{org.organizationDomain}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={org.status}
-                          style={{
-                            backgroundColor: getStatusBackgroundColor(
-                              org.status
-                            ),
-                            color: '#ffffff',
-                          }}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {org.subscriptions && org.subscriptions.length > 0 ? (
-                          <Box>
-                            {org.subscriptions.map((sub, index) => (
-                              <Card
-                                key={index}
-                                sx={{ mb: 1, p: 1, backgroundColor: 'grey.50' }}
-                              >
-                                <Grid container spacing={1} alignItems="center">
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Product:
-                                    </Typography>
-                                    <Typography variant="body2" component="div">
-                                      {(sub as any).product_name}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Tier:
-                                    </Typography>
-                                    <Chip
-                                      label={formatTierName((sub as any).tier)}
-                                      size="small"
-                                      color={getTierColor((sub as any).tier)}
-                                    />
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Usage:
-                                    </Typography>
-                                    <Typography variant="body2" component="div">
-                                      {(sub as any).current_usage || 0} /{' '}
-                                      {(sub as any).usage_limit || 'Unlimited'}
-                                    </Typography>
-                                  </Grid>
-                                </Grid>
-                              </Card>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            No subscriptions
+                  {organizations.organizations.map(org => {
+                    const orgSubscriptions = getSubscriptionsForOrganization(org.organizationId);
+                    
+                    return (
+                      <TableRow key={org.organizationId}>
+                        <TableCell>
+                          <Typography variant="subtitle2">
+                            {org.tenantName}
                           </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="View Details">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedOrg(org);
-                                setEditMode(false);
-                              }}
-                              data-testid={TestIds.organizations.viewDetails(
-                                org.organizationId
-                              )}
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Organization">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedOrg(org);
-                                setEditMode(true);
-                              }}
-                              data-testid={TestIds.organizations.edit(
-                                org.organizationId
-                              )}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>{org.organizationDomain}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={org.status}
+                            style={{
+                              backgroundColor: getStatusBackgroundColor(
+                                org.status
+                              ),
+                              color: '#ffffff',
+                            }}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {orgSubscriptions.length > 0 ? (
+                            <Box>
+                              {orgSubscriptions.map((sub, index) => {
+                                const product = products.find(p => p.id === sub.product_id);
+                                const productName = product?.name || `Product ${sub.product_id}`;
+                                
+                                return (
+                                  <Card
+                                    key={index}
+                                    sx={{ mb: 1, p: 1, backgroundColor: 'grey.50' }}
+                                  >
+                                    <Grid container spacing={1} alignItems="center">
+                                      <Grid item xs={4}>
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                          component="div"
+                                        >
+                                          Product:
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                          {productName}
+                                        </Typography>
+                                      </Grid>
+                                      <Grid item xs={4}>
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                          component="div"
+                                        >
+                                          Tier:
+                                        </Typography>
+                                        <Chip
+                                          label={formatTierName(sub.tier || sub.tier_name || '')}
+                                          size="small"
+                                          color={getTierColor(sub.tier || sub.tier_name || '')}
+                                        />
+                                      </Grid>
+                                      <Grid item xs={4}>
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                          component="div"
+                                        >
+                                          Usage:
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                          {sub.current_usage || 0} /{' '}
+                                          {sub.max_limit || sub.usage_limit || 'Unlimited'}
+                                        </Typography>
+                                      </Grid>
+                                    </Grid>
+                                  </Card>
+                                );
+                              })}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No subscriptions
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="View Details">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setSelectedOrg(org);
+                                  setEditMode(false);
+                                }}
+                                data-testid={TestIds.organizations.viewDetails(
+                                  org.organizationId
+                                )}
+                              >
+                                <VisibilityIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Edit Organization">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setSelectedOrg(org);
+                                  setEditMode(true);
+                                }}
+                                data-testid={TestIds.organizations.edit(
+                                  org.organizationId
+                                )}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -648,6 +710,8 @@ const Organizations: React.FC = () => {
           organization={selectedOrg}
           onClose={() => setSelectedOrg(null)}
           onUpdate={() => setEditMode(true)}
+          allSubscriptions={allSubscriptions}
+          products={products}
         />
       )}
 
@@ -1207,254 +1271,247 @@ interface ViewOrganizationDialogProps {
   organization: Organization;
   onClose: () => void;
   onUpdate: () => void;
+  allSubscriptions: Subscription[];
+  products: Product[];
 }
 
 const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
   organization,
   onClose,
-  // onUpdate,
+  allSubscriptions,
+  products,
 }) => {
-  // const [metrics, setMetrics] = useState<OrganizationMetrics | null>(null);
-  // const [loading, setLoading] = useState<boolean>(false);
-
-  // const fetchMetrics = async (): Promise<void> => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await apiHelpers.getOrganizationMetrics(organization.organizationId);
-  //     console.log('Organization metrics response:', response.data);
-  //     setMetrics(response.data);
-  //   } catch (error) {
-  //     console.error('Error fetching metrics:', error);
-  //     setMetrics({ error: 'Failed to load metrics' });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   fetchMetrics();
-  // }, [organization.organizationId]);
-
   const [activeTab, setActiveTab] = useState<number>(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
-  const renderOrganizationDetails = () => (
-    <Box sx={{ pt: 1 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Organization ID
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.organizationId}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Tenant Name
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.tenantName}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Primary Domain
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.organizationDomain}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Status
-          </Typography>
-          <Chip
-            label={organization.status}
-            style={{
-              backgroundColor: getStatusBackgroundColor(organization.status),
-              color: '#ffffff',
-            }}
-            size="small"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Created
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {new Date(organization.createdAt).toLocaleString()}
-          </Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            gutterBottom
-            component="div"
-          >
-            Subscriptions
-          </Typography>
-          {organization.subscriptions &&
-          organization.subscriptions.length > 0 ? (
-            <Box>
-              {organization.subscriptions.map((sub, index) => (
-                <Card key={index} sx={{ mb: 1, p: 1 }}>
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Product:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).product_name ||
-                          `Product ID: ${sub.product_id}`}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Tier:
-                      </Typography>
-                      <Chip
-                        label={formatTierName(
-                          (sub as any).tier || sub.tier_name
-                        )}
-                        size="small"
-                        color={getTierColor((sub as any).tier || sub.tier_name)}
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Status:
-                      </Typography>
-                      <Chip
-                        label={(sub as any).status || sub.status}
-                        size="small"
-                        color={
-                          (sub as any).status === 'active'
-                            ? 'success'
-                            : 'default'
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Usage:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).current_usage || 0} /{' '}
-                        {(sub as any).usage_limit || 'Unlimited'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        End Date:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).ends_at
-                          ? new Date((sub as any).ends_at).toLocaleDateString()
-                          : 'No end date'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Card>
-              ))}
-            </Box>
-          ) : (
-            <Typography variant="body1" color="text.secondary" component="div">
-              No subscriptions
-            </Typography>
-          )}
-        </Grid>
-      </Grid>
+  // Helper function to get subscriptions for this organization
+  const getOrganizationSubscriptions = (): Subscription[] => {
+    const numericOrgId = parseInt(organization.organizationId.replace('org_', ''), 10);
+    return allSubscriptions.filter(subscription => 
+      subscription.organization_id === numericOrgId
+    );
+  };
 
-      {/* Metrics section temporarily hidden
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <CircularProgress />
-        </Box>
-      ) : metrics && !metrics.error ? (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Additional Metrics
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="primary">
-                    {metrics.total_users || metrics.users_count || metrics.user_count || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Users
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="primary">
-                    {metrics.active_subscriptions || metrics.subscriptions_count || metrics.subscription_count || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Subscriptions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+  const renderOrganizationDetails = () => {
+    const orgSubscriptions = getOrganizationSubscriptions();
+    
+    return (
+      <Box sx={{ pt: 1 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              component="div"
+            >
+              Organization ID
+            </Typography>
+            <Typography variant="body1" gutterBottom component="div">
+              {organization.organizationId}
+            </Typography>
           </Grid>
-        </Box>
-      ) : metrics?.error ? (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {metrics.error}
-        </Alert>
-      ) : null}
-      */}
-    </Box>
-  );
+          <Grid item xs={12} sm={6}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              component="div"
+            >
+              Tenant Name
+            </Typography>
+            <Typography variant="body1" gutterBottom component="div">
+              {organization.tenantName}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              component="div"
+            >
+              Primary Domain
+            </Typography>
+            <Typography variant="body1" gutterBottom component="div">
+              {organization.organizationDomain}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              component="div"
+            >
+              Status
+            </Typography>
+            <Chip
+              label={organization.status}
+              style={{
+                backgroundColor: getStatusBackgroundColor(organization.status),
+                color: '#ffffff',
+              }}
+              size="small"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              component="div"
+            >
+              Created
+            </Typography>
+            <Typography variant="body1" gutterBottom component="div">
+              {new Date(organization.createdAt).toLocaleString()}
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              gutterBottom
+              component="div"
+            >
+              Subscriptions ({orgSubscriptions.length})
+            </Typography>
+            {orgSubscriptions.length > 0 ? (
+              <Box>
+                {orgSubscriptions.map((sub, index) => {
+                  const product = products.find(p => p.id === sub.product_id);
+                  const productName = product?.name || `Product ${sub.product_id}`;
+                  
+                  return (
+                    <Card key={index} sx={{ mb: 1, p: 1 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Product:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {productName}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Tier:
+                          </Typography>
+                          <Chip
+                            label={formatTierName(sub.tier || sub.tier_name || '')}
+                            size="small"
+                            color={getTierColor(sub.tier || sub.tier_name || '')}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Status:
+                          </Typography>
+                          <Chip
+                            label={sub.status}
+                            size="small"
+                            color={
+                              sub.status === 'active'
+                                ? 'success'
+                                : sub.status === 'suspended'
+                                ? 'error'
+                                : sub.status === 'trial'
+                                ? 'warning'
+                                : 'default'
+                            }
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Usage:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {sub.current_usage || 0} /{' '}
+                            {sub.max_limit || sub.usage_limit || 'Unlimited'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Start Date:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {sub.starts_at
+                              ? new Date(sub.starts_at).toLocaleDateString()
+                              : 'No start date'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            End Date:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {sub.ends_at
+                              ? new Date(sub.ends_at).toLocaleDateString()
+                              : 'No end date'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Auto Renewal:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {sub.auto_renewal ? 'Yes' : 'No'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="div"
+                          >
+                            Last Updated:
+                          </Typography>
+                          <Typography variant="body1" component="div">
+                            {new Date(sub.updated_at).toLocaleString()}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Card>
+                  );
+                })}
+              </Box>
+            ) : (
+              <Typography variant="body1" color="text.secondary" component="div">
+                No subscriptions found for this organization
+              </Typography>
+            )}
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
 
   const renderDomainManagement = () => (
     <Box sx={{ pt: 1 }}>
