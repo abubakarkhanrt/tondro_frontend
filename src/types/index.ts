@@ -76,7 +76,14 @@ export interface Organization {
   organizationId?: string;
   tenantName?: string;
   organizationDomain?: string;
-  status: 'Active' | 'Suspended' | 'Trial' | 'Inactive' | 'active' | 'inactive' | 'pending';
+  status:
+    | 'Active'
+    | 'Suspended'
+    | 'Trial'
+    | 'Inactive'
+    | 'active'
+    | 'inactive'
+    | 'pending';
   subscriptionTier?: string;
   subscriptions?: Subscription[];
   contractAnniversaryDate?: string;
@@ -85,7 +92,7 @@ export interface Organization {
   usageAgainstLimit?: string;
   createdAt?: string;
   domains?: Domain[];
-  
+
   // New format fields
   id?: number;
   name?: string;

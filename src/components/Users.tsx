@@ -278,7 +278,9 @@ const Users: React.FC = () => {
           ...prev,
           total:
             response.data.total ||
-            (response.data.items ? response.data.items.length : usersData.length),
+            (response.data.items
+              ? response.data.items.length
+              : usersData.length),
         }));
       } catch (error: any) {
         // If API filtering fails, fall back to frontend filtering
@@ -648,7 +650,7 @@ interface FilterSectionProps {
 
 const FilterSection: React.FC<FilterSectionProps> = ({
   filters,
-  organizations,  
+  organizations,
   handleFilterChange,
   handleClearFilters,
 }) => {

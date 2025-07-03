@@ -286,7 +286,9 @@ const getTierName = (subscription: Subscription): string => {
 };
 
 const getMaxLimit = (subscription: Subscription): number | null => {
-  return subscription.max_limit !== undefined ? subscription.max_limit : subscription.usage_limit || null;
+  return subscription.max_limit !== undefined
+    ? subscription.max_limit
+    : subscription.usage_limit || null;
 };
 
 // Update the EditSubscriptionDialog to use the helper function
@@ -558,26 +560,33 @@ const Subscriptions: React.FC = () => {
         params,
         controller.signal
       );
-      
+
       // Handle both paginated and direct array response formats
       let subscriptionsData: Subscription[] = [];
       let totalCount = 0;
-      
+
       if (Array.isArray(response.data)) {
         // Direct array format (new backend format)
         subscriptionsData = response.data;
         totalCount = response.data.length;
-      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'items' in response.data
+      ) {
         // Paginated format (old backend format)
         const data: PaginatedSubscriptionsResponse = response.data;
         subscriptionsData = data.items || [];
         totalCount = data.total || 0;
       } else {
-        console.warn('Unexpected subscriptions response format:', response.data);
+        console.warn(
+          'Unexpected subscriptions response format:',
+          response.data
+        );
         subscriptionsData = [];
         totalCount = 0;
       }
-      
+
       setSubscriptions(subscriptionsData);
       setPagination(prev => ({ ...prev, total: totalCount }));
     } catch (error: any) {
@@ -632,21 +641,25 @@ const Subscriptions: React.FC = () => {
       }
 
       const response = await apiHelpers.getProducts();
-      
+
       // Handle both response formats
       let productsData: Product[] = [];
-      
+
       if (Array.isArray(response.data)) {
         // Legacy format: direct array of products
         productsData = response.data;
-      } else if (response.data && typeof response.data === 'object' && 'products' in response.data) {
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'products' in response.data
+      ) {
         // New format: { success: boolean, message: string, products: Product[], total: number }
         productsData = response.data.products || [];
       } else {
         console.warn('Unexpected products response format:', response.data);
         productsData = [];
       }
-      
+
       setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -763,7 +776,7 @@ const Subscriptions: React.FC = () => {
   const getProductName = (productId: string): string => {
     const product = products.find(p => p.id === productId);
     if (!product) return `Product ${productId}`;
-    
+
     // Use name field instead of display_name
     return product.name || `Product ${productId}`;
   };
@@ -1105,7 +1118,7 @@ const Subscriptions: React.FC = () => {
     const getProductName = (productId: string): string => {
       const product = products.find(p => p.id === productId);
       if (!product) return `Product ${productId}`;
-      
+
       // Use name field instead of display_name
       return product.name || `Product ${productId}`;
     };

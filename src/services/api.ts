@@ -223,7 +223,10 @@ api.interceptors.response.use(
 
     if (error.response && error.response.status === 401) {
       // Don't redirect if we're already on the login page
-      if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+      if (
+        typeof window !== 'undefined' &&
+        window.location.pathname === '/login'
+      ) {
         return Promise.reject(error);
       }
 
@@ -269,7 +272,7 @@ export const apiHelpers = {
           params,
           signal: signal as GenericAbortSignal,
         });
-        
+
         // Check if response is in new format and transform if needed
         const data = response.data;
         if (data.items && Array.isArray(data.items)) {
@@ -282,9 +285,14 @@ export const apiHelpers = {
               organizationId: String(org.id),
               tenantName: org.name,
               organizationDomain: org.domain || '',
-              status: org.status === 'active' ? 'Active' : 
-                     org.status === 'inactive' ? 'Inactive' : 
-                     org.status === 'pending' ? 'Pending' : 'Inactive',
+              status:
+                org.status === 'active'
+                  ? 'Active'
+                  : org.status === 'inactive'
+                    ? 'Inactive'
+                    : org.status === 'pending'
+                      ? 'Pending'
+                      : 'Inactive',
               subscriptionTier: 'Tier 1', // Default value
               contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
               totalUsers: org.user_count || 0,
@@ -302,7 +310,7 @@ export const apiHelpers = {
           };
           return { ...response, data: transformedData };
         }
-        
+
         return response;
       } catch (error: unknown) {
         // If filters fail with 500 error, fall back to frontend filtering
@@ -371,7 +379,7 @@ export const apiHelpers = {
         params,
         signal: signal as GenericAbortSignal,
       });
-      
+
       // Check if response is in new format and transform if needed
       const data = response.data;
       if (data.items && Array.isArray(data.items)) {
@@ -384,9 +392,14 @@ export const apiHelpers = {
             organizationId: String(org.id),
             tenantName: org.name,
             organizationDomain: org.domain || '',
-            status: org.status === 'active' ? 'Active' : 
-                   org.status === 'inactive' ? 'Inactive' : 
-                   org.status === 'pending' ? 'Pending' : 'Inactive',
+            status:
+              org.status === 'active'
+                ? 'Active'
+                : org.status === 'inactive'
+                  ? 'Inactive'
+                  : org.status === 'pending'
+                    ? 'Pending'
+                    : 'Inactive',
             subscriptionTier: 'Tier 1', // Default value
             contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
             totalUsers: org.user_count || 0,
@@ -404,7 +417,7 @@ export const apiHelpers = {
         };
         return { ...response, data: transformedData };
       }
-      
+
       return response;
     } catch (error: unknown) {
       // Temporary fallback: try with old API structure if new one fails
@@ -504,7 +517,7 @@ export const apiHelpers = {
       initial_subscriptions: data.initialSubscriptions,
       initial_status: data.initialStatus,
     };
-    
+
     return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, transformedData, {
       signal: signal as GenericAbortSignal,
     });

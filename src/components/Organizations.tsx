@@ -192,21 +192,25 @@ const Organizations: React.FC = () => {
   const fetchProducts = useCallback(async (): Promise<void> => {
     try {
       const response = await apiHelpers.getProducts();
-      
+
       // Handle both response formats
       let productsData: Product[] = [];
-      
+
       if (Array.isArray(response.data)) {
         // Legacy format: direct array of products
         productsData = response.data;
-      } else if (response.data && typeof response.data === 'object' && 'products' in response.data) {
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'products' in response.data
+      ) {
         // New format: { success: boolean, message: string, products: Product[], total: number }
         productsData = response.data.products || [];
       } else {
         console.warn('Unexpected products response format:', response.data);
         productsData = [];
       }
-      
+
       setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -216,21 +220,28 @@ const Organizations: React.FC = () => {
   const fetchAllSubscriptions = useCallback(async (): Promise<void> => {
     try {
       const response = await apiHelpers.getSubscriptions();
-      
+
       // Handle both response formats
       let subscriptionsData: Subscription[] = [];
-      
+
       if (Array.isArray(response.data)) {
         // Direct array format (new backend format)
         subscriptionsData = response.data;
-      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'items' in response.data
+      ) {
         // Paginated format (old backend format)
         subscriptionsData = response.data.items || [];
       } else {
-        console.warn('Unexpected subscriptions response format:', response.data);
+        console.warn(
+          'Unexpected subscriptions response format:',
+          response.data
+        );
         subscriptionsData = [];
       }
-      
+
       setAllSubscriptions(subscriptionsData);
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
@@ -239,14 +250,17 @@ const Organizations: React.FC = () => {
   }, []);
 
   // Helper function to get subscriptions for a specific organization
-  const getSubscriptionsForOrganization = useCallback((organizationId: string): Subscription[] => {
-    // Convert organization ID format for comparison
-    const numericOrgId = parseInt(organizationId.replace('org_', ''), 10);
-    
-    return allSubscriptions.filter(subscription => 
-      subscription.organization_id === numericOrgId
-    );
-  }, [allSubscriptions]);
+  const getSubscriptionsForOrganization = useCallback(
+    (organizationId: string): Subscription[] => {
+      // Convert organization ID format for comparison
+      const numericOrgId = parseInt(organizationId.replace('org_', ''), 10);
+
+      return allSubscriptions.filter(
+        subscription => subscription.organization_id === numericOrgId
+      );
+    },
+    [allSubscriptions]
+  );
 
   const handleCreateOrganization = useCallback(
     async (formData: CreateOrganizationRequest): Promise<void> => {
@@ -544,8 +558,10 @@ const Organizations: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {organizations.organizations.map(org => {
-                    const orgSubscriptions = getSubscriptionsForOrganization(org.organizationId);
-                    
+                    const orgSubscriptions = getSubscriptionsForOrganization(
+                      org.organizationId
+                    );
+
                     return (
                       <TableRow key={org.organizationId}>
                         <TableCell>
@@ -570,15 +586,26 @@ const Organizations: React.FC = () => {
                           {orgSubscriptions.length > 0 ? (
                             <Box>
                               {orgSubscriptions.map((sub, index) => {
-                                const product = products.find(p => p.id === sub.product_id);
-                                const productName = product?.name || `Product ${sub.product_id}`;
-                                
+                                const product = products.find(
+                                  p => p.id === sub.product_id
+                                );
+                                const productName =
+                                  product?.name || `Product ${sub.product_id}`;
+
                                 return (
                                   <Card
                                     key={index}
-                                    sx={{ mb: 1, p: 1, backgroundColor: 'grey.50' }}
+                                    sx={{
+                                      mb: 1,
+                                      p: 1,
+                                      backgroundColor: 'grey.50',
+                                    }}
                                   >
-                                    <Grid container spacing={1} alignItems="center">
+                                    <Grid
+                                      container
+                                      spacing={1}
+                                      alignItems="center"
+                                    >
                                       <Grid item xs={4}>
                                         <Typography
                                           variant="caption"
@@ -587,7 +614,10 @@ const Organizations: React.FC = () => {
                                         >
                                           Product:
                                         </Typography>
-                                        <Typography variant="body2" component="div">
+                                        <Typography
+                                          variant="body2"
+                                          component="div"
+                                        >
                                           {productName}
                                         </Typography>
                                       </Grid>
@@ -600,9 +630,13 @@ const Organizations: React.FC = () => {
                                           Tier:
                                         </Typography>
                                         <Chip
-                                          label={formatTierName(sub.tier || sub.tier_name || '')}
+                                          label={formatTierName(
+                                            sub.tier || sub.tier_name || ''
+                                          )}
                                           size="small"
-                                          color={getTierColor(sub.tier || sub.tier_name || '')}
+                                          color={getTierColor(
+                                            sub.tier || sub.tier_name || ''
+                                          )}
                                         />
                                       </Grid>
                                       <Grid item xs={4}>
@@ -613,9 +647,14 @@ const Organizations: React.FC = () => {
                                         >
                                           Usage:
                                         </Typography>
-                                        <Typography variant="body2" component="div">
+                                        <Typography
+                                          variant="body2"
+                                          component="div"
+                                        >
                                           {sub.current_usage || 0} /{' '}
-                                          {sub.max_limit || sub.usage_limit || 'Unlimited'}
+                                          {sub.max_limit ||
+                                            sub.usage_limit ||
+                                            'Unlimited'}
                                         </Typography>
                                       </Grid>
                                     </Grid>
@@ -1289,15 +1328,18 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
 
   // Helper function to get subscriptions for this organization
   const getOrganizationSubscriptions = (): Subscription[] => {
-    const numericOrgId = parseInt(organization.organizationId.replace('org_', ''), 10);
-    return allSubscriptions.filter(subscription => 
-      subscription.organization_id === numericOrgId
+    const numericOrgId = parseInt(
+      organization.organizationId.replace('org_', ''),
+      10
+    );
+    return allSubscriptions.filter(
+      subscription => subscription.organization_id === numericOrgId
     );
   };
 
   const renderOrganizationDetails = () => {
     const orgSubscriptions = getOrganizationSubscriptions();
-    
+
     return (
       <Box sx={{ pt: 1 }}>
         <Grid container spacing={2}>
@@ -1379,8 +1421,9 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               <Box>
                 {orgSubscriptions.map((sub, index) => {
                   const product = products.find(p => p.id === sub.product_id);
-                  const productName = product?.name || `Product ${sub.product_id}`;
-                  
+                  const productName =
+                    product?.name || `Product ${sub.product_id}`;
+
                   return (
                     <Card key={index} sx={{ mb: 1, p: 1 }}>
                       <Grid container spacing={1}>
@@ -1405,9 +1448,13 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                             Tier:
                           </Typography>
                           <Chip
-                            label={formatTierName(sub.tier || sub.tier_name || '')}
+                            label={formatTierName(
+                              sub.tier || sub.tier_name || ''
+                            )}
                             size="small"
-                            color={getTierColor(sub.tier || sub.tier_name || '')}
+                            color={getTierColor(
+                              sub.tier || sub.tier_name || ''
+                            )}
                           />
                         </Grid>
                         <Grid item xs={6}>
@@ -1425,10 +1472,10 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                               sub.status === 'active'
                                 ? 'success'
                                 : sub.status === 'suspended'
-                                ? 'error'
-                                : sub.status === 'trial'
-                                ? 'warning'
-                                : 'default'
+                                  ? 'error'
+                                  : sub.status === 'trial'
+                                    ? 'warning'
+                                    : 'default'
                             }
                           />
                         </Grid>
@@ -1503,7 +1550,11 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                 })}
               </Box>
             ) : (
-              <Typography variant="body1" color="text.secondary" component="div">
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                component="div"
+              >
                 No subscriptions found for this organization
               </Typography>
             )}
