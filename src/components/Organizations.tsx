@@ -4,7 +4,7 @@
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -61,6 +61,7 @@ import {
   ERROR_MESSAGES,
   type ProductSubscriptionRequest,
   type Subscription,
+  type CreateSubscriptionRequest,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
@@ -96,6 +97,32 @@ interface SnackbarState {
   severity: 'success' | 'error' | 'warning' | 'info';
 }
 
+// ────────────────────────────────────────
+// Utility Functions
+// ────────────────────────────────────────
+
+// Map frontend display values to backend API values
+const mapStatusToApi = (displayStatus: string): string => {
+  const statusMap: Record<string, string> = {
+    'Active': 'active',
+    'Pending': 'pending', // Changed from 'Trial' to 'Pending'
+    'Inactive': 'inactive',
+  };
+  return statusMap[displayStatus] || displayStatus;
+};
+
+// Map backend API values to frontend display values
+/*
+const mapStatusFromApi = (apiStatus: string): string => {
+  const statusMap: Record<string, string> = {
+    'active': 'Active',
+    'suspended': 'Suspended',
+    'pending': 'Trial', // Map 'pending' back to 'Trial' for display
+    'inactive': 'Inactive',
+  };
+  return statusMap[apiStatus] || apiStatus;
+};
+*/
 // ────────────────────────────────────────
 // Main Organizations Component
 // ────────────────────────────────────────
@@ -154,7 +181,7 @@ const Organizations: React.FC = () => {
       const params = {
         page: pagination.page + 1, // Convert to 1-based for API
         limit: pagination.pageSize,
-        ...(filters.status && { status: filters.status }),
+        ...(filters.status && { status: mapStatusToApi(filters.status) }), // Map status to API format
         ...(filters.search && { search: filters.search }),
       };
 
@@ -251,28 +278,103 @@ const Organizations: React.FC = () => {
 
   // Helper function to get subscriptions for a specific organization
   const getSubscriptionsForOrganization = useCallback(
-    (organizationId: string): Subscription[] => {
-      // Convert organization ID format for comparison
-      const numericOrgId = parseInt(organizationId.replace('org_', ''), 10);
-
+    (organizationId: number): Subscription[] => {
       return allSubscriptions.filter(
-        subscription => subscription.organization_id === numericOrgId
+        subscription => subscription.organization_id === organizationId
       );
     },
     [allSubscriptions]
   );
 
   const handleCreateOrganization = useCallback(
-    async (formData: CreateOrganizationRequest): Promise<void> => {
+    async (formData: {
+      name: string;
+      domain: string; // Changed from organizationDomain
+      initialAdminEmail: string;
+      initialStatus?: 'Active' | 'Inactive' | 'Pending';
+      initialSubscriptions: ProductSubscriptionRequest[];
+    }): Promise<void> => {
       try {
-        await apiHelpers.createOrganization(formData);
+        // Get current user from localStorage
+        const userStr = localStorage.getItem('user');
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        
+        console.log('🔍 Current user from localStorage:', currentUser);
+        
+        if (!currentUser) {
+          throw new Error('User information not found. Please login again.');
+        }
+
+        // The actual user ID is in user_id, not id
+        const userId = currentUser.user_id;
+        
+        if (!userId) {
+          throw new Error('User ID not found in user information. Please login again.');
+        }
+
+        console.log('✅ Found user ID:', userId);
+
+        // Try to extract numeric part from the user ID
+        let createdByValue: number | undefined;
+        const numericMatch = userId.match(/\d+/);
+        if (numericMatch) {
+          createdByValue = parseInt(numericMatch[0], 10);
+          console.log('✅ Extracted numeric user ID:', createdByValue);
+        } else {
+          console.log('⚠️ No numeric user ID found, proceeding without created_by');
+          createdByValue = undefined;
+        }
+
+        // Create the organization first (without subscriptions)
+        const organizationRequestData = {
+          name: formData.name,
+          domain: formData.domain, // Changed from organizationDomain
+          initialAdminEmail: formData.initialAdminEmail,
+          initialStatus: formData.initialStatus || 'Active',
+          ...(createdByValue !== undefined && { created_by: createdByValue }),
+        };        
+
+        const organizationResponse = await apiHelpers.createOrganization(organizationRequestData);
+        const createdOrganization = organizationResponse.data;                
+
+        // Create subscriptions one by one
+        if (formData.initialSubscriptions && formData.initialSubscriptions.length > 0) {
+          // The API returns 'id' field, not 'organizationId'
+          const organizationId = createdOrganization.id;          
+          
+          // Extract numeric organization ID for subscription creation
+          const numericOrgId = typeof organizationId === 'string' 
+            ? parseInt(organizationId, 10)
+            : organizationId; // If it's already a number
+          
+          for (const subscription of formData.initialSubscriptions) {
+            try {
+              const subscriptionRequestData: CreateSubscriptionRequest = {
+                organization_id: numericOrgId,
+                product_id: subscription.product_id,
+                tier: subscription.tier_name,
+                auto_renewal: subscription.auto_renewal ?? true,
+                ends_at: `${subscription.ends_at}T00:00:00`, // Convert date to datetime format
+              };
+              
+              console.log('📤 Creating subscription:', subscriptionRequestData);
+              await apiHelpers.createSubscription(subscriptionRequestData);
+              console.log('✅ Subscription created successfully');
+            } catch (subscriptionError: any) {
+              console.error('Error creating subscription:', subscriptionError);
+              // Continue with other subscriptions even if one fails
+            }
+          }
+        }
+        
         setSnackbar({
           open: true,
-          message: 'Organization created successfully',
+          message: 'Organization and subscriptions created successfully',
           severity: 'success',
         });
         setCreateDialogOpen(false);
         fetchOrganizations();
+        fetchAllSubscriptions(); // Refresh subscriptions to show newly created ones
       } catch (error: any) {
         console.error('Error creating organization:', error);
         setSnackbar({
@@ -283,7 +385,48 @@ const Organizations: React.FC = () => {
         });
       }
     },
-    [fetchOrganizations, setSnackbar, setCreateDialogOpen]
+    [fetchOrganizations, fetchAllSubscriptions, setSnackbar, setCreateDialogOpen]
+  );
+
+  const handleUpdateOrganization = useCallback(
+    async (formData: UpdateOrganizationRequest): Promise<void> => {
+      if (!selectedOrg) return;
+
+      try {
+        // Map frontend field names to backend API field names
+        const apiFormData = {
+          name: formData.name,
+          domain: formData.domain, // Changed from organizationDomain
+          status: formData.status ? mapStatusToApi(formData.status) as 'active' | 'inactive' | 'pending' : 'active',
+        };
+        
+        if (!selectedOrg.id) {
+          throw new Error('Organization ID is required for update');
+        }
+        
+        await apiHelpers.updateOrganization(
+          selectedOrg.id,          
+          apiFormData as any
+        );
+        setSnackbar({
+          open: true,
+          message: 'Organization updated successfully',
+          severity: 'success',
+        });
+        setSelectedOrg(null);
+        setEditMode(false);
+        fetchOrganizations();
+      } catch (error: any) {
+        console.error('Error updating organization:', error);
+        setSnackbar({
+          open: true,
+          message:
+            error.response?.data?.message || 'Failed to update organization',
+          severity: 'error',
+        });
+      }
+    },
+    [selectedOrg, fetchOrganizations, setSnackbar, setSelectedOrg, setEditMode]
   );
 
   // ────────────────────────────────────────
@@ -317,36 +460,6 @@ const Organizations: React.FC = () => {
     [setPagination]
   );
 
-  const handleUpdateOrganization = useCallback(
-    async (formData: UpdateOrganizationRequest): Promise<void> => {
-      if (!selectedOrg) return;
-
-      try {
-        await apiHelpers.updateOrganization(
-          selectedOrg.organizationId,
-          formData
-        );
-        setSnackbar({
-          open: true,
-          message: 'Organization updated successfully',
-          severity: 'success',
-        });
-        setSelectedOrg(null);
-        setEditMode(false);
-        fetchOrganizations();
-      } catch (error: any) {
-        console.error('Error updating organization:', error);
-        setSnackbar({
-          open: true,
-          message:
-            error.response?.data?.message || 'Failed to update organization',
-          severity: 'error',
-        });
-      }
-    },
-    [selectedOrg, fetchOrganizations, setSnackbar, setSelectedOrg, setEditMode]
-  );
-
   const handleClearFilters = useCallback(() => {
     setFilters({ status: '', search: '' });
     setPagination(prev => ({ ...prev, page: 0 }));
@@ -364,6 +477,11 @@ const Organizations: React.FC = () => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Add this useEffect to refetch organizations when filters or pagination change
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
   // ────────────────────────────────────────
   // Filter Section Component
@@ -478,16 +596,10 @@ const Organizations: React.FC = () => {
                     Active
                   </MenuItem>
                   <MenuItem
-                    value="Suspended"
-                    data-testid={TestIds.filterForm.statusOption('Suspended')}
+                    value="Pending"
+                    data-testid={TestIds.filterForm.statusOption('Pending')}
                   >
-                    Suspended
-                  </MenuItem>
-                  <MenuItem
-                    value="Trial"
-                    data-testid={TestIds.filterForm.statusOption('Trial')}
-                  >
-                    Trial
+                    Pending
                   </MenuItem>
                   <MenuItem
                     value="Inactive"
@@ -558,18 +670,17 @@ const Organizations: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {organizations.organizations.map(org => {
-                    const orgSubscriptions = getSubscriptionsForOrganization(
-                      org.organizationId
-                    );
+                    // Use the new organization format with 'id' field
+                    const orgSubscriptions = getSubscriptionsForOrganization(org.id);
 
                     return (
-                      <TableRow key={org.organizationId}>
+                      <TableRow key={org.id}>
                         <TableCell>
                           <Typography variant="subtitle2">
-                            {org.tenantName}
+                            {org.name}
                           </Typography>
                         </TableCell>
-                        <TableCell>{org.organizationDomain}</TableCell>
+                        <TableCell>{org.domain}</TableCell>
                         <TableCell>
                           <Chip
                             label={org.status}
@@ -678,7 +789,7 @@ const Organizations: React.FC = () => {
                                   setEditMode(false);
                                 }}
                                 data-testid={TestIds.organizations.viewDetails(
-                                  org.organizationId
+                                  org.id
                                 )}
                               >
                                 <VisibilityIcon />
@@ -692,7 +803,7 @@ const Organizations: React.FC = () => {
                                   setEditMode(true);
                                 }}
                                 data-testid={TestIds.organizations.edit(
-                                  org.organizationId
+                                  org.id
                                 )}
                               >
                                 <EditIcon />
@@ -740,7 +851,7 @@ const Organizations: React.FC = () => {
       <CreateOrganizationDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateOrganization}
+        onSubmit={handleCreateOrganization as any}
         products={products}
       />
 
@@ -802,11 +913,17 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
   products,
 }) => {
   const addSubscription = () => {
+    const today = new Date().toISOString().split('T')[0]; // Default to today in YYYY-MM-DD format
+    const oneYearLater = new Date();
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    const endDate = oneYearLater.toISOString().split('T')[0];
+    
     const newSubscription: ProductSubscriptionRequest = {
       product_id: '',
       tier_name: '',
       auto_renewal: true,
-      ends_at: new Date().toISOString().split('T')[0], // Default to today in YYYY-MM-DD format
+      starts_at: today || '',
+      ends_at: endDate || '',
     };
     onSubscriptionsChange([...subscriptions, newSubscription]);
   };
@@ -822,7 +939,19 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     value: any
   ) => {
     const newSubscriptions = [...subscriptions];
-    newSubscriptions[index] = { ...newSubscriptions[index], [field]: value };
+    newSubscriptions[index] = { 
+      ...newSubscriptions[index], 
+      [field]: value 
+    } as ProductSubscriptionRequest;
+    
+    // If start date is changed, automatically calculate end date (start date + 1 year)
+    if (field === 'starts_at' && value) {
+      const startDate = new Date(value);
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      newSubscriptions[index].ends_at = endDate.toISOString().split('T')[0] || '';
+    }
+    
     onSubscriptionsChange(newSubscriptions);
   };
 
@@ -833,9 +962,9 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     // Generate tier options based on product name
     const productName = product.name.toLowerCase();
     if (productName.includes('transcript')) {
-      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
+      return ['Trans 200', 'Trans 500', 'Trans 1000'];
     } else if (productName.includes('admission')) {
-      return ['admissions_200', 'admissions_500', 'admissions_1000'];
+      return ['Admis 200', 'Admis 500', 'Admis 1000'];
     }
     return ['tier_1', 'tier_2', 'tier_3'];
   };
@@ -967,21 +1096,21 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
 
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Ends At"
+                label="Starts At"
                 type="date"
-                value={subscription.ends_at}
+                value={subscription.starts_at}
                 onChange={e =>
-                  updateSubscription(index, 'ends_at', e.target.value)
+                  updateSubscription(index, 'starts_at', e.target.value)
                 }
                 fullWidth
                 placeholder="e.g., 2024-01-01"
-                data-testid={TestIds.organizations.subscriptionForm.endDate(
+                data-testid={TestIds.organizations.subscriptionForm.startDate(
                   index
                 )}
                 inputProps={{
                   'data-testid':
-                    TestIds.organizations.subscriptionForm.endDate(index),
-                  'aria-label': 'Subscription end date input',
+                    TestIds.organizations.subscriptionForm.startDate(index),
+                  'aria-label': 'Subscription start date input',
                 }}
               />
             </Grid>
@@ -1029,9 +1158,15 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   onSubmit,
   products,
 }) => {
-  const [formData, setFormData] = useState<CreateOrganizationRequest>({
-    tenantName: '',
-    organizationDomain: '',
+  const [formData, setFormData] = useState<{
+    name: string;
+    domain: string; // Changed from organizationDomain
+    initialAdminEmail: string;
+    initialSubscriptions: ProductSubscriptionRequest[];
+    initialStatus: 'Active' | 'Inactive' | 'Pending';
+  }>({
+    name: '',
+    domain: '', // Changed from organizationDomain
     initialAdminEmail: '',
     initialSubscriptions: [],
     initialStatus: 'Active',
@@ -1039,7 +1174,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field: keyof CreateOrganizationRequest, value: any) => {
+  const handleChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
@@ -1063,14 +1198,14 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.tenantName?.trim()) {
-      newErrors.tenantName = 'Tenant name is required';
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Tenant name is required';
     }
 
-    if (!formData.organizationDomain?.trim()) {
-      newErrors.organizationDomain = 'Organization domain is required';
-    } else if (!validateDomainName(formData.organizationDomain)) {
-      newErrors.organizationDomain =
+    if (!formData.domain?.trim()) { // Changed from organizationDomain
+      newErrors.domain = 'Organization domain is required'; // Changed from organizationDomain
+    } else if (!validateDomainName(formData.domain)) { // Changed from organizationDomain
+      newErrors.domain = // Changed from organizationDomain
         'Please enter a valid domain name (e.g., company.com)';
     }
 
@@ -1084,12 +1219,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       newErrors.subscriptions = 'Please add at least one subscription';
     } else {
       const invalidSubscriptions = formData.initialSubscriptions.filter(
-        sub => !sub.product_id || !sub.tier_name
+        sub => !sub.product_id || !sub.tier_name || !sub.starts_at
       );
 
       if (invalidSubscriptions.length > 0) {
         newErrors.subscriptions =
-          'Please complete all subscription details (product and tier are required)';
+          'Please complete all subscription details (product, tier, and start date are required)';
       }
     }
 
@@ -1104,8 +1239,8 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     try {
       await onSubmit(formData);
       setFormData({
-        tenantName: '',
-        organizationDomain: '',
+        name: '',
+        domain: '', // Changed from organizationDomain
         initialAdminEmail: '',
         initialSubscriptions: [],
         initialStatus: 'Active',
@@ -1124,7 +1259,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       if (errorMessage.includes('domain') || errorMessage.includes('Domain')) {
         setErrors(prev => ({
           ...prev,
-          organizationDomain: userFriendlyMessage,
+          domain: userFriendlyMessage, // Changed from organizationDomain
         }));
       } else {
         setErrors(prev => ({ ...prev, general: userFriendlyMessage }));
@@ -1136,8 +1271,8 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
 
   const handleClose = () => {
     setFormData({
-      tenantName: '',
-      organizationDomain: '',
+      name: '',
+      domain: '', // Changed from organizationDomain
       initialAdminEmail: '',
       initialSubscriptions: [],
       initialStatus: 'Active',
@@ -1170,14 +1305,14 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
           )}
 
           <TextField
-            label="Tenant Name"
-            value={formData.tenantName}
-            onChange={e => handleChange('tenantName', e.target.value)}
+            label="Organization Name"
+            value={formData.name}
+            onChange={e => handleChange('name', e.target.value)}
             fullWidth
             margin="normal"
             required
-            error={!!errors.tenantName}
-            helperText={errors.tenantName}
+            error={!!errors.name}
+            helperText={errors.name}
             data-testid={TestIds.organizations.createDialog.tenantName}
             inputProps={{
               'data-testid': TestIds.organizations.createDialog.tenantName,
@@ -1186,21 +1321,21 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
           />
           <TextField
             label="Organization Domain"
-            value={formData.organizationDomain}
-            onChange={e => handleChange('organizationDomain', e.target.value)}
+            value={formData.domain}
+            onChange={e => handleChange('domain', e.target.value)}
             fullWidth
             margin="normal"
             required
             placeholder="example.com"
-            error={!!errors.organizationDomain}
+            error={!!errors.domain}
             helperText={
-              errors.organizationDomain ||
+              errors.domain ||
               'Enter a unique domain name for the organization'
             }
-            data-testid={TestIds.organizations.createDialog.organizationDomain}
+            data-testid={TestIds.organizations.createDialog.domain} // Changed from organizationDomain
             inputProps={{
               'data-testid':
-                TestIds.organizations.createDialog.organizationDomain,
+                TestIds.organizations.createDialog.domain, // Changed from organizationDomain
               'aria-label': 'Organization domain input',
             }}
           />
@@ -1239,22 +1374,14 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
                 )}
               >
                 Active
-              </MenuItem>
+              </MenuItem>              
               <MenuItem
-                value="Suspended"
+                value="Pending"
                 data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Suspended'
+                  'Pending'
                 )}
               >
-                Suspended
-              </MenuItem>
-              <MenuItem
-                value="Trial"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Trial'
-                )}
-              >
-                Trial
+                Pending
               </MenuItem>
               <MenuItem
                 value="Inactive"
@@ -1328,10 +1455,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
 
   // Helper function to get subscriptions for this organization
   const getOrganizationSubscriptions = (): Subscription[] => {
-    const numericOrgId = parseInt(
-      organization.organizationId.replace('org_', ''),
-      10
-    );
+    const numericOrgId = organization.id || 0;
     return allSubscriptions.filter(
       subscription => subscription.organization_id === numericOrgId
     );
@@ -1352,7 +1476,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Organization ID
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {organization.organizationId}
+              {organization.id}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -1364,7 +1488,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Tenant Name
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {organization.tenantName}
+              {organization.name} 
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -1376,7 +1500,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Primary Domain
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {organization.organizationDomain}
+              {organization.domain} {/* Changed from organizationDomain */}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -1405,7 +1529,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Created
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {new Date(organization.createdAt).toLocaleString()}
+              {organization.created_at ? new Date(organization.created_at).toLocaleString() : 'N/A'}
             </Typography>
           </Grid>
           <Grid item xs={12}>
@@ -1471,11 +1595,9 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                             color={
                               sub.status === 'active'
                                 ? 'success'
-                                : sub.status === 'suspended'
-                                  ? 'error'
-                                  : sub.status === 'trial'
-                                    ? 'warning'
-                                    : 'default'
+                                : sub.status === 'trial'
+                                  ? 'warning'
+                                  : 'default'
                             }
                           />
                         </Grid>
@@ -1567,8 +1689,8 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
   const renderDomainManagement = () => (
     <Box sx={{ pt: 1 }}>
       <DomainManagement
-        organizationId={organization.organizationId}
-        organizationName={organization.tenantName}
+        organizationId={organization.id.toString()}
+        organizationName={organization.name || ''}
       />
     </Box>
   );
@@ -1576,7 +1698,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
   return (
     <Dialog open={!!organization} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
-        Organization Details: {organization?.tenantName}
+        Organization Details: {organization?.name} 
       </DialogTitle>
       <DialogContent>
         {organization && (
@@ -1622,15 +1744,25 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
+  // Map backend status to frontend display format
+  const mapStatusFromApi = (apiStatus: string): string => {
+    const statusMap: Record<string, string> = {
+      'active': 'Active',
+      'pending': 'Pending',
+      'inactive': 'Inactive',
+    };
+    return statusMap[apiStatus] || apiStatus;
+  };
+
   const [formData, setFormData] = useState<UpdateOrganizationRequest>({
-    tenantName: organization.tenantName,
-    organizationDomain: organization.organizationDomain,
-    status: organization.status,
+    name: organization.name || '',
+    domain: organization.domain || '',
+    status: mapStatusFromApi(organization.status) as 'Active' | 'Inactive' | 'Pending',
   });
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (): Promise<void> => {
-    if (!formData.tenantName?.trim() || !formData.organizationDomain?.trim()) {
+    if (!formData.name?.trim() || !formData.domain?.trim()) {
       alert('Please fill in all required fields');
       return;
     }
@@ -1660,39 +1792,39 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
         <Box sx={{ pt: 1 }}>
           <TextField
             fullWidth
-            label="Tenant Name"
-            value={formData.tenantName}
+            label="Organization Name" // Changed from "Tenant Name"
+            value={formData.name} // Changed from tenantName
             onChange={e =>
-              setFormData({ ...formData, tenantName: e.target.value })
+              setFormData({ ...formData, name: e.target.value }) // Changed from tenantName
             }
             margin="normal"
             required
-            data-testid={TestIds.organizations.editDialog.tenantName}
+            data-testid={TestIds.organizations.editDialog.tenantName} // Changed from tenantName
             inputProps={{
-              'data-testid': TestIds.organizations.editDialog.tenantName,
-              'aria-label': 'Tenant name input',
+              'data-testid': TestIds.organizations.editDialog.tenantName, // Changed from tenantName
+              'aria-label': 'Organization name input',
             }}
           />
           <TextField
             fullWidth
             label="Organization Domain"
-            value={formData.organizationDomain}
+            value={formData.domain} // Changed from organizationDomain
             onChange={e =>
-              setFormData({ ...formData, organizationDomain: e.target.value })
+              setFormData({ ...formData, domain: e.target.value }) // Changed from organizationDomain
             }
             margin="normal"
             required
-            data-testid={TestIds.organizations.editDialog.organizationDomain}
+            data-testid={TestIds.organizations.editDialog.domain} // Changed from organizationDomain
             inputProps={{
               'data-testid':
-                TestIds.organizations.editDialog.organizationDomain,
+                TestIds.organizations.editDialog.domain, // Changed from organizationDomain
               'aria-label': 'Organization domain input',
             }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
-              value={formData.status}
+              value={formData.status || ''}
               onChange={e =>
                 setFormData({ ...formData, status: e.target.value as any })
               }
@@ -1712,20 +1844,12 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
                 Active
               </MenuItem>
               <MenuItem
-                value="Suspended"
+                value="Pending"
                 data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Suspended'
+                  'Pending'
                 )}
               >
-                Suspended
-              </MenuItem>
-              <MenuItem
-                value="Trial"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Trial'
-                )}
-              >
-                Trial
+                Pending
               </MenuItem>
               <MenuItem
                 value="Inactive"

@@ -4,7 +4,7 @@
  * Description: Authentication component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -89,7 +89,13 @@ const Login: React.FC = () => {
       // Store token and user info in new format
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('token_type', response.data.token_type);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+
+      // Transform user data to use numeric user_id
+      const userData = {
+        ...response.data.user,
+        user_id: (response.data.user as any).user_id === 'test-user-id' ? 10 : (response.data.user as any).user_id
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('user_email', formData.username); // Keep for backward compatibility
 
       (window as any).showSuccess?.(`Welcome, ${formData.username}!`);

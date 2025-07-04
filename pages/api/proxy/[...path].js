@@ -13,12 +13,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get the path segments
-    const { path } = req.query;
+    // Get the path segments and query parameters
+    const { path, ...queryParams } = req.query;
     const apiPath = Array.isArray(path) ? path.join('/') : path || '';
     
-    // Build the backend URL
-    const backendUrl = `${BACKEND_BASE_URL}/${apiPath}`;
+    // Build query string from query parameters (excluding 'path')
+    const queryString = Object.keys(queryParams)
+      .map(key => `${key}=${encodeURIComponent(queryParams[key])}`)
+      .join('&');
+    
+    // Build the backend URL with query parameters
+    const backendUrl = queryString 
+      ? `${BACKEND_BASE_URL}/${apiPath}?${queryString}`
+      : `${BACKEND_BASE_URL}/${apiPath}`;
     
     console.log(`Proxying ${req.method} request to: ${backendUrl}`);
     

@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 03-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -47,8 +47,7 @@ import {
 import { apiHelpers } from '../services/api';
 import axios from 'axios';
 import {
-  type User,
-  type Organization,
+  type User,  
   type OrganizationV2,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -97,66 +96,46 @@ const getRoleDisplayName = (role: string): string => {
   }
 };
 
-// const getRoleInternalValue = (displayName: string): string => {
-//   switch (displayName) {
-//     case 'Super Admin':
-//       return 'super_admin';
-//     case 'Tenant Admin':
-//       return 'tenant_admin';
-//     default:
-//       return displayName.toLowerCase().replace(' ', '_');
-//   }
-// };
-
-const convertOrgIdToString = (orgId: string | number): string => {
-  if (typeof orgId === 'string') {
-    return orgId.startsWith('org_') ? orgId : `org_${orgId.padStart(6, '0')}`;
+/*
+const getRoleInternalValue = (displayName: string): string => {
+  switch (displayName) {
+    case 'Super Admin':
+      return 'super_admin';
+    case 'Tenant Admin':
+      return 'tenant_admin';
+    default:
+      return displayName.toLowerCase().replace(' ', '_');
   }
-  return `org_${orgId.toString().padStart(6, '0')}`;
 };
-
-const convertOrgIdToInteger = (orgId: string): number => {
-  if (orgId.startsWith('org_')) {
-    return parseInt(orgId.replace('org_', ''), 10);
-  }
-  return parseInt(orgId, 10);
-};
+*/
 
 const getDomainName = (
   user: User,
   domains: Record<string, Domain[]>
 ): string => {
-  if (!user.domain_id) return 'N/A';
-
-  const orgId = convertOrgIdToString(user.organization_id);
+  // Since users don't have domain_id, show the primary domain for their organization
+  const orgId = (user.organization_id);
   const orgDomains = domains[orgId] || [];
 
-  const domain = orgDomains.find(d => Number(d.id) === user.domain_id);
-
-  return domain ? domain.domain_name : 'Unknown';
+  // Find the primary domain for this organization
+  const primaryDomain = orgDomains.find(d => d.is_primary);
+  
+  if (primaryDomain) {
+    return primaryDomain.domain_name || primaryDomain.name || 'Unknown';
+  }
+  
+  // If no primary domain, show the first available domain
+  if (orgDomains.length > 0) {
+    const firstDomain = orgDomains[0];
+    return firstDomain?.domain_name || firstDomain?.name || 'Unknown';
+  }
+  
+  return 'N/A';
 };
 
 // Get available roles that match the expected role values
 const availableRoles = ['super_admin', 'tenant_admin'];
 
-// New helper function to handle both organization formats
-const getOrganizationName = (org: Organization | OrganizationV2): string => {
-  // Check if it's the new format (V2)
-  if ('name' in org && typeof org.id === 'number') {
-    return org.name;
-  }
-  // Old format
-  return org.tenantName;
-};
-
-const getOrganizationId = (org: Organization | OrganizationV2): string => {
-  // Check if it's the new format (V2)
-  if ('name' in org && typeof org.id === 'number') {
-    return `org_${org.id.toString().padStart(6, '0')}`;
-  }
-  // Old format
-  return org.organizationId;
-};
 
 // ────────────────────────────────────────
 // Main Component
@@ -166,7 +145,7 @@ const Users: React.FC = () => {
   const { userRoles } = useUserRoles();
   const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<
-    (Organization | OrganizationV2)[]
+    OrganizationV2[]
   >([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -174,7 +153,7 @@ const Users: React.FC = () => {
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [filters, setFilters] = useState({
-    organization_id: '',
+    organization_id: 0, // Changed from string to number
     role: '',
     status: '',
     search: '',
@@ -202,6 +181,7 @@ const Users: React.FC = () => {
       if (token) {
         fetchUsers();
         fetchOrganizations();
+        fetchDomains();
         initialLoadRef.current = true;
       } else {
         setError('No authentication token found. Please login again.');
@@ -261,7 +241,7 @@ const Users: React.FC = () => {
       const finalApiParams = {
         ...apiParams,
         ...(apiParams.organization_id && {
-          organization_id: convertOrgIdToInteger(apiParams.organization_id),
+          organization_id: (apiParams.organization_id),
         }),
         ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
       } as any;
@@ -324,8 +304,8 @@ const Users: React.FC = () => {
           if (organization_id) {
             filteredUsers = filteredUsers.filter(
               user =>
-                convertOrgIdToString(user.organization_id) ===
-                convertOrgIdToString(organization_id)
+                (user.organization_id) ===
+                (organization_id)
             );
           }
 
@@ -368,60 +348,34 @@ const Users: React.FC = () => {
   const fetchOrganizations = async (): Promise<void> => {
     try {
       const response = await apiHelpers.getOrganizations();
-
-      // Handle both response formats
-      let orgs: (Organization | OrganizationV2)[] = [];
-
-      if (response.data.items) {
-        // New format (V2)
-        orgs = response.data.items;
-      } else if (response.data.organizations) {
-        // Old format
-        orgs = response.data.organizations;
-      } else {
-        // Fallback: assume it's an array
-        orgs = Array.isArray(response.data) ? response.data : [];
-      }
-
-      // Remove duplicate organizations based on organizationId/name
-      const uniqueOrgs = orgs.filter((org, index, self) => {
-        const orgId = getOrganizationId(org);
-        return index === self.findIndex(o => getOrganizationId(o) === orgId);
-      });
-
-      setOrganizations(uniqueOrgs);
-
-      // Fetch domains in parallel
-      const domainsPromises = uniqueOrgs.map(async org => {
-        try {
-          const orgId = getOrganizationId(org);
-          const domainsResponse = await apiHelpers.getUserDomains(orgId);
-          return {
-            orgId: orgId,
-            domains: domainsResponse.data.domains || [],
-          };
-        } catch (error) {
-          console.error(
-            `Error fetching domains for organization ${getOrganizationId(org)}:`,
-            error
-          );
-          return {
-            orgId: getOrganizationId(org),
-            domains: [],
-          };
-        }
-      });
-
-      const domainsResults = await Promise.all(domainsPromises);
-      const domainsData: Record<string, Domain[]> = {};
-
-      domainsResults.forEach(result => {
-        domainsData[result.orgId] = result.domains;
-      });
-
-      setDomains(domainsData);
+      const orgs: OrganizationV2[] = (response.data as any).organizations || [];
+      setOrganizations(orgs);
     } catch (error) {
       console.error('Error fetching organizations:', error);
+    }
+  };
+
+  const fetchDomains = async (): Promise<void> => {
+    try {
+      const response = await apiHelpers.getDomains();
+      // Fix: Use the correct response structure - domains are in response.data.domains
+      const allDomains = response.data.domains || (response.data as any).items || [];
+      
+      // Group domains by organization_id
+      const domainsByOrg: Record<string, Domain[]> = {};
+      
+      allDomains.forEach(domain => {
+        const orgId = (domain.organization_id);
+        if (!domainsByOrg[orgId]) {
+          domainsByOrg[orgId] = [];
+        }
+        domainsByOrg[orgId].push(domain);
+      });
+      
+      setDomains(domainsByOrg);
+    } catch (error) {
+      console.error('Error fetching domains:', error);
+      // Don't set error state as domains are not critical for page functionality
     }
   };
 
@@ -448,7 +402,7 @@ const Users: React.FC = () => {
   };
 
   const handleDeleteUser = async (
-    id: string,
+    id: number,
     reason: string = ''
   ): Promise<void> => {
     if (!confirm('Are you sure you want to delete this user?')) {
@@ -473,7 +427,7 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleFilterChange = (field: string, value: string): void => {
+  const handleFilterChange = (field: string, value: string | number): void => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPagination(prev => ({ ...prev, page: 0 }));
   };
@@ -518,7 +472,7 @@ const Users: React.FC = () => {
 
   const handleClearFilters = () => {
     setFilters({
-      organization_id: '',
+      organization_id: 0, // Changed from string to number
       role: '',
       status: '',
       search: '',
@@ -570,6 +524,7 @@ const Users: React.FC = () => {
         onClose={() => setCreateDialogOpen(false)}
         onSubmit={handleCreateUser}
         organizations={organizations}
+        domains={domains}
       />
 
       {selectedUser && (
@@ -637,14 +592,14 @@ export default Users;
 
 interface FilterSectionProps {
   filters: {
-    organization_id: string;
+    organization_id: number; // Changed from string to number
     role: string;
     status: string;
     search: string;
   };
-  organizations: (Organization | OrganizationV2)[];
+  organizations: OrganizationV2[]; // Only OrganizationV2
   userRoles: string[];
-  handleFilterChange: (field: string, value: string) => void;
+  handleFilterChange: (field: string, value: string | number) => void;
   handleClearFilters: () => void;
 }
 
@@ -719,7 +674,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               showAllOption={true}
               allOptionText="All Organizations"
               margin="none"
-              organizations={organizations}
+              organizations={organizations as any}
               fetchFromApi={false}
             />
           </Grid>
@@ -791,7 +746,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
 interface UsersTableProps {
   users: User[];
-  organizations: (Organization | OrganizationV2)[];
+  organizations: OrganizationV2[]; // Only OrganizationV2
   domains: Record<string, Domain[]>;
   loading: boolean;
   error: string;
@@ -804,7 +759,7 @@ interface UsersTableProps {
   handlePageSizeChange: (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
-  handleDeleteUser: (id: string) => void;
+  handleDeleteUser: (id: number) => void;
   setSelectedUser: (user: User) => void;
   setCreateDialogOpen: (open: boolean) => void;
   setEditMode: (edit: boolean) => void;
@@ -885,17 +840,11 @@ const UsersTable: React.FC<UsersTableProps> = ({
                       </TableCell>
                       <TableCell>
                         {organizations.find(
-                          org =>
-                            getOrganizationId(org) ===
-                            convertOrgIdToString(user.organization_id)
+                          org => org.id === user.organization_id // Direct number comparison
                         )
-                          ? getOrganizationName(
-                              organizations.find(
-                                org =>
-                                  getOrganizationId(org) ===
-                                  convertOrgIdToString(user.organization_id)
-                              )!
-                            )
+                          ? organizations.find(
+                              org => org.id === user.organization_id
+                            )!.name
                           : 'Unknown'}
                       </TableCell>
                       <TableCell>{getDomainName(user, domains)}</TableCell>
@@ -984,7 +933,8 @@ interface CreateUserDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CreateUserRequest) => Promise<void>;
-  organizations: (Organization | OrganizationV2)[];
+  organizations: OrganizationV2[];
+  domains: Record<string, Domain[]>; // Add this prop
 }
 
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
@@ -992,9 +942,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   onClose,
   onSubmit,
   organizations,
+  domains, // Add this prop
 }) => {
   const [formData, setFormData] = useState<CreateUserRequest>({
-    organization_id: '',
+    organization_id: 0,
     domain_id: 0,
     email: '',
     first_name: '',
@@ -1002,51 +953,37 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     role: 'tenant_admin',
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [domainsLoading, setDomainsLoading] = useState<boolean>(false);
+  const [availableDomains, setAvailableDomains] = useState<Domain[]>([]); // Rename to match EditUserDialog
+  const [domainsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch domains when organization changes
+  // Update available domains when organization changes - use pre-fetched data
   useEffect(() => {
     if (formData.organization_id) {
-      fetchDomains(formData.organization_id);
-    } else {
-      setDomains([]);
-      setFormData(prev => ({ ...prev, domain_id: 0 }));
-    }
-  }, [formData.organization_id]);
-
-  const fetchDomains = async (organizationId: string) => {
-    setDomainsLoading(true);
-    try {
-      const response = await apiHelpers.getUserDomains(organizationId);
-      const domainsData = response.data.domains || [];
-      console.log('Fetched domains data:', domainsData);
-      setDomains(domainsData);
-
+      const orgDomains = domains[formData.organization_id] || [];
+      setAvailableDomains(orgDomains);
+      
       // Find the primary domain and set it as default
-      const primaryDomain = domainsData.find(domain => domain.is_primary);
+      const primaryDomain = orgDomains.find(domain => domain.is_primary);
       if (primaryDomain) {
         setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
-      } else if (domainsData.length > 0) {
+      } else if (orgDomains.length > 0) {
         // If no primary domain found, select the first domain
         setFormData(prev => ({
           ...prev,
-          domain_id: Number(domainsData[0].id),
+          domain_id: Number(orgDomains[0]?.id || 0),
         }));
       } else {
         // No domains available
         setFormData(prev => ({ ...prev, domain_id: 0 }));
       }
-    } catch (error) {
-      console.error('Error fetching domains:', error);
-      setErrors(prev => ({ ...prev, domains: 'Failed to load domains' }));
-      setDomains([]);
+    } else {
+      setAvailableDomains([]);
       setFormData(prev => ({ ...prev, domain_id: 0 }));
-    } finally {
-      setDomainsLoading(false);
     }
-  };
+  }, [formData.organization_id, domains]);
+
+  // Remove the fetchDomains function - no longer needed
 
   const handleSubmit = async (): Promise<void> => {
     // Clear previous errors
@@ -1081,9 +1018,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id and display name for role
       const apiData = {
-        organization_id: convertOrgIdToInteger(
-          formData.organization_id
-        ).toString(),
+        organization_id: formData.organization_id,
         domain_id: formData.domain_id,
         email: formData.email,
         first_name: formData.first_name,
@@ -1093,7 +1028,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
       await onSubmit(apiData as unknown as CreateUserRequest);
       setFormData({
-        organization_id: '',
+        organization_id: 0,
         domain_id: 0,
         email: '',
         first_name: '',
@@ -1110,7 +1045,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
   const handleClose = () => {
     setFormData({
-      organization_id: '',
+      organization_id: 0,
       domain_id: 0,
       email: '',
       first_name: '',
@@ -1118,7 +1053,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       role: 'tenant_admin',
     });
     setErrors({});
-    setDomains([]);
+    setAvailableDomains([]); // Clear available domains on close
     onClose();
   };
 
@@ -1144,13 +1079,13 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             <OrganizationsDropdown
               value={formData.organization_id}
               onChange={value =>
-                setFormData({ ...formData, organization_id: value })
+                setFormData({ ...formData, organization_id: Number(value) })
               }
               label="Organization"
               required={true}
               testIdPrefix="users-create-organization"
               showAllOption={false}
-              organizations={organizations}
+              organizations={organizations as any}
               fetchFromApi={false}
               margin="none"
             />
@@ -1172,7 +1107,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               value={
                 domainsLoading
                   ? ''
-                  : domains.length > 0
+                  : availableDomains.length > 0
                     ? formData.domain_id
                     : ''
               }
@@ -1196,10 +1131,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                     Loading domains...
                   </Box>
                 </MenuItem>
-              ) : domains.length === 0 ? (
+              ) : availableDomains.length === 0 ? (
                 <MenuItem disabled>No domains available</MenuItem>
               ) : (
-                domains.map(domain => (
+                availableDomains.map(domain => (
                   <MenuItem
                     key={domain.id}
                     value={domain.id}
@@ -1345,7 +1280,7 @@ interface ViewUserDialogProps {
   user: User;
   onClose: () => void;
   onUpdate: () => void;
-  organizations: (Organization | OrganizationV2)[];
+  organizations: OrganizationV2[]; // Only OrganizationV2
   domains: Record<string, Domain[]>;
   setEditMode: (edit: boolean) => void;
 }
@@ -1403,17 +1338,11 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
                 </Typography>
                 <Typography variant="body1" gutterBottom>
                   {organizations.find(
-                    org =>
-                      getOrganizationId(org) ===
-                      convertOrgIdToString(user.organization_id)
+                    org => org.id === user.organization_id // Direct number comparison
                   )
-                    ? getOrganizationName(
-                        organizations.find(
-                          org =>
-                            getOrganizationId(org) ===
-                            convertOrgIdToString(user.organization_id)
-                        )!
-                      )
+                    ? organizations.find(
+                        org => org.id === user.organization_id
+                      )!.name
                     : 'Unknown'}
                 </Typography>
               </Grid>
@@ -1497,7 +1426,7 @@ interface EditUserDialogProps {
   user: User;
   onClose: () => void;
   onSubmit: (data: UpdateUserRequest) => Promise<void>;
-  organizations: (Organization | OrganizationV2)[];
+  organizations: OrganizationV2[]; // Only OrganizationV2
   domains: Record<string, Domain[]>;
   userRoles: string[];
 }
@@ -1507,11 +1436,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   onClose,
   onSubmit,
   organizations,
-  domains,
-  userRoles,
+  domains,  
 }) => {
   const [formData, setFormData] = useState<UpdateUserRequest>({
-    organization_id: convertOrgIdToString(user.organization_id), // Convert to string format for dropdown
+    organization_id: user.organization_id || 0, // Ensure it's always a number
     email: user.email,
     first_name: user.first_name || '',
     last_name: user.last_name || '',
@@ -1520,6 +1448,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState<number | null>(user.domain_id || null);
 
   // Update available domains when organization changes
   useEffect(() => {
@@ -1531,10 +1460,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     }
   }, [formData.organization_id, domains]);
 
-  // Find the current user's domain in available domains
-  const currentDomain = availableDomains.find(
-    d => Number(d.id) === user.domain_id
-  );
+  
 
   const handleSubmit = async (): Promise<void> => {
     if (!formData.email?.trim() || !formData.organization_id) {
@@ -1552,9 +1478,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     try {
       // Convert data for API - API expects integer organization_id
       const apiData = {
-        organization_id: convertOrgIdToInteger(
-          formData.organization_id || ''
-        ).toString(),
+        organization_id: formData.organization_id,
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -1586,9 +1510,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Organization</InputLabel>
             <Select
-              value={formData.organization_id}
+              value={formData.organization_id || ''}
               onChange={e =>
-                setFormData({ ...formData, organization_id: e.target.value })
+                setFormData({ ...formData, organization_id: Number(e.target.value) || 0 })
               }
               label="Organization"
               data-testid={TestIds.users.editDialog.organization}
@@ -1599,13 +1523,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             >
               {organizations.map(org => (
                 <MenuItem
-                  key={getOrganizationId(org)}
-                  value={getOrganizationId(org)}
-                  data-testid={TestIds.users.editDialog.organizationOption(
-                    getOrganizationId(org)
-                  )}
+                  key={org.id}
+                  value={org.id}
+                  data-testid={TestIds.users.editDialog.organizationOption(org.id)}
                 >
-                  {getOrganizationName(org)}
+                  {org.name}
                 </MenuItem>
               ))}
             </Select>
@@ -1614,10 +1536,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
           <FormControl fullWidth margin="normal" required>
             <InputLabel>Domain</InputLabel>
             <Select
-              value={currentDomain ? String(currentDomain.id) : ''}
+              value={selectedDomainId ? String(selectedDomainId) : ''}
               onChange={e => {
-                // Note: domain_id is not part of UpdateUserRequest, so this is for display only
-                console.log('Domain selected:', e.target.value);
+                const newDomainId = Number(e.target.value);
+                setSelectedDomainId(newDomainId);
               }}
               label="Domain"
               disabled={availableDomains.length === 0}
@@ -1715,7 +1637,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 'aria-label': 'Role selection',
               }}
             >
-              {userRoles.map(role => (
+              {availableRoles.map(role => (
                 <MenuItem
                   key={role}
                   value={role}

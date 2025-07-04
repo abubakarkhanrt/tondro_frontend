@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -40,7 +40,8 @@ import {
   type CreateDomainRequest,
   type UpdateDomainRequest,
   type DomainResponse,
-  type OrganizationDomainsResponse,
+  
+  type OrganizationDomainsArrayResponse,
   type PaginatedSubscriptionsResponse,
   type SubscriptionStatusRequest,
   type UsageEventRequest,
@@ -109,7 +110,7 @@ const API_ENDPOINTS = {
     STATUS: (id: string): string => buildCrmEndpoint(`/users/${id}/status`),
     LOGIN: (id: string): string => buildCrmEndpoint(`/users/${id}/login`),
     USER_ROLES: buildCrmEndpoint('/users'),
-    DOMAINS: (organizationId: string): string =>
+    DOMAINS: (organizationId: number): string =>
       buildCrmEndpoint(`/users/domains/${organizationId}`),
   },
 
@@ -166,7 +167,7 @@ const API_ENDPOINTS = {
 // ────────────────────────────────────────
 
 const api: AxiosInstance = axios.create({
-  baseURL: ENV_CONFIG.API_BASE_URL,
+  baseURL: ENV_CONFIG.API_BASE_URL || '',
   timeout: ENV_CONFIG.API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
@@ -348,8 +349,8 @@ export const apiHelpers = {
               const searchLower = search.toLowerCase();
               filteredOrganizations = filteredOrganizations.filter(
                 org =>
-                  org.tenantName.toLowerCase().includes(searchLower) ||
-                  org.organizationDomain.toLowerCase().includes(searchLower)
+                  org.name?.toLowerCase().includes(searchLower) ||
+                  org.domain?.toLowerCase().includes(searchLower)
               );
             }
 
@@ -506,17 +507,21 @@ export const apiHelpers = {
   },
 
   createOrganization: (
-    data: CreateOrganizationRequest,
+    data: CreateOrganizationRequest & { created_by?: number },
     signal?: AbortSignal
   ): Promise<AxiosResponse<CreateOrganizationResponse>> => {
     // Transform camelCase field names to snake_case for the API
-    const transformedData = {
-      name: data.tenantName,
-      domain: data.organizationDomain,
+    const transformedData: any = {
+      name: data.name,
+      domain: data.domain,
       initial_admin_email: data.initialAdminEmail,
-      initial_subscriptions: data.initialSubscriptions,
       initial_status: data.initialStatus,
     };
+
+    // Add created_by if provided
+    if (data.created_by !== undefined) {
+      transformedData.created_by = data.created_by;
+    }
 
     return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, transformedData, {
       signal: signal as GenericAbortSignal,
@@ -524,55 +529,55 @@ export const apiHelpers = {
   },
 
   getOrganization: (
-    id: string,
+    id: number,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
-    api.get(API_ENDPOINTS.ORGANIZATIONS.BY_ID(id), {
+    api.get(API_ENDPOINTS.ORGANIZATIONS.BY_ID(String(id)), {
       signal: signal as GenericAbortSignal,
     }),
 
   updateOrganization: (
-    id: string,
+    id: number,
     data: UpdateOrganizationRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
-    api.patch(API_ENDPOINTS.ORGANIZATIONS.BY_ID(id), data, {
+    api.patch(API_ENDPOINTS.ORGANIZATIONS.BY_ID(String(id)), data, {
       signal: signal as GenericAbortSignal,
     }),
 
   deleteOrganization: (
-    id: string,
+    id: number,
     force: boolean = false,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(`${API_ENDPOINTS.ORGANIZATIONS.BY_ID(id)}?force=${force}`, {
+    api.delete(`${API_ENDPOINTS.ORGANIZATIONS.BY_ID(String(id))}?force=${force}`, {
       signal: signal as GenericAbortSignal,
     }),
 
   updateOrganizationStatus: (
-    id: string,
+    id: number,
     status: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Organization>> =>
     api.put(
-      API_ENDPOINTS.ORGANIZATIONS.STATUS(id),
+      API_ENDPOINTS.ORGANIZATIONS.STATUS(String(id)),
       { status },
       { signal: signal as GenericAbortSignal }
     ),
 
   getOrganizationMetrics: (
-    id: string,
+    id: number,
     signal?: AbortSignal
   ): Promise<AxiosResponse<OrganizationMetrics>> =>
-    api.get(API_ENDPOINTS.ORGANIZATIONS.METRICS(id), {
+    api.get(API_ENDPOINTS.ORGANIZATIONS.METRICS(String(id)), {
       signal: signal as GenericAbortSignal,
     }),
 
   getOrganizationUsers: (
-    id: string,
+    id: number,
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<User>>> =>
-    api.get(API_ENDPOINTS.ORGANIZATIONS.USERS(id), {
+    api.get(API_ENDPOINTS.ORGANIZATIONS.USERS(String(id)), {
       signal: signal as GenericAbortSignal,
     }),
 
@@ -643,8 +648,9 @@ export const apiHelpers = {
   getOrganizationDomains: (
     organizationId: string,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<OrganizationDomainsResponse>> =>
-    api.get(API_ENDPOINTS.ORGANIZATIONS.DOMAINS(organizationId), {
+  ): Promise<AxiosResponse<OrganizationDomainsArrayResponse>> =>
+    api.get(API_ENDPOINTS.DOMAINS.BASE, {
+      params: { organization_id: organizationId },
       signal: signal as GenericAbortSignal,
     }),
 
@@ -653,9 +659,9 @@ export const apiHelpers = {
   // ────────────────────────────────────────
 
   getUserDomains: (
-    organizationId: string,
+    organizationId: number,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<OrganizationDomainsResponse>> =>
+  ): Promise<AxiosResponse<OrganizationDomainsArrayResponse>> =>
     api.get(API_ENDPOINTS.USERS.DOMAINS(organizationId), {
       signal: signal as GenericAbortSignal,
     }),
@@ -681,58 +687,58 @@ export const apiHelpers = {
       signal: signal as GenericAbortSignal,
     }),
 
-  getUser: (id: string, signal?: AbortSignal): Promise<AxiosResponse<User>> =>
-    api.get(API_ENDPOINTS.USERS.BY_ID(id), {
+  getUser: (id: number, signal?: AbortSignal): Promise<AxiosResponse<User>> =>
+    api.get(API_ENDPOINTS.USERS.BY_ID(String(id)), {
       signal: signal as GenericAbortSignal,
     }),
 
   updateUser: (
-    id: string,
+    id: number, // Changed from string to number
     data: UpdateUserRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
-    api.patch(API_ENDPOINTS.USERS.BY_ID(id), data, {
+    api.patch(API_ENDPOINTS.USERS.BY_ID(String(id)), data, {
       signal: signal as GenericAbortSignal,
     }),
 
   deleteUser: (
-    id: string,
+    id: number,
     reason?: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(API_ENDPOINTS.USERS.BY_ID(id), {
+    api.delete(API_ENDPOINTS.USERS.BY_ID(String(id)), {
       data: reason ? { reason } : undefined,
       signal: signal as GenericAbortSignal,
     }),
 
   updateUserRole: (
-    id: string,
+    id: number,
     role: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
     api.put(
-      API_ENDPOINTS.USERS.ROLE(id),
+      API_ENDPOINTS.USERS.ROLE(String(id)),
       { role },
       { signal: signal as GenericAbortSignal }
     ),
 
   updateUserStatus: (
-    id: string,
+    id: number,
     status: string,
     signal?: AbortSignal
   ): Promise<AxiosResponse<User>> =>
     api.put(
-      API_ENDPOINTS.USERS.STATUS(id),
+      API_ENDPOINTS.USERS.STATUS(String(id)),
       { status },
       { signal: signal as GenericAbortSignal }
     ),
 
   recordUserLogin: (
-    id: string,
+    id: number,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
     api.post(
-      API_ENDPOINTS.USERS.LOGIN(id),
+      API_ENDPOINTS.USERS.LOGIN(String(id)),
       {},
       { signal: signal as GenericAbortSignal }
     ),
@@ -843,11 +849,11 @@ export const apiHelpers = {
     }),
 
   updateProduct: (
-    id: string,
+    id: number,
     data: UpdateProductRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<Product>> =>
-    api.put(API_ENDPOINTS.PRODUCTS.BY_ID(id), data, {
+    api.put(API_ENDPOINTS.PRODUCTS.BY_ID(String(id)), data, {
       signal: signal as GenericAbortSignal,
     }),
 

@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -47,13 +47,14 @@ export interface Domain {
 
 export interface CreateDomainRequest {
   organization_id: string;
-  name: string;
+  domain_name: string;
   parent_domain_id?: string;
   is_primary?: boolean;
+  user_id?: number | undefined; // Allow undefined
 }
 
 export interface UpdateDomainRequest {
-  name?: string;
+  domain_name?: string;
   is_primary?: boolean | number;
   status?: 'active' | 'inactive' | 'pending';
 }
@@ -71,35 +72,18 @@ export interface OrganizationDomainsResponse {
   domains: Domain[];
 }
 
-export interface Organization {
-  // Old format fields (for backward compatibility)
-  organizationId?: string;
-  tenantName?: string;
-  organizationDomain?: string;
-  status:
-    | 'Active'
-    | 'Suspended'
-    | 'Trial'
-    | 'Inactive'
-    | 'active'
-    | 'inactive'
-    | 'pending';
-  subscriptionTier?: string;
-  subscriptions?: Subscription[];
-  contractAnniversaryDate?: string;
-  totalUsers?: number;
-  totalJobs?: number;
-  usageAgainstLimit?: string;
-  createdAt?: string;
-  domains?: Domain[];
+// New interface for the updated API response format
+export interface OrganizationDomainsArrayResponse extends Array<Domain> {}
 
-  // New format fields
-  id?: number;
-  name?: string;
-  domain?: string | null;
-  subscription_count?: number;
-  user_count?: number;
-  created_at?: string;
+export interface Organization {
+  // New format fields (required)
+  id: number; // Changed from optional to required
+  name: string; // Changed from optional to required
+  domain: string | null; // Changed from optional to required
+  status: 'active' | 'inactive' | 'pending'; // Changed from optional to required
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
 }
 
 export interface OrganizationsResponse {
@@ -122,28 +106,33 @@ export interface ProductSubscriptionRequest {
   product_id: string;
   tier_name: string;
   auto_renewal?: boolean;
-  ends_at: string; // Contract anniversary date in YYYY-MM-DD format
+  starts_at: string; // Start date in YYYY-MM-DD format
+  ends_at: string; // End date in YYYY-MM-DD format (calculated as start_date + 1 year)
 }
 
 export interface CreateOrganizationRequest {
-  tenantName: string;
-  organizationDomain: string; // Primary domain (e.g., 'company.com')
-  initialAdminEmail: string; // Email for initial admin user
-  initialSubscriptions: ProductSubscriptionRequest[]; // Initial product subscriptions
-  initialStatus?: 'Active' | 'Inactive' | 'Suspended' | 'Trial'; // Default: "Active"
+  name: string; // Changed from tenantName
+  domain: string; // Changed from organizationDomain
+  initialAdminEmail: string;
+  initialStatus?: 'Active' | 'Inactive' | 'Pending';
 }
 
 export interface CreateOrganizationResponse {
-  organizationId: string;
-  tenantName: string;
-  adminUserId: string;
+  id: number;
+  name: string;
+  domain: string;
   status: string;
+  settings: Record<string, unknown>;
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UpdateOrganizationRequest {
-  tenantName?: string;
-  organizationDomain?: string;
-  status?: 'Active' | 'Suspended' | 'Trial' | 'Inactive';
+  name?: string;
+  domain?: string;
+  status?: 'Active' | 'Pending' | 'Inactive';
   contractAnniversaryDate?: string;
 }
 
@@ -191,13 +180,13 @@ export interface UserRoles {
 // ────────────────────────────────────────
 
 export interface User {
-  id: string;
+  id: number; // Changed from string to number
   email: string;
   first_name: string;
   last_name: string;
   role: 'super_admin' | 'tenant_admin';
   status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
-  organization_id: string;
+  organization_id: number;
   domain_id?: number;
   created_at: string;
   updated_at: string;
@@ -208,7 +197,7 @@ export interface CreateUserRequest {
   first_name: string;
   last_name: string;
   role: 'super_admin' | 'tenant_admin';
-  organization_id: string;
+  organization_id: number;
   domain_id: number;
 }
 
@@ -218,7 +207,7 @@ export interface UpdateUserRequest {
   last_name?: string;
   role?: 'super_admin' | 'tenant_admin';
   status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
-  organization_id?: string;
+  organization_id?: number;
 }
 
 // ────────────────────────────────────────

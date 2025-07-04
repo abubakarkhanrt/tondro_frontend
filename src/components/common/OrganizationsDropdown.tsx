@@ -1,10 +1,10 @@
 /**
  * ──────────────────────────────────────────────────
  * File: src/components/common/OrganizationsDropdown.tsx
- * Description: Reusable organizations dropdown component that handles both API formats
+ * Description: Reusable organizations dropdown component for V2 API format
  * Author: Muhammad Abubakar Khan
  * Created: 02-07-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -19,29 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { apiHelpers } from '../../services/api';
-import { type Organization, type OrganizationV2 } from '../../types';
-
-// ────────────────────────────────────────
-// Helper Functions
-// ────────────────────────────────────────
-
-const getOrganizationName = (org: Organization | OrganizationV2): string => {
-  // Check if it's the new format (V2)
-  if ('name' in org && typeof org.id === 'number') {
-    return org.name;
-  }
-  // Old format
-  return org.tenantName;
-};
-
-const getOrganizationId = (org: Organization | OrganizationV2): string => {
-  // Check if it's the new format (V2)
-  if ('id' in org && typeof org.id === 'number') {
-    return String(org.id);
-  }
-  // Old format
-  return org.organizationId;
-};
+import { type OrganizationV2 } from '../../types';
 
 // ────────────────────────────────────────
 // Component Props Interface
@@ -85,7 +63,7 @@ interface OrganizationsDropdownProps {
   convertToNumeric?: boolean;
 
   /** Custom organizations data (if not fetching from API) */
-  organizations?: (Organization | OrganizationV2)[];
+  organizations?: OrganizationV2[];
 
   /** Whether to fetch organizations from API */
   fetchFromApi?: boolean;
@@ -127,9 +105,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // State Management
   // ────────────────────────────────────────
 
-  const [organizations, setOrganizations] = useState<
-    (Organization | OrganizationV2)[]
-  >([]);
+  const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string>('');
 
@@ -146,24 +122,34 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
     try {
       const response = await apiHelpers.getOrganizations();
 
-      // Handle both response formats
-      let orgs: (Organization | OrganizationV2)[] = [];
+      // Handle the transformed response format from getOrganizations
+      let orgs: OrganizationV2[] = [];
 
-      if (response.data.items) {
-        // New format (V2)
-        orgs = response.data.items;
-      } else if (response.data.organizations) {
-        // Old format
-        orgs = response.data.organizations;
+      if (response.data && response.data.organizations) {
+        // Handle the transformed response format (OrganizationsResponse)
+        orgs = response.data.organizations.map((org: any) => ({
+          id: org.id ,
+          name: org.name ,
+          domain: org.domain  || null,
+          status: (org.status || 'inactive').toLowerCase() as 'active' | 'inactive' | 'pending',
+          subscription_count: org.subscription_count || 0,
+          user_count: org.user_count || org.totalUsers || 0,
+          created_at: org.created_at || org.createdAt || new Date().toISOString(),
+        }));
+      } else if (response.data && (response.data as any).items) {
+        // Handle the paginated response format (OrganizationsV2Response)
+        orgs = (response.data as any).items;
+      } else if (Array.isArray(response.data)) {
+        // Direct array format
+        orgs = response.data;
       } else {
-        // Fallback: assume it's an array
-        orgs = Array.isArray(response.data) ? response.data : [];
+        console.warn('Unexpected organizations response format:', response.data);
+        orgs = [];
       }
 
-      // Remove duplicate organizations based on organizationId/name
+      // Remove duplicate organizations based on id
       const uniqueOrgs = orgs.filter((org, index, self) => {
-        const orgId = getOrganizationId(org);
-        return index === self.findIndex(o => getOrganizationId(o) === orgId);
+        return index === self.findIndex(o => o.id === org.id);
       });
 
       setOrganizations(uniqueOrgs);
@@ -180,24 +166,15 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // ────────────────────────────────────────
 
   useEffect(() => {
-    console.log('🔄 OrganizationsDropdown useEffect triggered');
-    console.log(
-      '📦 External organizations:',
-      externalOrganizations?.length || 0
-    );
-    console.log('🌐 Fetch from API:', fetchFromApi);
-
     if (externalOrganizations && externalOrganizations.length > 0) {
-      console.log('✅ Using external organizations data');
       setOrganizations(externalOrganizations);
       return;
     }
 
     if (fetchFromApi && !externalOrganizations) {
-      console.log('🌐 Fetching organizations from API');
       fetchOrganizations();
     }
-  }, [fetchOrganizations]); // Remove fetchFromApi dependency
+  }, [externalOrganizations, fetchFromApi]);
 
   // ────────────────────────────────────────
   // Event Handlers
@@ -212,17 +189,12 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // Value Conversion
   // ────────────────────────────────────────
 
-  const getDisplayValue = (
-    org: Organization | OrganizationV2
-  ): string | number => {
-    const orgId = getOrganizationId(org);
-
+  const getDisplayValue = (org: OrganizationV2): string | number => {
     if (convertToNumeric) {
-      // Convert org_000001 format to numeric for subscriptions
-      return parseInt(orgId.replace('org_', ''), 10);
+      // Return numeric ID for subscriptions
+      return org.id;
     }
-
-    return orgId;
+    return String(org.id);
   };
 
   // ────────────────────────────────────────
@@ -264,7 +236,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       required={required}
       disabled={disabled || isLoading}
       error={hasError}
-      className={className}
+      className={className || ''}
       sx={sx}
       margin={margin}
     >
@@ -297,11 +269,11 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
           hasOrganizations &&
           organizations.map(org => (
             <MenuItem
-              key={getOrganizationId(org)}
+              key={org.id}
               value={getDisplayValue(org)}
-              data-testid={`${testIdPrefix}-option-${getOrganizationId(org)}`}
+              data-testid={`${testIdPrefix}-option-${org.id}`}
             >
-              {getOrganizationName(org)}
+              {org.name}
             </MenuItem>
           ))}
       </Select>

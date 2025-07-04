@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -220,7 +220,7 @@ const Products: React.FC = () => {
     console.log('formData', formData);
     console.log('selectedProduct', selectedProduct);
     try {
-      await apiHelpers.updateProduct(selectedProduct.id, formData);
+      await apiHelpers.updateProduct(selectedProduct.id as number, formData);
       setSnackbar({
         open: true,
         message: 'Product updated successfully',
@@ -310,7 +310,7 @@ const Products: React.FC = () => {
                               setEditMode(false);
                             }}
                             data-testid={TestIds.products.viewDetails(
-                              product.id
+                              product.id as number
                             )}
                           >
                             <VisibilityIcon />
@@ -321,7 +321,7 @@ const Products: React.FC = () => {
                               setSelectedProduct(product);
                               setEditMode(true);
                             }}
-                            data-testid={TestIds.products.edit(product.id)}
+                            data-testid={TestIds.products.edit(product.id as number)}
                           >
                             <EditIcon />
                           </IconButton>
@@ -646,7 +646,7 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState<UpdateProductRequest>({
     name: product.name,
-    description: product.description,
+    description: product.description || '',
   });
   const [loading, setLoading] = useState<boolean>(false);
 

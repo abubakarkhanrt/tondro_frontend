@@ -4,12 +4,12 @@
  * Description: Main dashboard with entity summaries for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Grid,
@@ -27,6 +27,7 @@ import type {
   ErrorResponse,
   PaginatedSubscriptionsResponse,
   Product,
+  ProductsResponse,
 } from '@/types';
 
 // ────────────────────────────────────────
@@ -37,7 +38,7 @@ interface SummaryData {
   organizations: OrganizationsResponse | ErrorResponse | null;
   users: unknown | ErrorResponse | null;
   subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
-  products: Product[] | ErrorResponse | null;
+  products: Product[] | ProductsResponse | ErrorResponse | null;
   root: unknown | ErrorResponse | null;
   health: unknown | ErrorResponse | null;
   status: unknown | ErrorResponse | null;
@@ -114,13 +115,13 @@ const Dashboard: React.FC = () => {
 
       // Fetch summary data for each entity type using component-specific services
       const orgsData = await apiHelpers
-        .getOrganizations({ page: 1, limit: 1 }, controller.signal)
+        .getOrganizations({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const usersData = await apiHelpers
-        .getUsers({ page: 1, page_size: 1 }, controller.signal)
+        .getUsers({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const subsData = await apiHelpers
-        .getSubscriptions({ page: 1, page_size: 1 }, controller.signal)
+        .getSubscriptions({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const productsData = await apiHelpers
         .getProducts(controller.signal)
@@ -143,7 +144,11 @@ const Dashboard: React.FC = () => {
         users:
           'error' in usersData ? { error: usersData.error } : usersData.data,
         subscriptions:
-          'error' in subsData ? { error: subsData.error } : subsData.data,
+          'error' in subsData 
+            ? { error: subsData.error } 
+            : Array.isArray(subsData.data) 
+              ? { items: subsData.data, total: subsData.data.length, page: 1, page_size: 100, total_pages: 1 }
+              : subsData.data,
         products:
           'error' in productsData
             ? { error: productsData.error }
@@ -241,6 +246,13 @@ const Dashboard: React.FC = () => {
         count = data.data.length;
       } else if (Array.isArray(data)) {
         count = data.length;
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'items' in data &&
+        Array.isArray(data.items)
+      ) {
+        count = data.items.length;
       } else if (
         data &&
         typeof data === 'object' &&

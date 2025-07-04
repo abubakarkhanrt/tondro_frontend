@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -68,7 +68,7 @@ export const TestIds = {
     statusOption: (status: string) => `filter-form-status-option-${status}`,
     organizationOption: (orgId: string) =>
       `filter-form-organization-option-${orgId}`,
-    productOption: (productId: string) =>
+    productOption: (productId: string | number) =>
       `filter-form-product-option-${productId}`,
     tierOption: (tier: string) => `filter-form-tier-option-${tier}`,
     entityTypeOption: (entityType: string) =>
@@ -101,13 +101,13 @@ export const TestIds = {
     page: 'organizations-page',
     createButton: 'organizations-create-button',
     table: 'organizations-table',
-    viewDetails: (orgId: string) => `organizations-view-details-${orgId}`,
-    edit: (orgId: string) => `organizations-edit-${orgId}`,
-    delete: (orgId: string) => `organizations-delete-${orgId}`,
-    updateStatus: (orgId: string) => `organizations-update-status-${orgId}`,
-    viewMetrics: (orgId: string) => `organizations-view-metrics-${orgId}`,
-    viewUsers: (orgId: string) => `organizations-view-users-${orgId}`,
-    viewSubscriptions: (orgId: string) =>
+    viewDetails: (orgId: string | number) => `organizations-view-details-${orgId}`,
+    edit: (orgId: string | number) => `organizations-edit-${orgId}`,
+    delete: (orgId: string | number) => `organizations-delete-${orgId}`,
+    updateStatus: (orgId: string | number) => `organizations-update-status-${orgId}`,
+    viewMetrics: (orgId: string | number) => `organizations-view-metrics-${orgId}`,
+    viewUsers: (orgId: string | number) => `organizations-view-users-${orgId}`,
+    viewSubscriptions: (orgId: string | number) =>
       `organizations-view-subscriptions-${orgId}`,
 
     // Create Dialog
@@ -115,7 +115,7 @@ export const TestIds = {
       container: 'organizations-create-dialog',
       title: 'organizations-create-dialog-title',
       tenantName: 'organizations-create-tenant-name',
-      organizationDomain: 'organizations-create-domain',
+      domain: 'organizations-create-domain',
       adminEmail: 'organizations-create-admin-email',
       status: 'organizations-create-status',
       submit: 'organizations-create-submit',
@@ -130,7 +130,7 @@ export const TestIds = {
       container: 'organizations-edit-dialog',
       title: 'organizations-edit-dialog-title',
       tenantName: 'organizations-edit-tenant-name',
-      organizationDomain: 'organizations-edit-domain',
+      domain: 'organizations-edit-domain',
       status: 'organizations-edit-status',
       submit: 'organizations-edit-submit',
       cancel: 'organizations-edit-cancel',
@@ -147,11 +147,13 @@ export const TestIds = {
       productSelect: (index: number) =>
         `organizations-subscription-product-${index}`,
       tierSelect: (index: number) => `organizations-subscription-tier-${index}`,
+      startDate: (index: number) =>
+        `organizations-subscription-start-date-${index}`,
       endDate: (index: number) =>
         `organizations-subscription-end-date-${index}`,
       subscriptionCard: (index: number) =>
         `organizations-subscription-card-${index}`,
-      productSelectOption: (index: number, productId: string) =>
+      productSelectOption: (index: number, productId: string | number) =>
         `organizations-subscription-product-option-${index}-${productId}`,
       tierSelectOption: (index: number, tier: string) =>
         `organizations-subscription-tier-option-${index}-${tier}`,
@@ -170,12 +172,12 @@ export const TestIds = {
     page: 'users-page',
     table: 'users-table',
     createButton: 'users-create-button',
-    viewDetails: (id: string) => `users-view-details-${id}`,
-    edit: (id: string) => `users-edit-${id}`,
-    deactivate: (id: string) => `users-deactivate-${id}`,
-    updateRole: (userId: string) => `users-update-role-${userId}`,
-    updateStatus: (userId: string) => `users-update-status-${userId}`,
-    recordLogin: (userId: string) => `users-record-login-${userId}`,
+    viewDetails: (id: number) => `users-view-details-${id}`,
+    edit: (id: number) => `users-edit-${id}`,
+    deactivate: (id: number) => `users-deactivate-${id}`,
+    updateRole: (userId: number) => `users-update-role-${userId}`,
+    updateStatus: (userId: number) => `users-update-status-${userId}`,
+    recordLogin: (userId: number) => `users-record-login-${userId}`,
 
     // Create Dialog
     createDialog: {
@@ -213,7 +215,7 @@ export const TestIds = {
       roleOption: (role: string) => `users-edit-dialog-role-option-${role}`,
       statusOption: (status: string) =>
         `users-edit-dialog-status-option-${status}`,
-      organizationOption: (orgId: string) =>
+      organizationOption: (orgId: number) =>
         `users-edit-dialog-organization-option-${orgId}`,
     },
 
@@ -252,7 +254,7 @@ export const TestIds = {
       error: 'subscriptions-create-error',
       organizationOption: (orgId: string) =>
         `subscriptions-create-dialog-organization-option-${orgId}`,
-      productOption: (productId: string) =>
+      productOption: (productId: string | number) =>
         `subscriptions-create-dialog-product-option-${productId}`,
       tierOption: (tier: string) =>
         `subscriptions-create-dialog-tier-option-${tier}`,
@@ -317,9 +319,9 @@ export const TestIds = {
     page: 'products-page',
     createButton: 'products-create-button',
     table: 'products-table',
-    viewDetails: (productId: string) => `products-view-details-${productId}`,
-    edit: (productId: string) => `products-edit-${productId}`,
-    delete: (productId: string) => `products-delete-${productId}`,
+    viewDetails: (productId: number) => `products-view-details-${productId}`,
+    edit: (productId: number) => `products-edit-${productId}`,
+    delete: (productId: number) => `products-delete-${productId}`,
 
     // Create Dialog
     createDialog: {

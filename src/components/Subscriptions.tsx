@@ -4,7 +4,7 @@
  * Description: Subscriptions management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 02-07-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -84,11 +84,27 @@ const CreateSubscriptionDialog = ({
     product_id: '',
     tier: '',
     auto_renewal: true,
-    starts_at: new Date().toISOString().split('T')[0],
+    starts_at: new Date().toISOString().split('T')[0] || '',
     ends_at: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setForm({
+        organization_id: 0,
+        product_id: '',
+        tier: '',
+        auto_renewal: true,
+        starts_at: new Date().toISOString().split('T')[0] || '',
+        ends_at: null,
+      });
+      setError(null);
+      setSubmitting(false);
+    }
+  }, [open]);
 
   const tierOptions = getTierOptions(form.product_id);
 
@@ -144,7 +160,7 @@ const CreateSubscriptionDialog = ({
       product_id: '',
       tier: '',
       auto_renewal: true,
-      starts_at: new Date().toISOString().split('T')[0],
+      starts_at: new Date().toISOString().split('T')[0] || '',
       ends_at: null,
     });
     setError(null);
@@ -176,7 +192,7 @@ const CreateSubscriptionDialog = ({
                 showAllOption={false}
                 convertToNumeric={true}
                 margin="normal"
-                organizations={organizations}
+                organizations={organizations as any}
                 fetchFromApi={false}
               />
             </Grid>
@@ -347,7 +363,7 @@ const EditSubscriptionDialog = ({
               <FormControl fullWidth margin="normal">
                 <InputLabel>Tier</InputLabel>
                 <Select
-                  value={form.tier}
+                  value={form.tier || ''}
                   onChange={e => handleChange('tier', e.target.value)}
                   label="Tier"
                   data-testid={TestIds.subscriptions.editDialog.tier}
@@ -370,7 +386,7 @@ const EditSubscriptionDialog = ({
               <FormControl fullWidth margin="normal">
                 <InputLabel>Status</InputLabel>
                 <Select
-                  value={form.status}
+                  value={form.status || ''}
                   onChange={e => handleChange('status', e.target.value)}
                   label="Status"
                   data-testid={TestIds.subscriptions.editDialog.status}
@@ -493,17 +509,18 @@ const Subscriptions: React.FC = () => {
   const { tiers: productTiers } = useProductTiers();
 
   useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('No authentication token found. Please login again.');
+      setLoading(false);
+      return;
+    }
+
     // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        fetchSubscriptions();
-        loadDropdownData(); // Load organizations and products for display
-      } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
-      }
-    }, 100); // Small delay to ensure token is set
+      fetchSubscriptions();
+      loadDropdownData(); // Load organizations and products for display
+    }, 100);
 
     return () => {
       clearTimeout(timer);
@@ -512,15 +529,7 @@ const Subscriptions: React.FC = () => {
         abortController.abort();
       }
     };
-  }, []); // Empty dependency array - only run once on mount
-
-  // Add separate useEffect for filters/pagination changes
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      fetchSubscriptions();
-    }
-  }, [filters, pagination.page, pagination.pageSize]);
+  }, [filters, pagination.page, pagination.pageSize]); // Include all dependencies
 
   const fetchSubscriptions = async (): Promise<void> => {
     // Cancel any existing request
@@ -550,14 +559,25 @@ const Subscriptions: React.FC = () => {
         ...filters,
       };
 
+      // Map frontend filter names to backend API parameter names
+      const apiParams = {
+        page: params.page,
+        page_size: params.page_size,
+        organization_id: params.organization_id,
+        product_id: params.product_id,
+        tier: params.tier,
+        // Map status to status_filter for backend compatibility
+        ...(params.status && { status_filter: params.status }),
+      };
+
       // Remove empty filters
-      Object.keys(params).forEach(key => {
-        if (params[key as keyof typeof params] === '')
-          delete params[key as keyof typeof params];
+      Object.keys(apiParams).forEach(key => {
+        if (apiParams[key as keyof typeof apiParams] === '')
+          delete apiParams[key as keyof typeof apiParams];
       });
 
       const response = await apiHelpers.getSubscriptions(
-        params,
+        apiParams,
         controller.signal
       );
 
@@ -762,15 +782,9 @@ const Subscriptions: React.FC = () => {
     }));
   };
 
-  const getOrganizationIdString = (numericId: number): string => {
-    return `org_${numericId.toString().padStart(6, '0')}`;
-  };
-
   const getOrganizationName = (organizationId: number): string => {
-    const org = organizations.find(
-      o => o.organizationId === getOrganizationIdString(organizationId)
-    );
-    return org ? org.tenantName : `Organization ${organizationId}`;
+    const org = organizations.find(o => o.id === organizationId);
+    return org ? org.name || `Organization ${organizationId}` : `Organization ${organizationId}`;
   };
 
   const getProductName = (productId: string): string => {
@@ -845,13 +859,13 @@ const Subscriptions: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <OrganizationsDropdown
               value={filters.organization_id}
-              onChange={value => handleFilterChange('organization_id', value)}
+              onChange={value => handleFilterChange('organization_id', String(value))}
               label="Organization"
               testIdPrefix="subscriptions-filter-organization"
               showAllOption={true}
               allOptionText="All Organizations"
               convertToNumeric={true}
-              organizations={organizations}
+              organizations={organizations as any}
               fetchFromApi={false}
               margin="none"
             />
@@ -1107,12 +1121,8 @@ const Subscriptions: React.FC = () => {
     products,
   }) => {
     const getOrganizationName = (organizationId: number): string => {
-      const org = organizations.find(
-        o =>
-          o.organizationId ===
-          `org_${organizationId.toString().padStart(6, '0')}`
-      );
-      return org ? org.tenantName : `Organization ${organizationId}`;
+      const org = organizations.find(o => o.id === organizationId);
+      return org ? org.name || `Organization ${organizationId}` : `Organization ${organizationId}`;
     };
 
     const getProductName = (productId: string): string => {
