@@ -48,13 +48,13 @@ export const useProductTiers = (): UseProductTiersReturn => {
 
       // First, get all products
       const productsResponse = await apiHelpers.getProducts();
-      const products = Array.isArray(productsResponse.data) 
-        ? productsResponse.data 
+      const products = Array.isArray(productsResponse.data)
+        ? productsResponse.data
         : productsResponse.data.products || [];
 
       // Then fetch tiers for each product
       const allTiers: ProductTier[] = [];
-      
+
       for (const product of products) {
         try {
           const controller = apiHelpers.createAbortController();
@@ -62,7 +62,7 @@ export const useProductTiers = (): UseProductTiersReturn => {
             String(product.id),
             controller.signal
           );
-          
+
           if (response.data.tiers) {
             allTiers.push(...response.data.tiers);
           }

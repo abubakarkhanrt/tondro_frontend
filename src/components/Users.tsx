@@ -115,28 +115,28 @@ const getDomainName = (
 ): string => {
   // Flatten all domains from all organizations to search for user's assigned domain
   const allDomains = Object.values(domains).flat();
-  
+
   // Find the domain assigned to this specific user
   const userDomain = allDomains.find(domain => domain.user_id === user.id);
-  
+
   if (userDomain) {
     return userDomain.domain_name || 'Unknown';
   }
-  
+
   // Fallback: if no direct assignment, show primary domain for their organization
   const orgId = user.organization_id;
   const orgDomains = domains[orgId] || [];
-  
+
   const primaryDomain = orgDomains.find(d => d.is_primary);
   if (primaryDomain) {
     return primaryDomain.domain_name || 'Unknown';
   }
-  
+
   // Final fallback: first available domain for organization
   if (orgDomains.length > 0) {
     return orgDomains[0]?.domain_name || 'Unknown';
   }
-  
+
   return 'N/A';
 };
 
@@ -483,7 +483,7 @@ const Users: React.FC = () => {
     try {
       // Step 1: Update user without domain_id - only include fields that have values
       const userData: UpdateUserRequest = {};
-      
+
       if (formData.organization_id !== undefined) {
         userData.organization_id = formData.organization_id;
       }
@@ -509,11 +509,11 @@ const Users: React.FC = () => {
       // Find the current domain assigned to this user
       //const allDomains = Object.values(domains).flat();
       //const currentUserDomain = allDomains.find(domain => domain.user_id === selectedUser.id);
-      
+
       // Get the selected domain from the edit dialog state
       // We need to access the selectedDomainId from the EditUserDialog component
       // For now, we'll handle this in the EditUserDialog's handleSubmit
-      
+
       setSnackbar({
         open: true,
         message: 'User updated successfully',
