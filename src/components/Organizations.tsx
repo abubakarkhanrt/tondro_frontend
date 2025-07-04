@@ -104,9 +104,9 @@ interface SnackbarState {
 // Map frontend display values to backend API values
 const mapStatusToApi = (displayStatus: string): string => {
   const statusMap: Record<string, string> = {
-    'Active': 'active',
-    'Pending': 'pending', // Changed from 'Trial' to 'Pending'
-    'Inactive': 'inactive',
+    Active: 'active',
+    Pending: 'pending', // Changed from 'Trial' to 'Pending'
+    Inactive: 'inactive',
   };
   return statusMap[displayStatus] || displayStatus;
 };
@@ -298,18 +298,20 @@ const Organizations: React.FC = () => {
         // Get current user from localStorage
         const userStr = localStorage.getItem('user');
         const currentUser = userStr ? JSON.parse(userStr) : null;
-        
+
         console.log('🔍 Current user from localStorage:', currentUser);
-        
+
         if (!currentUser) {
           throw new Error('User information not found. Please login again.');
         }
 
         // The actual user ID is in user_id, not id
         const userId = currentUser.user_id;
-        
+
         if (!userId) {
-          throw new Error('User ID not found in user information. Please login again.');
+          throw new Error(
+            'User ID not found in user information. Please login again.'
+          );
         }
 
         console.log('✅ Found user ID:', userId);
@@ -321,7 +323,9 @@ const Organizations: React.FC = () => {
           createdByValue = parseInt(numericMatch[0], 10);
           console.log('✅ Extracted numeric user ID:', createdByValue);
         } else {
-          console.log('⚠️ No numeric user ID found, proceeding without created_by');
+          console.log(
+            '⚠️ No numeric user ID found, proceeding without created_by'
+          );
           createdByValue = undefined;
         }
 
@@ -332,21 +336,27 @@ const Organizations: React.FC = () => {
           initialAdminEmail: formData.initialAdminEmail,
           initialStatus: formData.initialStatus || 'Active',
           ...(createdByValue !== undefined && { created_by: createdByValue }),
-        };        
+        };
 
-        const organizationResponse = await apiHelpers.createOrganization(organizationRequestData);
-        const createdOrganization = organizationResponse.data;                
+        const organizationResponse = await apiHelpers.createOrganization(
+          organizationRequestData
+        );
+        const createdOrganization = organizationResponse.data;
 
         // Create subscriptions one by one
-        if (formData.initialSubscriptions && formData.initialSubscriptions.length > 0) {
+        if (
+          formData.initialSubscriptions &&
+          formData.initialSubscriptions.length > 0
+        ) {
           // The API returns 'id' field, not 'organizationId'
-          const organizationId = createdOrganization.id;          
-          
+          const organizationId = createdOrganization.id;
+
           // Extract numeric organization ID for subscription creation
-          const numericOrgId = typeof organizationId === 'string' 
-            ? parseInt(organizationId, 10)
-            : organizationId; // If it's already a number
-          
+          const numericOrgId =
+            typeof organizationId === 'string'
+              ? parseInt(organizationId, 10)
+              : organizationId; // If it's already a number
+
           for (const subscription of formData.initialSubscriptions) {
             try {
               const subscriptionRequestData: CreateSubscriptionRequest = {
@@ -356,7 +366,7 @@ const Organizations: React.FC = () => {
                 auto_renewal: subscription.auto_renewal ?? true,
                 ends_at: `${subscription.ends_at}T00:00:00`, // Convert date to datetime format
               };
-              
+
               console.log('📤 Creating subscription:', subscriptionRequestData);
               await apiHelpers.createSubscription(subscriptionRequestData);
               console.log('✅ Subscription created successfully');
@@ -366,7 +376,7 @@ const Organizations: React.FC = () => {
             }
           }
         }
-        
+
         setSnackbar({
           open: true,
           message: 'Organization and subscriptions created successfully',
@@ -385,7 +395,12 @@ const Organizations: React.FC = () => {
         });
       }
     },
-    [fetchOrganizations, fetchAllSubscriptions, setSnackbar, setCreateDialogOpen]
+    [
+      fetchOrganizations,
+      fetchAllSubscriptions,
+      setSnackbar,
+      setCreateDialogOpen,
+    ]
   );
 
   const handleUpdateOrganization = useCallback(
@@ -397,17 +412,19 @@ const Organizations: React.FC = () => {
         const apiFormData = {
           name: formData.name,
           domain: formData.domain, // Changed from organizationDomain
-          status: formData.status ? mapStatusToApi(formData.status) as 'active' | 'inactive' | 'pending' : 'active',
+          status: formData.status
+            ? (mapStatusToApi(formData.status) as
+                | 'active'
+                | 'inactive'
+                | 'pending')
+            : 'active',
         };
-        
+
         if (!selectedOrg.id) {
           throw new Error('Organization ID is required for update');
         }
-        
-        await apiHelpers.updateOrganization(
-          selectedOrg.id,          
-          apiFormData as any
-        );
+
+        await apiHelpers.updateOrganization(selectedOrg.id, apiFormData as any);
         setSnackbar({
           open: true,
           message: 'Organization updated successfully',
@@ -671,7 +688,9 @@ const Organizations: React.FC = () => {
                 <TableBody>
                   {organizations.organizations.map(org => {
                     // Use the new organization format with 'id' field
-                    const orgSubscriptions = getSubscriptionsForOrganization(org.id);
+                    const orgSubscriptions = getSubscriptionsForOrganization(
+                      org.id
+                    );
 
                     return (
                       <TableRow key={org.id}>
@@ -802,9 +821,7 @@ const Organizations: React.FC = () => {
                                   setSelectedOrg(org);
                                   setEditMode(true);
                                 }}
-                                data-testid={TestIds.organizations.edit(
-                                  org.id
-                                )}
+                                data-testid={TestIds.organizations.edit(org.id)}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -917,7 +934,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     const endDate = oneYearLater.toISOString().split('T')[0];
-    
+
     const newSubscription: ProductSubscriptionRequest = {
       product_id: '',
       tier_name: '',
@@ -939,19 +956,20 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     value: any
   ) => {
     const newSubscriptions = [...subscriptions];
-    newSubscriptions[index] = { 
-      ...newSubscriptions[index], 
-      [field]: value 
+    newSubscriptions[index] = {
+      ...newSubscriptions[index],
+      [field]: value,
     } as ProductSubscriptionRequest;
-    
+
     // If start date is changed, automatically calculate end date (start date + 1 year)
     if (field === 'starts_at' && value) {
       const startDate = new Date(value);
       const endDate = new Date(startDate);
       endDate.setFullYear(endDate.getFullYear() + 1);
-      newSubscriptions[index].ends_at = endDate.toISOString().split('T')[0] || '';
+      newSubscriptions[index].ends_at =
+        endDate.toISOString().split('T')[0] || '';
     }
-    
+
     onSubscriptionsChange(newSubscriptions);
   };
 
@@ -1202,11 +1220,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       newErrors.name = 'Tenant name is required';
     }
 
-    if (!formData.domain?.trim()) { // Changed from organizationDomain
+    if (!formData.domain?.trim()) {
+      // Changed from organizationDomain
       newErrors.domain = 'Organization domain is required'; // Changed from organizationDomain
-    } else if (!validateDomainName(formData.domain)) { // Changed from organizationDomain
-      newErrors.domain = // Changed from organizationDomain
-        'Please enter a valid domain name (e.g., company.com)';
+    } else if (!validateDomainName(formData.domain)) {
+      // Changed from organizationDomain
+      newErrors.domain = 'Please enter a valid domain name (e.g., company.com)'; // Changed from organizationDomain
     }
 
     if (!formData.initialAdminEmail?.trim()) {
@@ -1329,13 +1348,11 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             placeholder="example.com"
             error={!!errors.domain}
             helperText={
-              errors.domain ||
-              'Enter a unique domain name for the organization'
+              errors.domain || 'Enter a unique domain name for the organization'
             }
             data-testid={TestIds.organizations.createDialog.domain} // Changed from organizationDomain
             inputProps={{
-              'data-testid':
-                TestIds.organizations.createDialog.domain, // Changed from organizationDomain
+              'data-testid': TestIds.organizations.createDialog.domain, // Changed from organizationDomain
               'aria-label': 'Organization domain input',
             }}
           />
@@ -1374,7 +1391,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
                 )}
               >
                 Active
-              </MenuItem>              
+              </MenuItem>
               <MenuItem
                 value="Pending"
                 data-testid={TestIds.organizations.createDialog.statusOption(
@@ -1488,7 +1505,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Tenant Name
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {organization.name} 
+              {organization.name}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -1529,7 +1546,9 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               Created
             </Typography>
             <Typography variant="body1" gutterBottom component="div">
-              {organization.created_at ? new Date(organization.created_at).toLocaleString() : 'N/A'}
+              {organization.created_at
+                ? new Date(organization.created_at).toLocaleString()
+                : 'N/A'}
             </Typography>
           </Grid>
           <Grid item xs={12}>
@@ -1697,9 +1716,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
 
   return (
     <Dialog open={!!organization} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>
-        Organization Details: {organization?.name} 
-      </DialogTitle>
+      <DialogTitle>Organization Details: {organization?.name}</DialogTitle>
       <DialogContent>
         {organization && (
           <>
@@ -1747,9 +1764,9 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   // Map backend status to frontend display format
   const mapStatusFromApi = (apiStatus: string): string => {
     const statusMap: Record<string, string> = {
-      'active': 'Active',
-      'pending': 'Pending',
-      'inactive': 'Inactive',
+      active: 'Active',
+      pending: 'Pending',
+      inactive: 'Inactive',
     };
     return statusMap[apiStatus] || apiStatus;
   };
@@ -1757,7 +1774,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   const [formData, setFormData] = useState<UpdateOrganizationRequest>({
     name: organization.name || '',
     domain: organization.domain || '',
-    status: mapStatusFromApi(organization.status) as 'Active' | 'Inactive' | 'Pending',
+    status: mapStatusFromApi(organization.status) as
+      | 'Active'
+      | 'Inactive'
+      | 'Pending',
   });
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -1794,8 +1814,8 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             fullWidth
             label="Organization Name" // Changed from "Tenant Name"
             value={formData.name} // Changed from tenantName
-            onChange={e =>
-              setFormData({ ...formData, name: e.target.value }) // Changed from tenantName
+            onChange={
+              e => setFormData({ ...formData, name: e.target.value }) // Changed from tenantName
             }
             margin="normal"
             required
@@ -1809,15 +1829,14 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             fullWidth
             label="Organization Domain"
             value={formData.domain} // Changed from organizationDomain
-            onChange={e =>
-              setFormData({ ...formData, domain: e.target.value }) // Changed from organizationDomain
+            onChange={
+              e => setFormData({ ...formData, domain: e.target.value }) // Changed from organizationDomain
             }
             margin="normal"
             required
             data-testid={TestIds.organizations.editDialog.domain} // Changed from organizationDomain
             inputProps={{
-              'data-testid':
-                TestIds.organizations.editDialog.domain, // Changed from organizationDomain
+              'data-testid': TestIds.organizations.editDialog.domain, // Changed from organizationDomain
               'aria-label': 'Organization domain input',
             }}
           />

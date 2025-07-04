@@ -40,7 +40,6 @@ import {
   type CreateDomainRequest,
   type UpdateDomainRequest,
   type DomainResponse,
-  
   type OrganizationDomainsArrayResponse,
   type PaginatedSubscriptionsResponse,
   type SubscriptionStatusRequest,
@@ -550,9 +549,12 @@ export const apiHelpers = {
     force: boolean = false,
     signal?: AbortSignal
   ): Promise<AxiosResponse<void>> =>
-    api.delete(`${API_ENDPOINTS.ORGANIZATIONS.BY_ID(String(id))}?force=${force}`, {
-      signal: signal as GenericAbortSignal,
-    }),
+    api.delete(
+      `${API_ENDPOINTS.ORGANIZATIONS.BY_ID(String(id))}?force=${force}`,
+      {
+        signal: signal as GenericAbortSignal,
+      }
+    ),
 
   updateOrganizationStatus: (
     id: number,

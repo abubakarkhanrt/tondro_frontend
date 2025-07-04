@@ -128,13 +128,17 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       if (response.data && response.data.organizations) {
         // Handle the transformed response format (OrganizationsResponse)
         orgs = response.data.organizations.map((org: any) => ({
-          id: org.id ,
-          name: org.name ,
-          domain: org.domain  || null,
-          status: (org.status || 'inactive').toLowerCase() as 'active' | 'inactive' | 'pending',
+          id: org.id,
+          name: org.name,
+          domain: org.domain || null,
+          status: (org.status || 'inactive').toLowerCase() as
+            | 'active'
+            | 'inactive'
+            | 'pending',
           subscription_count: org.subscription_count || 0,
           user_count: org.user_count || org.totalUsers || 0,
-          created_at: org.created_at || org.createdAt || new Date().toISOString(),
+          created_at:
+            org.created_at || org.createdAt || new Date().toISOString(),
         }));
       } else if (response.data && (response.data as any).items) {
         // Handle the paginated response format (OrganizationsV2Response)
@@ -143,7 +147,10 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
         // Direct array format
         orgs = response.data;
       } else {
-        console.warn('Unexpected organizations response format:', response.data);
+        console.warn(
+          'Unexpected organizations response format:',
+          response.data
+        );
         orgs = [];
       }
 

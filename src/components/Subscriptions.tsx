@@ -784,7 +784,9 @@ const Subscriptions: React.FC = () => {
 
   const getOrganizationName = (organizationId: number): string => {
     const org = organizations.find(o => o.id === organizationId);
-    return org ? org.name || `Organization ${organizationId}` : `Organization ${organizationId}`;
+    return org
+      ? org.name || `Organization ${organizationId}`
+      : `Organization ${organizationId}`;
   };
 
   const getProductName = (productId: string): string => {
@@ -859,7 +861,9 @@ const Subscriptions: React.FC = () => {
           <Grid item xs={12} sm={3}>
             <OrganizationsDropdown
               value={filters.organization_id}
-              onChange={value => handleFilterChange('organization_id', String(value))}
+              onChange={value =>
+                handleFilterChange('organization_id', String(value))
+              }
               label="Organization"
               testIdPrefix="subscriptions-filter-organization"
               showAllOption={true}
@@ -1122,7 +1126,9 @@ const Subscriptions: React.FC = () => {
   }) => {
     const getOrganizationName = (organizationId: number): string => {
       const org = organizations.find(o => o.id === organizationId);
-      return org ? org.name || `Organization ${organizationId}` : `Organization ${organizationId}`;
+      return org
+        ? org.name || `Organization ${organizationId}`
+        : `Organization ${organizationId}`;
     };
 
     const getProductName = (productId: string): string => {

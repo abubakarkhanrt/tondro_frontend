@@ -144,10 +144,16 @@ const Dashboard: React.FC = () => {
         users:
           'error' in usersData ? { error: usersData.error } : usersData.data,
         subscriptions:
-          'error' in subsData 
-            ? { error: subsData.error } 
-            : Array.isArray(subsData.data) 
-              ? { items: subsData.data, total: subsData.data.length, page: 1, page_size: 100, total_pages: 1 }
+          'error' in subsData
+            ? { error: subsData.error }
+            : Array.isArray(subsData.data)
+              ? {
+                  items: subsData.data,
+                  total: subsData.data.length,
+                  page: 1,
+                  page_size: 100,
+                  total_pages: 1,
+                }
               : subsData.data,
         products:
           'error' in productsData

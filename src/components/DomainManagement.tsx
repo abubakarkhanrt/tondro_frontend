@@ -78,7 +78,11 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       const response = await apiHelpers.getOrganizationDomains(organizationId);
       // Handle the new paginated API response structure
       const responseData = response.data as any;
-      if (responseData && responseData.items && Array.isArray(responseData.items)) {
+      if (
+        responseData &&
+        responseData.items &&
+        Array.isArray(responseData.items)
+      ) {
         // Extract domains from the paginated response
         const domainsArray = responseData.items;
         setDomains(domainsArray);
@@ -362,7 +366,11 @@ interface CreateDomainDialogProps {
   onSubmit: (data: CreateDomainRequest) => Promise<void>;
   organizationId: string;
   validateDomainName: (name: string) => boolean;
-  setSnackbar: (snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' }) => void;
+  setSnackbar: (snackbar: {
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  }) => void;
 }
 
 const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
@@ -381,10 +389,15 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
       if (userStr) {
         const user = JSON.parse(userStr);
         console.log('Parsed user object:', user);
-        
+
         // Try multiple possible user ID fields
         if (user.user_id) {
-          console.log('Found user_id:', user.user_id, 'Type:', typeof user.user_id);
+          console.log(
+            'Found user_id:',
+            user.user_id,
+            'Type:',
+            typeof user.user_id
+          );
           // Handle string format like "user_123" or direct number
           if (typeof user.user_id === 'number') {
             return user.user_id;
@@ -396,7 +409,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
             return userId;
           }
         }
-        
+
         // Fallback to id field
         if (user.id) {
           console.log('Found id field:', user.id, 'Type:', typeof user.id);

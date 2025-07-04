@@ -101,11 +101,14 @@ export const TestIds = {
     page: 'organizations-page',
     createButton: 'organizations-create-button',
     table: 'organizations-table',
-    viewDetails: (orgId: string | number) => `organizations-view-details-${orgId}`,
+    viewDetails: (orgId: string | number) =>
+      `organizations-view-details-${orgId}`,
     edit: (orgId: string | number) => `organizations-edit-${orgId}`,
     delete: (orgId: string | number) => `organizations-delete-${orgId}`,
-    updateStatus: (orgId: string | number) => `organizations-update-status-${orgId}`,
-    viewMetrics: (orgId: string | number) => `organizations-view-metrics-${orgId}`,
+    updateStatus: (orgId: string | number) =>
+      `organizations-update-status-${orgId}`,
+    viewMetrics: (orgId: string | number) =>
+      `organizations-view-metrics-${orgId}`,
     viewUsers: (orgId: string | number) => `organizations-view-users-${orgId}`,
     viewSubscriptions: (orgId: string | number) =>
       `organizations-view-subscriptions-${orgId}`,

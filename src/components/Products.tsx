@@ -321,7 +321,9 @@ const Products: React.FC = () => {
                               setSelectedProduct(product);
                               setEditMode(true);
                             }}
-                            data-testid={TestIds.products.edit(product.id as number)}
+                            data-testid={TestIds.products.edit(
+                              product.id as number
+                            )}
                           >
                             <EditIcon />
                           </IconButton>

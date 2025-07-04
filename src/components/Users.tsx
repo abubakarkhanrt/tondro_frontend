@@ -47,7 +47,7 @@ import {
 import { apiHelpers } from '../services/api';
 import axios from 'axios';
 import {
-  type User,  
+  type User,
   type OrganizationV2,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -114,28 +114,27 @@ const getDomainName = (
   domains: Record<string, Domain[]>
 ): string => {
   // Since users don't have domain_id, show the primary domain for their organization
-  const orgId = (user.organization_id);
+  const orgId = user.organization_id;
   const orgDomains = domains[orgId] || [];
 
   // Find the primary domain for this organization
   const primaryDomain = orgDomains.find(d => d.is_primary);
-  
+
   if (primaryDomain) {
     return primaryDomain.domain_name || primaryDomain.name || 'Unknown';
   }
-  
+
   // If no primary domain, show the first available domain
   if (orgDomains.length > 0) {
     const firstDomain = orgDomains[0];
     return firstDomain?.domain_name || firstDomain?.name || 'Unknown';
   }
-  
+
   return 'N/A';
 };
 
 // Get available roles that match the expected role values
 const availableRoles = ['super_admin', 'tenant_admin'];
-
 
 // ────────────────────────────────────────
 // Main Component
@@ -144,9 +143,7 @@ const availableRoles = ['super_admin', 'tenant_admin'];
 const Users: React.FC = () => {
   const { userRoles } = useUserRoles();
   const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<
-    OrganizationV2[]
-  >([]);
+  const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -241,7 +238,7 @@ const Users: React.FC = () => {
       const finalApiParams = {
         ...apiParams,
         ...(apiParams.organization_id && {
-          organization_id: (apiParams.organization_id),
+          organization_id: apiParams.organization_id,
         }),
         ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
       } as any;
@@ -303,9 +300,7 @@ const Users: React.FC = () => {
           // Apply organization filter
           if (organization_id) {
             filteredUsers = filteredUsers.filter(
-              user =>
-                (user.organization_id) ===
-                (organization_id)
+              user => user.organization_id === organization_id
             );
           }
 
@@ -359,19 +354,20 @@ const Users: React.FC = () => {
     try {
       const response = await apiHelpers.getDomains();
       // Fix: Use the correct response structure - domains are in response.data.domains
-      const allDomains = response.data.domains || (response.data as any).items || [];
-      
+      const allDomains =
+        response.data.domains || (response.data as any).items || [];
+
       // Group domains by organization_id
       const domainsByOrg: Record<string, Domain[]> = {};
-      
+
       allDomains.forEach(domain => {
-        const orgId = (domain.organization_id);
+        const orgId = domain.organization_id;
         if (!domainsByOrg[orgId]) {
           domainsByOrg[orgId] = [];
         }
         domainsByOrg[orgId].push(domain);
       });
-      
+
       setDomains(domainsByOrg);
     } catch (error) {
       console.error('Error fetching domains:', error);
@@ -962,7 +958,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     if (formData.organization_id) {
       const orgDomains = domains[formData.organization_id] || [];
       setAvailableDomains(orgDomains);
-      
+
       // Find the primary domain and set it as default
       const primaryDomain = orgDomains.find(domain => domain.is_primary);
       if (primaryDomain) {
@@ -1436,7 +1432,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   onClose,
   onSubmit,
   organizations,
-  domains,  
+  domains,
 }) => {
   const [formData, setFormData] = useState<UpdateUserRequest>({
     organization_id: user.organization_id || 0, // Ensure it's always a number
@@ -1448,7 +1444,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
-  const [selectedDomainId, setSelectedDomainId] = useState<number | null>(user.domain_id || null);
+  const [selectedDomainId, setSelectedDomainId] = useState<number | null>(
+    user.domain_id || null
+  );
 
   // Update available domains when organization changes
   useEffect(() => {
@@ -1459,8 +1457,6 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       setAvailableDomains([]);
     }
   }, [formData.organization_id, domains]);
-
-  
 
   const handleSubmit = async (): Promise<void> => {
     if (!formData.email?.trim() || !formData.organization_id) {
@@ -1512,7 +1508,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             <Select
               value={formData.organization_id || ''}
               onChange={e =>
-                setFormData({ ...formData, organization_id: Number(e.target.value) || 0 })
+                setFormData({
+                  ...formData,
+                  organization_id: Number(e.target.value) || 0,
+                })
               }
               label="Organization"
               data-testid={TestIds.users.editDialog.organization}
@@ -1525,7 +1524,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 <MenuItem
                   key={org.id}
                   value={org.id}
-                  data-testid={TestIds.users.editDialog.organizationOption(org.id)}
+                  data-testid={TestIds.users.editDialog.organizationOption(
+                    org.id
+                  )}
                 >
                   {org.name}
                 </MenuItem>

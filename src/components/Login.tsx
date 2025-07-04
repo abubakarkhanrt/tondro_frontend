@@ -93,7 +93,10 @@ const Login: React.FC = () => {
       // Transform user data to use numeric user_id
       const userData = {
         ...response.data.user,
-        user_id: (response.data.user as any).user_id === 'test-user-id' ? 10 : (response.data.user as any).user_id
+        user_id:
+          (response.data.user as any).user_id === 'test-user-id'
+            ? 10
+            : (response.data.user as any).user_id,
       };
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('user_email', formData.username); // Keep for backward compatibility
