@@ -964,7 +964,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         // Find the primary domain and set it as default
         const primaryDomain = orgDomains.find(domain => domain.is_primary);
         if (primaryDomain) {
-          setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
+          setFormData(prev => ({
+            ...prev,
+            domain_id: Number(primaryDomain.id),
+          }));
         } else if (orgDomains.length > 0) {
           // If no primary domain found, select the first domain
           setFormData(prev => ({
@@ -1447,20 +1450,20 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
-  
+
   // Find the domain assigned to this user from the domains API response
   const findUserAssignedDomain = (): number | null => {
     // Flatten all domains from all organizations
     const allDomains = Object.values(domains).flat();
-    
+
     // Find domain where user_id matches the current user's ID
-    const assignedDomain = allDomains.find(domain => 
-      domain.user_id === user.id
+    const assignedDomain = allDomains.find(
+      domain => domain.user_id === user.id
     );
-    
+
     return assignedDomain ? Number(assignedDomain.id) : null;
   };
-  
+
   const [selectedDomainId, setSelectedDomainId] = useState<number | null>(
     findUserAssignedDomain()
   );
@@ -1470,11 +1473,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     if (formData.organization_id) {
       const orgDomains = domains[formData.organization_id] || [];
       setAvailableDomains(orgDomains);
-      
+
       // If no domain is currently selected, try to find user's assigned domain in this organization
       if (!selectedDomainId) {
-        const userAssignedDomain = orgDomains.find(domain => 
-          domain.user_id === user.id
+        const userAssignedDomain = orgDomains.find(
+          domain => domain.user_id === user.id
         );
         if (userAssignedDomain) {
           setSelectedDomainId(Number(userAssignedDomain.id));

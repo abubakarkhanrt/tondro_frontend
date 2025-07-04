@@ -648,7 +648,10 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
         ...formData,
         user_id: undefined, // ← TESTING: Empty user_id
       };
-      console.log('🔍 TESTING: Sending update payload with empty user_id:', updatePayload);
+      console.log(
+        '🔍 TESTING: Sending update payload with empty user_id:',
+        updatePayload
+      );
       await onSubmit(updatePayload);
     } finally {
       setLoading(false);
@@ -710,9 +713,9 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
           disabled={loading}
           data-testid={TestIds.updateDomainButton}
         >
