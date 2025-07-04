@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 04-07-2025
+ * Last Updated: 05-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -113,23 +113,30 @@ const getDomainName = (
   user: User,
   domains: Record<string, Domain[]>
 ): string => {
-  // Since users don't have domain_id, show the primary domain for their organization
+  // Flatten all domains from all organizations to search for user's assigned domain
+  const allDomains = Object.values(domains).flat();
+  
+  // Find the domain assigned to this specific user
+  const userDomain = allDomains.find(domain => domain.user_id === user.id);
+  
+  if (userDomain) {
+    return userDomain.domain_name || 'Unknown';
+  }
+  
+  // Fallback: if no direct assignment, show primary domain for their organization
   const orgId = user.organization_id;
   const orgDomains = domains[orgId] || [];
-
-  // Find the primary domain for this organization
+  
   const primaryDomain = orgDomains.find(d => d.is_primary);
-
   if (primaryDomain) {
-    return primaryDomain.domain_name || primaryDomain.name || 'Unknown';
+    return primaryDomain.domain_name || 'Unknown';
   }
-
-  // If no primary domain, show the first available domain
+  
+  // Final fallback: first available domain for organization
   if (orgDomains.length > 0) {
-    const firstDomain = orgDomains[0];
-    return firstDomain?.domain_name || firstDomain?.name || 'Unknown';
+    return orgDomains[0]?.domain_name || 'Unknown';
   }
-
+  
   return 'N/A';
 };
 
@@ -379,19 +386,45 @@ const Users: React.FC = () => {
     formData: CreateUserRequest
   ): Promise<void> => {
     try {
-      await apiHelpers.createUser(formData);
+      // Step 1: Create user without domain_id
+      const userData = {
+        organization_id: formData.organization_id,
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        role: formData.role,
+      };
+
+      const userResponse = await apiHelpers.createUser(userData as any);
+      const newUserId = userResponse.data.id;
+
+      // Step 2: Update the selected domain with the new user_id
+      if (formData.domain_id) {
+        try {
+          await apiHelpers.updateDomain(String(formData.domain_id), {
+            user_id: newUserId,
+          });
+        } catch (domainError) {
+          console.error('Failed to assign domain to user:', domainError);
+          // Optionally delete the user if domain assignment fails
+          // await apiHelpers.deleteUser(newUserId);
+          throw new Error('User created but domain assignment failed');
+        }
+      }
+
       setSnackbar({
         open: true,
-        message: 'User created successfully',
+        message: 'User created and domain assigned successfully',
         severity: 'success',
       });
       setCreateDialogOpen(false);
       fetchUsers();
-    } catch (error) {
+      fetchDomains(); // Refresh domains to show updated user assignments
+    } catch (error: any) {
       console.error('Error creating user:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to create user',
+        message: error.message || 'Failed to create user',
         severity: 'error',
       });
     }
@@ -448,19 +481,53 @@ const Users: React.FC = () => {
     if (!selectedUser) return;
 
     try {
-      await apiHelpers.updateUser(selectedUser.id, formData);
+      // Step 1: Update user without domain_id - only include fields that have values
+      const userData: UpdateUserRequest = {};
+      
+      if (formData.organization_id !== undefined) {
+        userData.organization_id = formData.organization_id;
+      }
+      if (formData.email !== undefined) {
+        userData.email = formData.email;
+      }
+      if (formData.first_name !== undefined) {
+        userData.first_name = formData.first_name;
+      }
+      if (formData.last_name !== undefined) {
+        userData.last_name = formData.last_name;
+      }
+      if (formData.role !== undefined) {
+        userData.role = formData.role;
+      }
+      if (formData.status !== undefined) {
+        userData.status = formData.status;
+      }
+
+      await apiHelpers.updateUser(selectedUser.id, userData);
+
+      // Step 2: Handle domain assignment if domain selection changed
+      // Find the current domain assigned to this user
+      //const allDomains = Object.values(domains).flat();
+      //const currentUserDomain = allDomains.find(domain => domain.user_id === selectedUser.id);
+      
+      // Get the selected domain from the edit dialog state
+      // We need to access the selectedDomainId from the EditUserDialog component
+      // For now, we'll handle this in the EditUserDialog's handleSubmit
+      
       setSnackbar({
         open: true,
         message: 'User updated successfully',
         severity: 'success',
       });
       setSelectedUser(null);
+      setEditMode(false);
       fetchUsers();
-    } catch (error) {
+      fetchDomains(); // Refresh domains to show updated user assignments
+    } catch (error: any) {
       console.error('Error updating user:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to update user',
+        message: error.message || 'Failed to update user',
         severity: 'error',
       });
     }
@@ -1110,13 +1177,13 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 domainsLoading
                   ? ''
                   : availableDomains.length > 0
-                    ? formData.domain_id
+                    ? String(formData.domain_id || '')
                     : ''
               }
               onChange={e =>
                 setFormData({
                   ...formData,
-                  domain_id: e.target.value as number,
+                  domain_id: Number(e.target.value),
                 })
               }
               label="Domain"

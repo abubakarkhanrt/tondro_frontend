@@ -138,6 +138,8 @@ const API_ENDPOINTS = {
   // Product Tiers
   PRODUCT_TIERS: {
     BASE: buildCrmEndpoint('/product-tiers'),
+    BY_PRODUCT: (productId: string): string =>
+      buildCrmEndpoint(`/products/${productId}/tiers`),
     BY_PRODUCT_AND_TIER: (productId: string, tierName: string): string =>
       buildCrmEndpoint(`/product-tiers/${productId}/${tierName}`),
   },
@@ -869,6 +871,16 @@ export const apiHelpers = {
     AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
   > =>
     api.get(API_ENDPOINTS.PRODUCT_TIERS.BASE, {
+      signal: signal as GenericAbortSignal,
+    }),
+
+  getProductTiersByProduct: (
+    productId: string,
+    signal?: AbortSignal
+  ): Promise<
+    AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
+  > =>
+    api.get(API_ENDPOINTS.PRODUCT_TIERS.BY_PRODUCT(productId), {
       signal: signal as GenericAbortSignal,
     }),
 

@@ -200,7 +200,7 @@ export interface CreateUserRequest {
   last_name: string;
   role: 'super_admin' | 'tenant_admin';
   organization_id: number;
-  domain_id: number;
+  domain_id?: number; // Made optional since we handle it separately
 }
 
 export interface UpdateUserRequest {
