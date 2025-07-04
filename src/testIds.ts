@@ -386,6 +386,7 @@ export const TestIds = {
   domainNameInput: 'domain-name-input',
   createDomainButton: 'create-domain-button',
   editDomainButton: 'edit-domain-button',
+  updateDomainButton: 'update-domain-button',
   deleteDomainButton: 'delete-domain-button',
   addSubdomainButton: 'add-subdomain-button',
   domainManagementSection: 'domain-management-section',

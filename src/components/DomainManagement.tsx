@@ -265,6 +265,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
                               setSelectedDomain(domain);
                               setEditDialogOpen(true);
                             }}
+                            data-testid={TestIds.editDomainButton}
                           >
                             <EditIcon />
                           </IconButton>
@@ -609,9 +610,46 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    // TESTING: Pass empty user_id instead of getting current user ID
+    // const getCurrentUserId = (): number | undefined => {
+    //   try {
+    //     const userStr = localStorage.getItem('user');
+    //     if (userStr) {
+    //       const user = JSON.parse(userStr);
+    //       if (user.user_id) {
+    //         if (typeof user.user_id === 'number') {
+    //           return user.user_id;
+    //         }
+    //         const numericMatch = user.user_id.match(/\d+/);
+    //         if (numericMatch) {
+    //           return parseInt(numericMatch[0], 10);
+    //         }
+    //       }
+    //       if (user.id) {
+    //         return parseInt(user.id, 10);
+    //       }
+    //     }
+    //   } catch (error) {
+    //     console.error('Error parsing user from localStorage:', error);
+    //   }
+    //   return undefined;
+    // };
+
+    // const currentUserId = getCurrentUserId();
+    // if (!currentUserId) {
+    //   console.error('User ID not found for domain update');
+    //   return;
+    // }
+
     setLoading(true);
     try {
-      await onSubmit(formData);
+      // TESTING: Pass empty user_id instead of current user ID
+      const updatePayload = {
+        ...formData,
+        user_id: undefined, // ← TESTING: Empty user_id
+      };
+      console.log('🔍 TESTING: Sending update payload with empty user_id:', updatePayload);
+      await onSubmit(updatePayload);
     } finally {
       setLoading(false);
     }
@@ -672,7 +710,12 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained" 
+          disabled={loading}
+          data-testid={TestIds.updateDomainButton}
+        >
           {loading ? <CircularProgress size={20} /> : 'Update'}
         </Button>
       </DialogActions>

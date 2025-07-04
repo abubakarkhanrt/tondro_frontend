@@ -959,19 +959,22 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       const orgDomains = domains[formData.organization_id] || [];
       setAvailableDomains(orgDomains);
 
-      // Find the primary domain and set it as default
-      const primaryDomain = orgDomains.find(domain => domain.is_primary);
-      if (primaryDomain) {
-        setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
-      } else if (orgDomains.length > 0) {
-        // If no primary domain found, select the first domain
-        setFormData(prev => ({
-          ...prev,
-          domain_id: Number(orgDomains[0]?.id || 0),
-        }));
-      } else {
-        // No domains available
-        setFormData(prev => ({ ...prev, domain_id: 0 }));
+      // Only set default domain if no domain is currently selected
+      if (!formData.domain_id) {
+        // Find the primary domain and set it as default
+        const primaryDomain = orgDomains.find(domain => domain.is_primary);
+        if (primaryDomain) {
+          setFormData(prev => ({ ...prev, domain_id: Number(primaryDomain.id) }));
+        } else if (orgDomains.length > 0) {
+          // If no primary domain found, select the first domain
+          setFormData(prev => ({
+            ...prev,
+            domain_id: Number(orgDomains[0]?.id || 0),
+          }));
+        } else {
+          // No domains available
+          setFormData(prev => ({ ...prev, domain_id: 0 }));
+        }
       }
     } else {
       setAvailableDomains([]);
@@ -1435,17 +1438,31 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   domains,
 }) => {
   const [formData, setFormData] = useState<UpdateUserRequest>({
-    organization_id: user.organization_id || 0, // Ensure it's always a number
+    organization_id: user.organization_id || 0,
     email: user.email,
     first_name: user.first_name || '',
     last_name: user.last_name || '',
-    role: user.role, // Use the original role value directly
-    status: user.status, // Add status to form data
+    role: user.role,
+    status: user.status,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
+  
+  // Find the domain assigned to this user from the domains API response
+  const findUserAssignedDomain = (): number | null => {
+    // Flatten all domains from all organizations
+    const allDomains = Object.values(domains).flat();
+    
+    // Find domain where user_id matches the current user's ID
+    const assignedDomain = allDomains.find(domain => 
+      domain.user_id === user.id
+    );
+    
+    return assignedDomain ? Number(assignedDomain.id) : null;
+  };
+  
   const [selectedDomainId, setSelectedDomainId] = useState<number | null>(
-    user.domain_id || null
+    findUserAssignedDomain()
   );
 
   // Update available domains when organization changes
@@ -1453,10 +1470,20 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     if (formData.organization_id) {
       const orgDomains = domains[formData.organization_id] || [];
       setAvailableDomains(orgDomains);
+      
+      // If no domain is currently selected, try to find user's assigned domain in this organization
+      if (!selectedDomainId) {
+        const userAssignedDomain = orgDomains.find(domain => 
+          domain.user_id === user.id
+        );
+        if (userAssignedDomain) {
+          setSelectedDomainId(Number(userAssignedDomain.id));
+        }
+      }
     } else {
       setAvailableDomains([]);
     }
-  }, [formData.organization_id, domains]);
+  }, [formData.organization_id, domains, user.id, selectedDomainId]);
 
   const handleSubmit = async (): Promise<void> => {
     if (!formData.email?.trim() || !formData.organization_id) {

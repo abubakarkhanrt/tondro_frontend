@@ -43,6 +43,7 @@ export interface Domain {
   dns_settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  user_id?: number | null; // Add this field
 }
 
 export interface CreateDomainRequest {
@@ -57,6 +58,7 @@ export interface UpdateDomainRequest {
   domain_name?: string;
   is_primary?: boolean | number;
   status?: 'active' | 'inactive' | 'pending';
+  user_id?: number | undefined; // Add user_id for consistency with CreateDomainRequest
 }
 
 export interface DomainResponse {

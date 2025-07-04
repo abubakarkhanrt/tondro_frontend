@@ -318,7 +318,8 @@ const Organizations: React.FC = () => {
 
         // Try to extract numeric part from the user ID
         let createdByValue: number | undefined;
-        const numericMatch = userId.match(/\d+/);
+        const userIdString = String(userId); // Convert to string first
+        const numericMatch = userIdString.match(/\d+/);
         if (numericMatch) {
           createdByValue = parseInt(numericMatch[0], 10);
           console.log('✅ Extracted numeric user ID:', createdByValue);
