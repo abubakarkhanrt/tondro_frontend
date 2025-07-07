@@ -244,9 +244,10 @@ const Users: React.FC = () => {
       // Convert parameters for API compatibility
       const finalApiParams = {
         ...apiParams,
-        ...(apiParams.organization_id !== null && apiParams.organization_id !== undefined && {
-          organization_id: apiParams.organization_id,
-        }),
+        ...(apiParams.organization_id !== null &&
+          apiParams.organization_id !== undefined && {
+            organization_id: apiParams.organization_id,
+          }),
         ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
       } as any;
 
@@ -457,9 +458,9 @@ const Users: React.FC = () => {
   };
 
   const handleFilterChange = (field: string, value: string | number): void => {
-    setFilters(prev => ({ 
-      ...prev, 
-      [field]: field === 'organization_id' && value === 0 ? null : value 
+    setFilters(prev => ({
+      ...prev,
+      [field]: field === 'organization_id' && value === 0 ? null : value,
     }));
     setPagination(prev => ({ ...prev, page: 0 }));
   };
