@@ -4,7 +4,7 @@
  * Description: Domain management component for organizations
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 04-07-2025
+ * Last Updated: 07-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -403,11 +403,17 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
           if (typeof user.user_id === 'number') {
             return user.user_id;
           }
-          const numericMatch = user.user_id.match(/\d+/);
-          if (numericMatch) {
-            const userId = parseInt(numericMatch[0], 10);
-            console.log('Extracted user ID from string:', userId);
-            return userId;
+          // Handle string user IDs - try to extract numeric part first
+          if (typeof user.user_id === 'string') {
+            const numericMatch = user.user_id.match(/\d+/);
+            if (numericMatch) {
+              const userId = parseInt(numericMatch[0], 10);
+              console.log('Extracted user ID from string:', userId);
+              return userId;
+            }
+            // If no numeric part found, use fixed value of 10
+            console.log('Using fixed user ID: 10');
+            return 10;
           }
         }
 
@@ -568,6 +574,54 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   domain,
   validateDomainName,
 }) => {
+  // Get current user from localStorage with improved extraction
+  const getCurrentUserId = (): number | undefined => {
+    try {
+      const userStr = localStorage.getItem('user');
+      console.log('User string from localStorage:', userStr);
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        console.log('Parsed user object:', user);
+
+        // Try multiple possible user ID fields
+        if (user.user_id) {
+          console.log(
+            'Found user_id:',
+            user.user_id,
+            'Type:',
+            typeof user.user_id
+          );
+          // Handle string format like "user_123" or direct number
+          if (typeof user.user_id === 'number') {
+            return user.user_id;
+          }
+          // Handle string user IDs - try to extract numeric part first
+          if (typeof user.user_id === 'string') {
+            const numericMatch = user.user_id.match(/\d+/);
+            if (numericMatch) {
+              const userId = parseInt(numericMatch[0], 10);
+              console.log('Extracted user ID from string:', userId);
+              return userId;
+            }
+            // If no numeric part found, use fixed value of 10
+            console.log('Using fixed user ID: 10');
+            return 10;
+          }
+        }
+
+        // Fallback to id field
+        if (user.id) {
+          console.log('Found id field:', user.id, 'Type:', typeof user.id);
+          return parseInt(user.id, 10);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+    }
+    console.log('No user ID found');
+    return undefined;
+  };
+
   const [formData, setFormData] = useState<UpdateDomainRequest>({
     domain_name: '',
     is_primary: false,
@@ -610,48 +664,20 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    // TESTING: Pass empty user_id instead of getting current user ID
-    // const getCurrentUserId = (): number | undefined => {
-    //   try {
-    //     const userStr = localStorage.getItem('user');
-    //     if (userStr) {
-    //       const user = JSON.parse(userStr);
-    //       if (user.user_id) {
-    //         if (typeof user.user_id === 'number') {
-    //           return user.user_id;
-    //         }
-    //         const numericMatch = user.user_id.match(/\d+/);
-    //         if (numericMatch) {
-    //           return parseInt(numericMatch[0], 10);
-    //         }
-    //       }
-    //       if (user.id) {
-    //         return parseInt(user.id, 10);
-    //       }
-    //     }
-    //   } catch (error) {
-    //     console.error('Error parsing user from localStorage:', error);
-    //   }
-    //   return undefined;
-    // };
-
-    // const currentUserId = getCurrentUserId();
-    // if (!currentUserId) {
-    //   console.error('User ID not found for domain update');
-    //   return;
-    // }
+    const currentUserId = getCurrentUserId();
+    console.log('Current user ID for update:', currentUserId);
+    if (!currentUserId) {
+      console.error('User ID not found for domain update');
+      return;
+    }
 
     setLoading(true);
     try {
-      // TESTING: Pass empty user_id instead of current user ID
       const updatePayload = {
         ...formData,
-        user_id: undefined, // ← TESTING: Empty user_id
+        user_id: currentUserId, // Use the actual user ID
       };
-      console.log(
-        '🔍 TESTING: Sending update payload with empty user_id:',
-        updatePayload
-      );
+      console.log('Sending update payload with user_id:', updatePayload);
       await onSubmit(updatePayload);
     } finally {
       setLoading(false);

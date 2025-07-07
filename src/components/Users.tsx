@@ -4,7 +4,7 @@
  * Description: Users management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 05-07-2025
+ * Last Updated: 07-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -157,7 +157,7 @@ const Users: React.FC = () => {
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [filters, setFilters] = useState({
-    organization_id: 0, // Changed from string to number
+    organization_id: null as number | null, // Changed from 0 to null
     role: '',
     status: '',
     search: '',
@@ -244,7 +244,7 @@ const Users: React.FC = () => {
       // Convert parameters for API compatibility
       const finalApiParams = {
         ...apiParams,
-        ...(apiParams.organization_id && {
+        ...(apiParams.organization_id !== null && apiParams.organization_id !== undefined && {
           organization_id: apiParams.organization_id,
         }),
         ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
@@ -457,7 +457,10 @@ const Users: React.FC = () => {
   };
 
   const handleFilterChange = (field: string, value: string | number): void => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    setFilters(prev => ({ 
+      ...prev, 
+      [field]: field === 'organization_id' && value === 0 ? null : value 
+    }));
     setPagination(prev => ({ ...prev, page: 0 }));
   };
 
@@ -535,7 +538,7 @@ const Users: React.FC = () => {
 
   const handleClearFilters = () => {
     setFilters({
-      organization_id: 0, // Changed from string to number
+      organization_id: null, // Changed from 0 to null
       role: '',
       status: '',
       search: '',
@@ -655,7 +658,7 @@ export default Users;
 
 interface FilterSectionProps {
   filters: {
-    organization_id: number; // Changed from string to number
+    organization_id: number | null; // Changed from number to number | null
     role: string;
     status: string;
     search: string;
@@ -730,7 +733,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <OrganizationsDropdown
-              value={filters.organization_id}
+              value={filters.organization_id || 0}
               onChange={value => handleFilterChange('organization_id', value)}
               label="Organization"
               testIdPrefix="filter-form-organization"
