@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 04-07-2025
+ * Last Updated: 08-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -294,6 +294,9 @@ export const TestIds = {
     submitButton: 'transcripts-submit-button',
     clearButton: 'transcripts-clear-button',
     responseDisplay: 'transcripts-response-display',
+    progressBar: 'transcripts-progress-bar',
+    detailedResultsButton: 'transcripts-detailed-results-button',
+    retryButton: 'transcripts-retry-button',
 
     // Processing Information
     processingInfo: {
