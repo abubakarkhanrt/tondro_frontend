@@ -28,6 +28,10 @@ const Navigation: React.FC = () => {
   }, []);
 
   const handleLogout = (): void => {
+    // Clear all token formats for backward compatibility
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token_type');
+    localStorage.removeItem('user');
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('user_email');
     forceUpdate({});
@@ -47,7 +51,7 @@ const Navigation: React.FC = () => {
   ];
 
   const token =
-    typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
   return (
     <AppBar position="static">

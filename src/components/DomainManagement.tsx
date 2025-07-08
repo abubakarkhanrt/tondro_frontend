@@ -4,7 +4,7 @@
  * Description: Domain management component for organizations
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 23-06-2025
+ * Last Updated: 07-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -76,11 +76,21 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
     setError('');
     try {
       const response = await apiHelpers.getOrganizationDomains(organizationId);
-      // Handle the API response structure: { organization_id, total_domains, domains: [...] }
-      const domainsData = response.data?.domains || [];
-      // Ensure domains is always an array
-      const domainsArray = Array.isArray(domainsData) ? domainsData : [];
-      setDomains(domainsArray);
+      // Handle the new paginated API response structure
+      const responseData = response.data as any;
+      if (
+        responseData &&
+        responseData.items &&
+        Array.isArray(responseData.items)
+      ) {
+        // Extract domains from the paginated response
+        const domainsArray = responseData.items;
+        setDomains(domainsArray);
+      } else {
+        // Fallback for unexpected response format
+        console.warn('Unexpected domains response format:', responseData);
+        setDomains([]);
+      }
     } catch (error: any) {
       console.error('Error fetching domains:', error);
       setError(error.response?.data?.message || 'Failed to fetch domains');
@@ -255,6 +265,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
                               setSelectedDomain(domain);
                               setEditDialogOpen(true);
                             }}
+                            data-testid={TestIds.editDomainButton}
                           >
                             <EditIcon />
                           </IconButton>
@@ -311,6 +322,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
         onSubmit={handleCreateDomain}
         organizationId={organizationId}
         validateDomainName={validateDomainName}
+        setSnackbar={setSnackbar}
       />
 
       {/* Edit Domain Dialog */}
@@ -355,6 +367,11 @@ interface CreateDomainDialogProps {
   onSubmit: (data: CreateDomainRequest) => Promise<void>;
   organizationId: string;
   validateDomainName: (name: string) => boolean;
+  setSnackbar: (snackbar: {
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  }) => void;
 }
 
 const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
@@ -363,11 +380,61 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   onSubmit,
   organizationId,
   validateDomainName,
+  setSnackbar,
 }) => {
+  // Get current user from localStorage with improved extraction
+  const getCurrentUserId = (): number | undefined => {
+    try {
+      const userStr = localStorage.getItem('user');
+      console.log('User string from localStorage:', userStr);
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        console.log('Parsed user object:', user);
+
+        // Try multiple possible user ID fields
+        if (user.user_id) {
+          console.log(
+            'Found user_id:',
+            user.user_id,
+            'Type:',
+            typeof user.user_id
+          );
+          // Handle string format like "user_123" or direct number
+          if (typeof user.user_id === 'number') {
+            return user.user_id;
+          }
+          // Handle string user IDs - try to extract numeric part first
+          if (typeof user.user_id === 'string') {
+            const numericMatch = user.user_id.match(/\d+/);
+            if (numericMatch) {
+              const userId = parseInt(numericMatch[0], 10);
+              console.log('Extracted user ID from string:', userId);
+              return userId;
+            }
+            // If no numeric part found, use fixed value of 10
+            console.log('Using fixed user ID: 10');
+            return 10;
+          }
+        }
+
+        // Fallback to id field
+        if (user.id) {
+          console.log('Found id field:', user.id, 'Type:', typeof user.id);
+          return parseInt(user.id, 10);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+    }
+    console.log('No user ID found');
+    return undefined;
+  };
+
   const [formData, setFormData] = useState<CreateDomainRequest>({
     organization_id: organizationId,
-    name: '',
+    domain_name: '',
     is_primary: false,
+    user_id: getCurrentUserId(),
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -383,10 +450,10 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Domain name is required';
-    } else if (!validateDomainName(formData.name)) {
-      newErrors.name = 'Please enter a valid domain name';
+    if (!formData.domain_name.trim()) {
+      newErrors.domain_name = 'Domain name is required';
+    } else if (!validateDomainName(formData.domain_name)) {
+      newErrors.domain_name = 'Please enter a valid domain name';
     }
 
     setErrors(newErrors);
@@ -396,13 +463,31 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    const currentUserId = getCurrentUserId();
+    console.log('Current user ID:', currentUserId);
+    if (!currentUserId) {
+      setSnackbar({
+        open: true,
+        message: 'User ID not found. Please log in again.',
+        severity: 'error',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSubmit(formData);
+      // Ensure user_id is included in the payload
+      const payload = {
+        ...formData,
+        user_id: currentUserId, // Get fresh user ID
+      };
+      console.log('Sending payload:', payload);
+      await onSubmit(payload);
       setFormData({
         organization_id: organizationId,
-        name: '',
+        domain_name: '',
         is_primary: false,
+        user_id: currentUserId,
       });
       setErrors({});
     } finally {
@@ -413,8 +498,9 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const handleClose = () => {
     setFormData({
       organization_id: organizationId,
-      name: '',
+      domain_name: '',
       is_primary: false,
+      user_id: getCurrentUserId(),
     });
     setErrors({});
     onClose();
@@ -429,11 +515,11 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
             <TextField
               fullWidth
               label="Domain Name"
-              value={formData.name}
-              onChange={e => handleChange('name', e.target.value)}
-              error={!!errors.name}
+              value={formData.domain_name}
+              onChange={e => handleChange('domain_name', e.target.value)}
+              error={!!errors.domain_name}
               helperText={
-                errors.name || 'Enter domain name (e.g., company.com)'
+                errors.domain_name || 'Enter domain name (e.g., company.com)'
               }
               disabled={loading}
               data-testid={TestIds.domainNameInput}
@@ -462,7 +548,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={loading || !formData.name.trim()}
+          disabled={loading || !formData.domain_name.trim()}
           data-testid={TestIds.createDomainButton}
         >
           {loading ? <CircularProgress size={20} /> : 'Create'}
@@ -488,8 +574,56 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   domain,
   validateDomainName,
 }) => {
+  // Get current user from localStorage with improved extraction
+  const getCurrentUserId = (): number | undefined => {
+    try {
+      const userStr = localStorage.getItem('user');
+      console.log('User string from localStorage:', userStr);
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        console.log('Parsed user object:', user);
+
+        // Try multiple possible user ID fields
+        if (user.user_id) {
+          console.log(
+            'Found user_id:',
+            user.user_id,
+            'Type:',
+            typeof user.user_id
+          );
+          // Handle string format like "user_123" or direct number
+          if (typeof user.user_id === 'number') {
+            return user.user_id;
+          }
+          // Handle string user IDs - try to extract numeric part first
+          if (typeof user.user_id === 'string') {
+            const numericMatch = user.user_id.match(/\d+/);
+            if (numericMatch) {
+              const userId = parseInt(numericMatch[0], 10);
+              console.log('Extracted user ID from string:', userId);
+              return userId;
+            }
+            // If no numeric part found, use fixed value of 10
+            console.log('Using fixed user ID: 10');
+            return 10;
+          }
+        }
+
+        // Fallback to id field
+        if (user.id) {
+          console.log('Found id field:', user.id, 'Type:', typeof user.id);
+          return parseInt(user.id, 10);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+    }
+    console.log('No user ID found');
+    return undefined;
+  };
+
   const [formData, setFormData] = useState<UpdateDomainRequest>({
-    name: '',
+    domain_name: '',
     is_primary: false,
     status: 'active',
   });
@@ -500,7 +634,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   React.useEffect(() => {
     if (domain) {
       setFormData({
-        name: domain.name || domain.domain_name || '',
+        domain_name: domain.name || domain.domain_name || '',
         is_primary: Boolean(domain.is_primary),
         status: domain.status,
       });
@@ -517,10 +651,10 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name?.trim()) {
-      newErrors.name = 'Domain name is required';
-    } else if (!validateDomainName(formData.name)) {
-      newErrors.name = 'Please enter a valid domain name';
+    if (!formData.domain_name?.trim()) {
+      newErrors.domain_name = 'Domain name is required';
+    } else if (!validateDomainName(formData.domain_name)) {
+      newErrors.domain_name = 'Please enter a valid domain name';
     }
 
     setErrors(newErrors);
@@ -530,9 +664,21 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    const currentUserId = getCurrentUserId();
+    console.log('Current user ID for update:', currentUserId);
+    if (!currentUserId) {
+      console.error('User ID not found for domain update');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSubmit(formData);
+      const updatePayload = {
+        ...formData,
+        user_id: currentUserId, // Use the actual user ID
+      };
+      console.log('Sending update payload with user_id:', updatePayload);
+      await onSubmit(updatePayload);
     } finally {
       setLoading(false);
     }
@@ -554,14 +700,14 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
             <TextField
               fullWidth
               label="Domain Name"
-              value={formData.name}
-              onChange={e => handleChange('name', e.target.value)}
-              error={!!errors.name}
-              helperText={errors.name}
+              value={formData.domain_name}
+              onChange={e => handleChange('domain_name', e.target.value)}
+              error={!!errors.domain_name}
+              helperText={errors.domain_name}
               disabled={loading}
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={12} sx={{ display: 'none' }}>
             <FormControlLabel
               control={
                 <Switch
@@ -573,7 +719,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
               label="Primary Domain"
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid item xs={12} sx={{ display: 'none' }}>
             <TextField
               select
               fullWidth
@@ -593,7 +739,12 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          data-testid={TestIds.updateDomainButton}
+        >
           {loading ? <CircularProgress size={20} /> : 'Update'}
         </Button>
       </DialogActions>

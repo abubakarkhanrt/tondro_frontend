@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const router = useRouter();
   const token =
-    typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
   useEffect(() => {
     if (!token) {

@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 25-06-2025
+ * Last Updated: 04-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -43,19 +43,22 @@ export interface Domain {
   dns_settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  user_id?: number | null; // Add this field
 }
 
 export interface CreateDomainRequest {
   organization_id: string;
-  name: string;
+  domain_name: string;
   parent_domain_id?: string;
   is_primary?: boolean;
+  user_id?: number | undefined; // Allow undefined
 }
 
 export interface UpdateDomainRequest {
-  name?: string;
+  domain_name?: string;
   is_primary?: boolean | number;
   status?: 'active' | 'inactive' | 'pending';
+  user_id?: number | undefined; // Add user_id for consistency with CreateDomainRequest
 }
 
 export interface DomainResponse {
@@ -71,19 +74,18 @@ export interface OrganizationDomainsResponse {
   domains: Domain[];
 }
 
+// New interface for the updated API response format
+export interface OrganizationDomainsArrayResponse extends Array<Domain> {}
+
 export interface Organization {
-  organizationId: string;
-  tenantName: string;
-  organizationDomain: string;
-  status: 'Active' | 'Suspended' | 'Trial' | 'Inactive';
-  subscriptionTier: string;
-  subscriptions: Subscription[];
-  contractAnniversaryDate: string;
-  totalUsers: number;
-  totalJobs: number;
-  usageAgainstLimit: string;
-  createdAt: string;
-  domains?: Domain[];
+  // New format fields (required)
+  id: number; // Changed from optional to required
+  name: string; // Changed from optional to required
+  domain: string | null; // Changed from optional to required
+  status: 'active' | 'inactive' | 'pending'; // Changed from optional to required
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
 }
 
 export interface OrganizationsResponse {
@@ -106,28 +108,33 @@ export interface ProductSubscriptionRequest {
   product_id: string;
   tier_name: string;
   auto_renewal?: boolean;
-  ends_at: string; // Contract anniversary date in YYYY-MM-DD format
+  starts_at: string; // Start date in YYYY-MM-DD format
+  ends_at: string; // End date in YYYY-MM-DD format (calculated as start_date + 1 year)
 }
 
 export interface CreateOrganizationRequest {
-  tenantName: string;
-  organizationDomain: string; // Primary domain (e.g., 'company.com')
-  initialAdminEmail: string; // Email for initial admin user
-  initialSubscriptions: ProductSubscriptionRequest[]; // Initial product subscriptions
-  initialStatus?: 'Active' | 'Inactive' | 'Suspended' | 'Trial'; // Default: "Active"
+  name: string; // Changed from tenantName
+  domain: string; // Changed from organizationDomain
+  initialAdminEmail: string;
+  initialStatus?: 'Active' | 'Inactive' | 'Pending';
 }
 
 export interface CreateOrganizationResponse {
-  organizationId: string;
-  tenantName: string;
-  adminUserId: string;
+  id: number;
+  name: string;
+  domain: string;
   status: string;
+  settings: Record<string, unknown>;
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UpdateOrganizationRequest {
-  tenantName?: string;
-  organizationDomain?: string;
-  status?: 'Active' | 'Suspended' | 'Trial' | 'Inactive';
+  name?: string;
+  domain?: string;
+  status?: 'Active' | 'Pending' | 'Inactive';
   contractAnniversaryDate?: string;
 }
 
@@ -139,6 +146,27 @@ export interface OrganizationMetrics {
   subscriptions_count?: number;
   subscription_count?: number;
   error?: string;
+}
+
+// New interface for the updated organization format
+export interface OrganizationV2 {
+  id: number;
+  name: string;
+  domain: string | null;
+  status: 'active' | 'inactive' | 'pending';
+  subscription_count: number;
+  user_count: number;
+  created_at: string;
+}
+
+export interface OrganizationsV2Response {
+  items: OrganizationV2[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
 }
 
 // ────────────────────────────────────────
@@ -154,20 +182,14 @@ export interface UserRoles {
 // ────────────────────────────────────────
 
 export interface User {
-  id: string;
+  id: number; // Changed from string to number
   email: string;
   first_name: string;
   last_name: string;
-  role:
-    | 'admin'
-    | 'user'
-    | 'viewer'
-    | 'tenant_admin'
-    | 'tenant_support'
-    | 'tenant_user';
+  role: 'super_admin' | 'tenant_admin';
   status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
-  organization_id: string;
-  domain_id?: number; // Optional field in response
+  organization_id: number;
+  domain_id?: number;
   created_at: string;
   updated_at: string;
 }
@@ -176,30 +198,18 @@ export interface CreateUserRequest {
   email: string;
   first_name: string;
   last_name: string;
-  role:
-    | 'admin'
-    | 'user'
-    | 'viewer'
-    | 'tenant_admin'
-    | 'tenant_support'
-    | 'tenant_user';
-  organization_id: string;
-  domain_id: number; // Required field for user creation
+  role: 'super_admin' | 'tenant_admin';
+  organization_id: number;
+  domain_id?: number; // Made optional since we handle it separately
 }
 
 export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role?:
-    | 'admin'
-    | 'user'
-    | 'viewer'
-    | 'tenant_admin'
-    | 'tenant_support'
-    | 'tenant_user';
+  role?: 'super_admin' | 'tenant_admin';
   status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
-  organization_id?: string;
+  organization_id?: number;
 }
 
 // ────────────────────────────────────────
@@ -217,9 +227,13 @@ export interface Subscription {
     | 'expired'
     | 'cancelled'
     | 'suspended';
-  tier_name: string;
+  // Support both old and new field names for backward compatibility
+  tier_name?: string;
+  tier?: string;
   current_usage: number;
-  max_limit: number;
+  // Support both old and new field names for backward compatibility
+  max_limit?: number;
+  usage_limit?: number;
   auto_renewal: boolean;
   starts_at: string;
   ends_at: string | null;
@@ -232,7 +246,7 @@ export interface Subscription {
 export interface CreateSubscriptionRequest {
   organization_id: number;
   product_id: string;
-  tier_name: string;
+  tier: string;
   auto_renewal: boolean;
   starts_at?: string;
   ends_at?: string | null;
@@ -246,7 +260,7 @@ export interface UpdateSubscriptionRequest {
     | 'expired'
     | 'cancelled'
     | 'suspended';
-  tier_name?: string;
+  tier?: string;
   auto_renewal?: boolean;
   ends_at?: string | null;
 }
@@ -304,12 +318,18 @@ export interface PaginatedSubscriptionsResponse {
 // ────────────────────────────────────────
 
 export interface Product {
-  id: string;
+  id: string | number;
   name: string;
-  description: string;
-  price: number;
-  currency: string;
-  status: 'Active' | 'Inactive';
+  display_name?: string; // Optional for backward compatibility
+  product_type?: string; // Optional for backward compatibility
+  description: string | null;
+  is_active?: boolean; // Optional for backward compatibility
+  features?: any[]; // Optional for backward compatibility
+  settings?: Record<string, any>; // Optional for backward compatibility
+  // Keep existing fields for backward compatibility
+  price?: number;
+  currency?: string;
+  status?: 'Active' | 'Inactive';
   created_at: string;
   updated_at: string;
 }
@@ -473,15 +493,18 @@ export interface TableProps<T> {
 // ────────────────────────────────────────
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface LoginResponse {
-  token: string;
-  token_type?: string;
+  access_token: string;
+  token_type: string;
   expires_in: number;
-  user?: User;
+  user: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface AuthContextType {
@@ -585,3 +608,14 @@ export interface SummaryCardProps {
 // ──────────────────────────────────────────────────
 // End of File: client/src/types/index.ts
 // ──────────────────────────────────────────────────
+
+// Add new interface for the products API response
+export interface ProductsResponse {
+  success: boolean;
+  message: string;
+  products: Product[];
+  total: number;
+}
+
+// Add legacy response type for backward compatibility
+export interface ProductsLegacyResponse extends Array<Product> {}

@@ -4,7 +4,7 @@
  * Description: Products management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 26-06-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -43,6 +43,7 @@ import {
   type Product,
   type CreateProductRequest,
   type UpdateProductRequest,
+  type ProductsResponse,
 } from '../types';
 import axios from 'axios';
 import { TestIds } from '../testIds';
@@ -91,7 +92,7 @@ const Products: React.FC = () => {
   useEffect(() => {
     // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         fetchProducts();
       } else {
@@ -124,7 +125,7 @@ const Products: React.FC = () => {
 
     try {
       // Double-check token before making request
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         setError('Authentication token not found. Please login again.');
         setLoading(false);
@@ -132,10 +133,30 @@ const Products: React.FC = () => {
       }
 
       const response = await apiHelpers.getProducts(controller.signal);
-      setProducts(response.data || []);
+      const responseData = response.data;
+
+      let productsArray: Product[];
+      let totalCount: number;
+
+      // Check if response is in new format (has success property)
+      if (
+        responseData &&
+        typeof responseData === 'object' &&
+        'success' in responseData
+      ) {
+        const productsResponse = responseData as ProductsResponse;
+        productsArray = productsResponse.products || [];
+        totalCount = productsResponse.total || 0;
+      } else {
+        // Legacy format - direct array
+        productsArray = responseData as Product[];
+        totalCount = productsArray.length;
+      }
+
+      setProducts(productsArray);
       setPagination(prev => ({
         ...prev,
-        total: response.data.length || 0,
+        total: totalCount,
       }));
     } catch (error: any) {
       // Don't show error for cancelled requests
@@ -195,9 +216,11 @@ const Products: React.FC = () => {
     formData: UpdateProductRequest
   ): Promise<void> => {
     if (!selectedProduct) return;
-
+    // log formdata and selectedProduct
+    console.log('formData', formData);
+    console.log('selectedProduct', selectedProduct);
     try {
-      await apiHelpers.updateProduct(selectedProduct.id, formData);
+      await apiHelpers.updateProduct(selectedProduct.id as number, formData);
       setSnackbar({
         open: true,
         message: 'Product updated successfully',
@@ -272,7 +295,9 @@ const Products: React.FC = () => {
                           {product.name}
                         </Typography>
                       </TableCell>
-                      <TableCell>{product.description}</TableCell>
+                      <TableCell>
+                        {product.description || 'No description provided'}
+                      </TableCell>
                       <TableCell>
                         {new Date(product.created_at).toLocaleDateString()}
                       </TableCell>
@@ -285,7 +310,7 @@ const Products: React.FC = () => {
                               setEditMode(false);
                             }}
                             data-testid={TestIds.products.viewDetails(
-                              product.id
+                              product.id as number
                             )}
                           >
                             <VisibilityIcon />
@@ -296,7 +321,9 @@ const Products: React.FC = () => {
                               setSelectedProduct(product);
                               setEditMode(true);
                             }}
-                            data-testid={TestIds.products.edit(product.id)}
+                            data-testid={TestIds.products.edit(
+                              product.id as number
+                            )}
                           >
                             <EditIcon />
                           </IconButton>
@@ -526,7 +553,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
       data-testid={TestIds.products.viewDialog.container}
     >
       <DialogTitle data-testid={TestIds.products.viewDialog.title}>
-        Product Details: {product?.name}
+        Product Details: {product?.display_name || product?.name}
       </DialogTitle>
       <DialogContent>
         {product && (
@@ -556,6 +583,16 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
                   {product.description || 'No description provided'}
                 </Typography>
               </Grid>
+              {product.price !== undefined && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Price
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {product.price} {product.currency || 'USD'}
+                  </Typography>
+                </Grid>
+              )}
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Created
@@ -611,7 +648,7 @@ const EditProductDialog: React.FC<EditProductDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState<UpdateProductRequest>({
     name: product.name,
-    description: product.description,
+    description: product.description || '',
   });
   const [loading, setLoading] = useState<boolean>(false);
 

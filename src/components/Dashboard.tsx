@@ -4,12 +4,12 @@
  * Description: Main dashboard with entity summaries for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 24-06-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Grid,
@@ -27,6 +27,7 @@ import type {
   ErrorResponse,
   PaginatedSubscriptionsResponse,
   Product,
+  ProductsResponse,
 } from '@/types';
 
 // ────────────────────────────────────────
@@ -37,7 +38,7 @@ interface SummaryData {
   organizations: OrganizationsResponse | ErrorResponse | null;
   users: unknown | ErrorResponse | null;
   subscriptions: PaginatedSubscriptionsResponse | ErrorResponse | null;
-  products: Product[] | ErrorResponse | null;
+  products: Product[] | ProductsResponse | ErrorResponse | null;
   root: unknown | ErrorResponse | null;
   health: unknown | ErrorResponse | null;
   status: unknown | ErrorResponse | null;
@@ -72,7 +73,25 @@ const Dashboard: React.FC = () => {
     useState<AbortController | null>(null);
   const router = useRouter();
 
-  const fetchSummaryData = useCallback(async (): Promise<void> => {
+  useEffect(() => {
+    // Remove the artificial delay - token is available immediately after login
+    const token = localStorage.getItem('access_token');
+    if (token && token !== 'undefined' && token !== 'null') {
+      fetchSummaryData();
+    } else {
+      setError('No authentication token found. Please login again.');
+      setLoading(false);
+    }
+
+    return () => {
+      // Cancel any ongoing requests when component unmounts
+      if (abortController) {
+        abortController.abort();
+      }
+    };
+  }, []);
+
+  const fetchSummaryData = async (): Promise<void> => {
     // Cancel any existing request
     if (abortController) {
       abortController.abort();
@@ -87,7 +106,7 @@ const Dashboard: React.FC = () => {
 
     try {
       // Double-check token before making request
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       if (!token || token === 'undefined' || token === 'null') {
         setError('Authentication token not found. Please login again.');
         setLoading(false);
@@ -96,13 +115,13 @@ const Dashboard: React.FC = () => {
 
       // Fetch summary data for each entity type using component-specific services
       const orgsData = await apiHelpers
-        .getOrganizations({ page: 1, limit: 1 }, controller.signal)
+        .getOrganizations({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const usersData = await apiHelpers
-        .getUsers({ page: 1, page_size: 1 }, controller.signal)
+        .getUsers({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const subsData = await apiHelpers
-        .getSubscriptions({ page: 1, page_size: 1 }, controller.signal)
+        .getSubscriptions({}, controller.signal)
         .catch((err: Error) => ({ error: err.message }));
       const productsData = await apiHelpers
         .getProducts(controller.signal)
@@ -125,7 +144,17 @@ const Dashboard: React.FC = () => {
         users:
           'error' in usersData ? { error: usersData.error } : usersData.data,
         subscriptions:
-          'error' in subsData ? { error: subsData.error } : subsData.data,
+          'error' in subsData
+            ? { error: subsData.error }
+            : Array.isArray(subsData.data)
+              ? {
+                  items: subsData.data,
+                  total: subsData.data.length,
+                  page: 1,
+                  page_size: 100,
+                  total_pages: 1,
+                }
+              : subsData.data,
         products:
           'error' in productsData
             ? { error: productsData.error }
@@ -162,28 +191,7 @@ const Dashboard: React.FC = () => {
       setLoading(false);
       setAbortController(null);
     }
-  }, []);
-
-  useEffect(() => {
-    // Add a longer delay to ensure token is available after login
-    const timer = setTimeout(() => {
-      const token = localStorage.getItem('jwt_token');
-      if (token && token !== 'undefined' && token !== 'null') {
-        fetchSummaryData();
-      } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
-      }
-    }, 500); // Increased delay to ensure token is set
-
-    return () => {
-      clearTimeout(timer);
-      // Cancel any ongoing requests when component unmounts
-      if (abortController) {
-        abortController.abort();
-      }
-    };
-  }, []);
+  };
 
   const handleViewDetails = (path: string): void => {
     router.push(path);
@@ -247,6 +255,13 @@ const Dashboard: React.FC = () => {
       } else if (
         data &&
         typeof data === 'object' &&
+        'items' in data &&
+        Array.isArray(data.items)
+      ) {
+        count = data.items.length;
+      } else if (
+        data &&
+        typeof data === 'object' &&
         'status' in data &&
         typeof data.status === 'string'
       ) {
@@ -266,6 +281,13 @@ const Dashboard: React.FC = () => {
 
     // Special handling for organizations API error
     const isOrganizationsError = title === 'Organizations' && isError;
+
+    // Check if this card should show the View Details button
+    const shouldShowViewDetails = ![
+      'API Status',
+      'Health Check',
+      'Service Info',
+    ].includes(title);
 
     return (
       <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -388,16 +410,19 @@ const Dashboard: React.FC = () => {
             </Box>
           )}
 
-          <Button
-            variant="outlined"
-            color={color}
-            onClick={() => handleViewDetails(path)}
-            sx={{ mt: 'auto', alignSelf: 'flex-start' }}
-            disabled={loading}
-            data-testid={`dashboard-${title.toLowerCase()}-view-details`}
-          >
-            View Details
-          </Button>
+          {/* Conditionally render the View Details button */}
+          {shouldShowViewDetails && (
+            <Button
+              variant="outlined"
+              color={color}
+              onClick={() => handleViewDetails(path)}
+              sx={{ mt: 'auto', alignSelf: 'flex-start' }}
+              disabled={loading}
+              data-testid={`dashboard-${title.toLowerCase()}-view-details`}
+            >
+              View Details
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

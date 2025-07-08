@@ -1,86 +1,457 @@
 /**
  * ──────────────────────────────────────────────────
- * File: client/src/components/Organizations.tsx
- * Description: Organizations management component for TondroAI CRM
+ * File: client/src/components/Subscriptions.tsx
+ * Description: Subscriptions management page for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 27-06-2025
+ * Last Updated: 03-07-2025
  * ──────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Typography,
+  Grid,
   Card,
   CardContent,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Typography,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Paper,
-  Chip,
-  CircularProgress,
+  Button,
+  IconButton,
   Alert,
+  CircularProgress,
+  TablePagination,
+  Snackbar,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
-  Snackbar,
-  IconButton,
-  Tooltip,
-  Divider,
-  Tab,
-  Tabs,
+  TextField,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Add as AddIcon,
-  Remove as RemoveIcon,
 } from '@mui/icons-material';
-import { debounce } from 'lodash';
-import axios from 'axios';
 import { apiHelpers } from '../services/api';
 import {
+  type Subscription,
   type Organization,
-  type OrganizationsResponse,
-  type CreateOrganizationRequest,
-  type UpdateOrganizationRequest,
   type Product,
-  ERROR_MESSAGES,
-  type ProductSubscriptionRequest,
+  type CreateSubscriptionRequest,
+  type UpdateSubscriptionRequest,
+  type PaginatedSubscriptionsResponse,
 } from '../types';
+import axios from 'axios';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
-import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { getButtonProps } from '../utils/buttonStyles';
-import DomainManagement from './DomainManagement';
+import { formatTierName, getTierColor } from '../utils/tierFormatter';
+import { useProductTiers } from '../hooks/useProductTiers';
+import OrganizationsDropdown from './common/OrganizationsDropdown';
 
-// ────────────────────────────────────────
-// Component State Interfaces
-// ────────────────────────────────────────
+// Stub for current user ID (replace with real user context if available)
+// const currentUserId = 'demo-user-id';
 
-interface OrganizationsState {
+// Stubs for missing dialog components (replace with real implementations if available)
+const CreateSubscriptionDialog = ({
+  open,
+  onClose,
+  onSubmit,
+  organizations,
+  products,
+  getTierOptions,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: CreateSubscriptionRequest) => Promise<void>;
   organizations: Organization[];
-  loading: boolean;
-  error: string;
-  abortController: AbortController | null;
-}
+  products: Product[];
+  getTierOptions: (productId: string) => string[];
+}) => {
+  const [form, setForm] = useState<CreateSubscriptionRequest>({
+    organization_id: 0,
+    product_id: '',
+    tier: '',
+    auto_renewal: true,
+    starts_at: new Date().toISOString().split('T')[0] || '',
+    ends_at: null,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setForm({
+        organization_id: 0,
+        product_id: '',
+        tier: '',
+        auto_renewal: true,
+        starts_at: new Date().toISOString().split('T')[0] || '',
+        ends_at: null,
+      });
+      setError(null);
+      setSubmitting(false);
+    }
+  }, [open]);
+
+  const tierOptions = getTierOptions(form.product_id);
+
+  const handleChange = (field: keyof CreateSubscriptionRequest, value: any) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    // Clear tier when product changes
+    if (field === 'product_id') {
+      setForm(prev => ({ ...prev, tier: '' }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (
+      !form.organization_id ||
+      !form.product_id ||
+      !form.tier ||
+      !form.starts_at
+    ) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      // Calculate end date as one year from start date
+      const startDate = new Date(form.starts_at);
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      // Format dates properly for backend API
+      const formattedData = {
+        ...form,
+        auto_renewal: true, // Always true for new subscriptions
+        starts_at: `${form.starts_at}T00:00:00`,
+        ends_at: endDate.toISOString().split('T')[0] + 'T00:00:00',
+      };
+
+      await onSubmit(formattedData);
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to create subscription');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    // Reset form
+    setForm({
+      organization_id: 0,
+      product_id: '',
+      tier: '',
+      auto_renewal: true,
+      starts_at: new Date().toISOString().split('T')[0] || '',
+      ends_at: null,
+    });
+    setError(null);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      data-testid={TestIds.subscriptions.createDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.subscriptions.createDialog.title}>
+        Create New Subscription
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <OrganizationsDropdown
+                value={form.organization_id || ''}
+                onChange={value =>
+                  handleChange('organization_id', Number(value))
+                }
+                label="Organization"
+                required={true}
+                testIdPrefix="subscriptions-create-organization"
+                showAllOption={false}
+                convertToNumeric={true}
+                margin="normal"
+                organizations={organizations as any}
+                fetchFromApi={false}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Product *</InputLabel>
+                <Select
+                  value={form.product_id}
+                  onChange={e => handleChange('product_id', e.target.value)}
+                  label="Product *"
+                  data-testid={TestIds.subscriptions.createDialog.product}
+                >
+                  {products.map(product => (
+                    <MenuItem
+                      key={product.id}
+                      value={product.id}
+                      data-testid={TestIds.subscriptions.createDialog.productOption(
+                        product.id
+                      )}
+                    >
+                      {product.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Tier *</InputLabel>
+                <Select
+                  value={form.tier}
+                  onChange={e => handleChange('tier', e.target.value)}
+                  label="Tier *"
+                  disabled={!form.product_id}
+                  data-testid={TestIds.subscriptions.createDialog.tier}
+                >
+                  {tierOptions.map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.subscriptions.createDialog.tierOption(
+                        tier
+                      )}
+                    >
+                      {formatTierName(tier)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Start Date *"
+                type="date"
+                value={form.starts_at ? form.starts_at.slice(0, 10) : ''}
+                onChange={e => handleChange('starts_at', e.target.value)}
+                fullWidth
+                margin="normal"
+                InputLabelProps={{ shrink: true }}
+                required
+                data-testid={TestIds.subscriptions.createDialog.startDate}
+                inputProps={{
+                  'data-testid': TestIds.subscriptions.createDialog.startDate,
+                  'aria-label': 'Subscription start date input',
+                }}
+              />
+            </Grid>
+          </Grid>
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mt: 2 }}
+              data-testid={TestIds.subscriptions.createDialog.error}
+            >
+              {error}
+            </Alert>
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={handleClose}
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.createDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.createDialog.submit}
+        >
+          {submitting ? 'Creating...' : 'Create Subscription'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Add helper functions to handle both field formats
+const getTierName = (subscription: Subscription): string => {
+  return subscription.tier || '';
+};
+
+const getMaxLimit = (subscription: Subscription): number | null => {
+  return subscription.max_limit !== undefined
+    ? subscription.max_limit
+    : subscription.usage_limit || null;
+};
+
+// Update the EditSubscriptionDialog to use the helper function
+const EditSubscriptionDialog = ({
+  subscription,
+  onClose,
+  onSubmit,
+  getTierOptions,
+}: {
+  subscription: Subscription;
+  onClose: () => void;
+  onSubmit: (data: UpdateSubscriptionRequest) => Promise<void>;
+  getTierOptions: (productId: string) => string[];
+}) => {
+  const [form, setForm] = useState<UpdateSubscriptionRequest>({
+    status: subscription.status,
+    tier: getTierName(subscription),
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const tierOptions = getTierOptions(subscription.product_id);
+
+  const handleChange = (field: keyof UpdateSubscriptionRequest, value: any) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSubmit(form);
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update subscription');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid={TestIds.subscriptions.editDialog.container}
+    >
+      <DialogTitle data-testid={TestIds.subscriptions.editDialog.title}>
+        Edit Subscription
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Tier</InputLabel>
+                <Select
+                  value={form.tier || ''}
+                  onChange={e => handleChange('tier', e.target.value)}
+                  label="Tier"
+                  data-testid={TestIds.subscriptions.editDialog.tier}
+                >
+                  {tierOptions.map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.subscriptions.editDialog.tierOption(
+                        tier
+                      )}
+                    >
+                      {formatTierName(tier)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={form.status || ''}
+                  onChange={e => handleChange('status', e.target.value)}
+                  label="Status"
+                  data-testid={TestIds.subscriptions.editDialog.status}
+                >
+                  <MenuItem
+                    value="active"
+                    data-testid={TestIds.subscriptions.editDialog.statusOption(
+                      'active'
+                    )}
+                  >
+                    Active
+                  </MenuItem>
+                  <MenuItem
+                    value="inactive"
+                    data-testid={TestIds.subscriptions.editDialog.statusOption(
+                      'inactive'
+                    )}
+                  >
+                    Inactive
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mt: 2 }}
+              data-testid={TestIds.subscriptions.editDialog.error}
+            >
+              {error}
+            </Alert>
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={onClose}
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.editDialog.cancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={submitting}
+          data-testid={TestIds.subscriptions.editDialog.submit}
+        >
+          {submitting ? 'Saving...' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// ────────────────────────────────────────
+// Type Definitions
+// ────────────────────────────────────────
 
 interface FiltersState {
+  organization_id: string;
+  product_id: string;
   status: string;
-  search: string;
+  tier: string;
 }
 
 interface PaginationState {
@@ -95,354 +466,511 @@ interface SnackbarState {
   severity: 'success' | 'error' | 'warning' | 'info';
 }
 
+// interface UsageData {
+//   quantity: number;
+//   event_type: string;
+//   timestamp: string;
+// }
+
 // ────────────────────────────────────────
-// Main Organizations Component
+// Main Component
 // ────────────────────────────────────────
 
-const Organizations: React.FC = () => {
-  // State management
-  const [organizations, setOrganizations] = useState<OrganizationsState>({
-    organizations: [],
-    loading: false,
-    error: '',
-    abortController: null,
-  });
-
+const Subscriptions: React.FC = () => {
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
   const [filters, setFilters] = useState<FiltersState>({
+    organization_id: '',
+    product_id: '',
     status: '',
-    search: '',
+    tier: '',
   });
-
   const [pagination, setPagination] = useState<PaginationState>({
     page: 0,
-    pageSize: 10,
+    pageSize: 50,
     total: 0,
   });
-
+  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<Subscription | null>(null);
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
-    severity: 'info',
+    severity: 'success',
   });
 
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  // Product tiers hook for dynamic tier data
+  const { tiers: productTiers } = useProductTiers();
 
-  // ────────────────────────────────────────
-  // API Functions
-  // ────────────────────────────────────────
-
-  const fetchOrganizations = useCallback(async (): Promise<void> => {
-    // Cancel previous request if it exists
-    if (organizations.abortController) {
-      organizations.abortController.abort();
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('No authentication token found. Please login again.');
+      setLoading(false);
+      return;
     }
 
-    const abortController = apiHelpers.createAbortController();
-    setOrganizations(prev => ({
-      ...prev,
-      loading: true,
-      error: '',
-      abortController,
-    }));
+    // Add a small delay to ensure token is available after login
+    const timer = setTimeout(() => {
+      fetchSubscriptions();
+      loadDropdownData(); // Load organizations and products for display
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      // Cancel any ongoing requests when component unmounts
+      if (abortController) {
+        abortController.abort();
+      }
+    };
+  }, [filters, pagination.page, pagination.pageSize]); // Include all dependencies
+
+  const fetchSubscriptions = async (): Promise<void> => {
+    // Cancel any existing request
+    if (abortController) {
+      abortController.abort();
+    }
+
+    // Create new abort controller
+    const controller = apiHelpers.createAbortController();
+    setAbortController(controller);
+
+    setLoading(true);
+    setError('');
 
     try {
+      // Double-check token before making request
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Authentication token not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
       const params = {
-        page: pagination.page + 1, // Convert to 1-based for API
-        limit: pagination.pageSize,
-        ...(filters.status && { status: filters.status }),
-        ...(filters.search && { search: filters.search }),
+        page: pagination.page + 1,
+        page_size: pagination.pageSize,
+        ...filters,
       };
 
-      const response = await apiHelpers.getOrganizations(
-        params,
-        abortController.signal
+      // Map frontend filter names to backend API parameter names
+      const apiParams = {
+        page: params.page,
+        page_size: params.page_size,
+        organization_id: params.organization_id,
+        product_id: params.product_id,
+        tier: params.tier,
+        // Map status to status_filter for backend compatibility
+        ...(params.status && { status_filter: params.status }),
+      };
+
+      // Remove empty filters
+      Object.keys(apiParams).forEach(key => {
+        if (apiParams[key as keyof typeof apiParams] === '')
+          delete apiParams[key as keyof typeof apiParams];
+      });
+
+      const response = await apiHelpers.getSubscriptions(
+        apiParams,
+        controller.signal
       );
-      const data: OrganizationsResponse = response.data;
 
-      setOrganizations(prev => ({
-        ...prev,
-        organizations: data.organizations,
-        loading: false,
-        error: '',
-      }));
+      // Handle both paginated and direct array response formats
+      let subscriptionsData: Subscription[] = [];
+      let totalCount = 0;
 
-      setPagination(prev => ({
-        ...prev,
-        total: data.total,
-        page: data.page - 1, // Convert back to 0-based for MUI
-      }));
-    } catch (error: any) {
-      if (!axios.isCancel(error)) {
-        console.error('Error fetching organizations:', error);
-        setOrganizations(prev => ({
-          ...prev,
-          loading: false,
-          error:
-            error.response?.data?.message || 'Failed to fetch organizations',
-        }));
+      if (Array.isArray(response.data)) {
+        // Direct array format (new backend format)
+        subscriptionsData = response.data;
+        totalCount = response.data.length;
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'items' in response.data
+      ) {
+        // Paginated format (old backend format)
+        const data: PaginatedSubscriptionsResponse = response.data;
+        subscriptionsData = data.items || [];
+        totalCount = data.total || 0;
+      } else {
+        console.warn(
+          'Unexpected subscriptions response format:',
+          response.data
+        );
+        subscriptionsData = [];
+        totalCount = 0;
       }
-    }
-  }, [pagination.page, pagination.pageSize, filters.status, filters.search]);
 
-  const fetchProducts = useCallback(async (): Promise<void> => {
+      setSubscriptions(subscriptionsData);
+      setPagination(prev => ({ ...prev, total: totalCount }));
+    } catch (error: any) {
+      // Don't show error for cancelled requests
+      if (axios.isCancel(error)) {
+        return;
+      }
+
+      console.error('Error fetching subscriptions:', error);
+
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as any).response &&
+        (error as any).response.status === 401
+      ) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError('Failed to load subscriptions. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const fetchOrganizations = async (): Promise<void> => {
     try {
+      const response = await apiHelpers.getOrganizations();
+      const organizationsData = response.data.organizations || [];
+      setOrganizations(organizationsData);
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      const err = error as any;
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        console.error('Error status:', err.response.status);
+        console.error('Error headers:', err.response.headers);
+      }
+      // Don't show error for organizations as it's not critical
+    }
+  };
+
+  const fetchProducts = async (): Promise<void> => {
+    try {
+      // Double-check token before making request
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        console.error('No token available for products request');
+        return;
+      }
+
       const response = await apiHelpers.getProducts();
-      setProducts(Array.isArray(response.data) ? response.data : []);
+
+      // Handle both response formats
+      let productsData: Product[] = [];
+
+      if (Array.isArray(response.data)) {
+        // Legacy format: direct array of products
+        productsData = response.data;
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'products' in response.data
+      ) {
+        // New format: { success: boolean, message: string, products: Product[], total: number }
+        productsData = response.data.products || [];
+      } else {
+        console.warn('Unexpected products response format:', response.data);
+        productsData = [];
+      }
+
+      setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
+      const err = error as any;
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        console.error('Error status:', err.response.status);
+        console.error('Error headers:', err.response.headers);
+      }
+      // Don't show error for products as it's not critical
     }
-  }, []);
+  };
 
-  const handleCreateOrganization = useCallback(
-    async (formData: CreateOrganizationRequest): Promise<void> => {
-      try {
-        await apiHelpers.createOrganization(formData);
-        setSnackbar({
-          open: true,
-          message: 'Organization created successfully',
-          severity: 'success',
-        });
-        setCreateDialogOpen(false);
-        fetchOrganizations();
-      } catch (error: any) {
-        console.error('Error creating organization:', error);
-        setSnackbar({
-          open: true,
-          message:
-            error.response?.data?.message || 'Failed to create organization',
-          severity: 'error',
-        });
-      }
-    },
-    [fetchOrganizations, setSnackbar, setCreateDialogOpen]
-  );
+  const handleCreateSubscription = async (
+    formData: CreateSubscriptionRequest
+  ): Promise<void> => {
+    try {
+      await apiHelpers.createSubscription(formData);
+      setSnackbar({
+        open: true,
+        message: 'Subscription created successfully',
+        severity: 'success',
+      });
+      setCreateDialogOpen(false);
+      fetchSubscriptions();
+    } catch (error: any) {
+      console.error('Error creating subscription:', error);
+      setSnackbar({
+        open: true,
+        message:
+          error.response?.data?.message || 'Failed to create subscription',
+        severity: 'error',
+      });
+    }
+  };
 
-  // ────────────────────────────────────────
-  // Event Handlers
-  // ────────────────────────────────────────
+  const getTierOptions = (productId: string): string[] => {
+    if (!productId) return [];
 
-  const handleFilterChange = useCallback(
-    (newFilters: { status: string; search: string }): void => {
-      setFilters(newFilters);
-      setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
-    },
-    [setFilters, setPagination]
-  );
+    // Get tiers for the specific product from API data
+    const productTiersForProduct = productTiers.filter(
+      tier => tier.product_id === productId
+    );
 
-  const handlePageChange = useCallback(
-    (_event: unknown, newPage: number): void => {
-      setPagination(prev => ({ ...prev, page: newPage }));
-    },
-    [setPagination]
-  );
+    if (productTiersForProduct.length > 0) {
+      // Return tier names from API data
+      return productTiersForProduct.map(tier => tier.tier_name);
+    }
 
-  const handlePageSizeChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const newPageSize = parseInt(event.target.value, 10);
-      setPagination(prev => ({
-        ...prev,
-        pageSize: newPageSize,
-        page: 0, // Reset to first page
-      }));
-    },
-    [setPagination]
-  );
+    // Fallback to hardcoded values if no API data available
+    const product = products.find(p => p.id === productId);
+    if (!product) return [];
 
-  const handleUpdateOrganization = useCallback(
-    async (formData: UpdateOrganizationRequest): Promise<void> => {
-      if (!selectedOrg) return;
+    // Use name field instead of display_name
+    const productName = (product.name || '').toLowerCase();
+    if (productName.includes('transcript')) {
+      return ['Trans 200', 'Trans 500', 'Trans 1000'];
+    } else if (productName.includes('admission')) {
+      return ['Admis 200', 'Admis 500', 'Admis 1000'];
+    } else if (productName.includes('transcript')) {
+      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
+    } else if (productName.includes('admission')) {
+      return ['admissions_200', 'admissions_500', 'admissions_1000'];
+    }
+    return ['tier_1', 'tier_2', 'tier_3'];
+  };
 
-      try {
-        await apiHelpers.updateOrganization(
-          selectedOrg.organizationId,
-          formData
-        );
-        setSnackbar({
-          open: true,
-          message: 'Organization updated successfully',
-          severity: 'success',
-        });
-        setSelectedOrg(null);
-        setEditMode(false);
-        fetchOrganizations();
-      } catch (error: any) {
-        console.error('Error updating organization:', error);
-        setSnackbar({
-          open: true,
-          message:
-            error.response?.data?.message || 'Failed to update organization',
-          severity: 'error',
-        });
-      }
-    },
-    [selectedOrg, fetchOrganizations, setSnackbar, setSelectedOrg, setEditMode]
-  );
+  const handleFilterChange = (field: string, value: string): void => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
 
-  const handleClearFilters = useCallback(() => {
-    setFilters({ status: '', search: '' });
+    // Clear tier filter when product changes
+    if (field === 'product_id') {
+      setFilters(prev => ({ ...prev, tier: '' }));
+    }
+  };
+
+  const handleClearFilters = (): void => {
+    setFilters({
+      organization_id: '',
+      product_id: '',
+      status: '',
+      tier: '',
+    });
     setPagination(prev => ({ ...prev, page: 0 }));
-  }, []);
+  };
 
-  // ────────────────────────────────────────
-  // Effects
-  // ────────────────────────────────────────
+  const handlePageChange = (_event: unknown, newPage: number): void => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  };
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
+  const handlePageSizeChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const newPageSize = parseInt(event.target.value, 10);
+    setPagination(prev => ({
+      ...prev,
+      pageSize: newPageSize,
+      page: 0, // Reset to first page
+    }));
+  };
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  const getOrganizationName = (organizationId: number): string => {
+    const org = organizations.find(o => o.id === organizationId);
+    return org
+      ? org.name || `Organization ${organizationId}`
+      : `Organization ${organizationId}`;
+  };
+
+  const getProductName = (productId: string): string => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return `Product ${productId}`;
+
+    // Use name field instead of display_name
+    return product.name || `Product ${productId}`;
+  };
+
+  const handleUpdateSubscription = async (
+    formData: UpdateSubscriptionRequest
+  ): Promise<void> => {
+    if (!selectedSubscription) return;
+
+    try {
+      await apiHelpers.updateSubscription(selectedSubscription.id, formData);
+      setSnackbar({
+        open: true,
+        message: 'Subscription updated successfully',
+        severity: 'success',
+      });
+      setSelectedSubscription(null);
+      setEditMode(false);
+      fetchSubscriptions();
+    } catch (error: any) {
+      console.error('Error updating subscription:', error);
+      setSnackbar({
+        open: true,
+        message:
+          error.response?.data?.message || 'Failed to update subscription',
+        severity: 'error',
+      });
+    }
+  };
+
+  const loadDropdownData = async (): Promise<void> => {
+    await Promise.all([fetchOrganizations(), fetchProducts()]);
+  };
+
+  const handleOpenCreateDialog = async (): Promise<void> => {
+    await loadDropdownData();
+    setCreateDialogOpen(true);
+  };
 
   // ────────────────────────────────────────
   // Filter Section Component
   // ────────────────────────────────────────
 
-  interface FilterSectionProps {
-    filters: FiltersState;
-    onFiltersChange: (filters: FiltersState) => void;
-    onClearFilters: () => void;
-  }
-
-  const FilterSection: React.FC<FilterSectionProps> = ({
-    filters,
-    onFiltersChange,
-    onClearFilters,
-  }) => {
-    const [localSearch, setLocalSearch] = useState<string>(filters.search);
-    const searchInputRef = useRef<HTMLInputElement>(null);
-
-    // Sync local state with parent filters
-    useEffect(() => {
-      setLocalSearch(filters.search);
-    }, [filters.search]);
-
-    // Stable debounced search handler using useRef
-    const debouncedSearchRef = useRef(
-      debounce((searchValue: string) => {
-        onFiltersChange({ ...filters, search: searchValue });
-      }, 500)
-    );
-
-    // Update the debounced function when filters or onFiltersChange changes
-    useEffect(() => {
-      debouncedSearchRef.current = debounce((searchValue: string) => {
-        onFiltersChange({ ...filters, search: searchValue });
-      }, 500);
-    }, [filters, onFiltersChange]);
-
-    // Handle search input change
-    const handleSearchChange = useCallback((value: string) => {
-      setLocalSearch(value);
-      debouncedSearchRef.current(value);
-    }, []);
-
-    // Handle clear filters
-    const handleClearFilters = useCallback(() => {
-      setLocalSearch('');
-      onClearFilters();
-    }, [onClearFilters]);
-
-    return (
-      <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
-        <CardContent>
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            mb={2}
+  const FilterSection: React.FC = () => (
+    <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
+      <CardContent>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Typography variant="h6" gutterBottom>
+            Filters
+          </Typography>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleClearFilters}
+            data-testid={TestIds.filterForm.clearButton}
           >
-            <Typography variant="h6" gutterBottom>
-              Filters
-            </Typography>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleClearFilters}
-              data-testid={TestIds.filterForm.clearButton}
-            >
-              Clear
-            </Button>
-          </Box>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Search"
-                value={localSearch}
-                onChange={e => handleSearchChange(e.target.value)}
-                placeholder="Search organizations..."
-                inputRef={searchInputRef}
-                data-testid={TestIds.filterForm.search}
-                inputProps={{
-                  'data-testid': TestIds.filterForm.search,
-                  'aria-label': 'Search organizations input',
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={e =>
-                    onFiltersChange({ ...filters, status: e.target.value })
-                  }
-                  label="Status"
-                  data-testid={TestIds.filterForm.statusTrigger}
-                  inputProps={{
-                    'aria-label': 'Status filter',
-                  }}
-                >
-                  <MenuItem
-                    value=""
-                    data-testid={TestIds.filterForm.statusOptionAll}
-                  >
-                    All
-                  </MenuItem>
-                  <MenuItem
-                    value="Active"
-                    data-testid={TestIds.filterForm.statusOption('Active')}
-                  >
-                    Active
-                  </MenuItem>
-                  <MenuItem
-                    value="Suspended"
-                    data-testid={TestIds.filterForm.statusOption('Suspended')}
-                  >
-                    Suspended
-                  </MenuItem>
-                  <MenuItem
-                    value="Trial"
-                    data-testid={TestIds.filterForm.statusOption('Trial')}
-                  >
-                    Trial
-                  </MenuItem>
-                  <MenuItem
-                    value="Inactive"
-                    data-testid={TestIds.filterForm.statusOption('Inactive')}
-                  >
-                    Inactive
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            Clear
+          </Button>
+        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={3}>
+            <OrganizationsDropdown
+              value={filters.organization_id}
+              onChange={value =>
+                handleFilterChange('organization_id', String(value))
+              }
+              label="Organization"
+              testIdPrefix="subscriptions-filter-organization"
+              showAllOption={true}
+              allOptionText="All Organizations"
+              convertToNumeric={true}
+              organizations={organizations as any}
+              fetchFromApi={false}
+              margin="none"
+            />
           </Grid>
-        </CardContent>
-      </Card>
-    );
-  };
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Product</InputLabel>
+              <Select
+                value={filters.product_id}
+                onChange={e => handleFilterChange('product_id', e.target.value)}
+                label="Product"
+                data-testid={TestIds.filterForm.product}
+              >
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.productOptionAll}
+                >
+                  All Products
+                </MenuItem>
+                {products.map(product => (
+                  <MenuItem
+                    key={product.id}
+                    value={product.id}
+                    data-testid={TestIds.filterForm.productOption(product.id)}
+                  >
+                    {product.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filters.status}
+                onChange={e => handleFilterChange('status', e.target.value)}
+                label="Status"
+                data-testid={TestIds.filterForm.status}
+              >
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.statusOptionAll}
+                >
+                  All
+                </MenuItem>
+                <MenuItem
+                  value="active"
+                  data-testid={TestIds.filterForm.statusOption('active')}
+                >
+                  Active
+                </MenuItem>
+                <MenuItem
+                  value="inactive"
+                  data-testid={TestIds.filterForm.statusOption('inactive')}
+                >
+                  Inactive
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Tier</InputLabel>
+              <Select
+                value={filters.tier}
+                onChange={e => handleFilterChange('tier', e.target.value)}
+                label="Tier"
+                disabled={!filters.product_id}
+                data-testid={TestIds.filterForm.tier}
+              >
+                <MenuItem
+                  value=""
+                  data-testid={TestIds.filterForm.tierOptionAll}
+                >
+                  All
+                </MenuItem>
+                {filters.product_id &&
+                  getTierOptions(filters.product_id).map(tier => (
+                    <MenuItem
+                      key={tier}
+                      value={tier}
+                      data-testid={TestIds.filterForm.tierOption(tier)}
+                    >
+                      {formatTierName(tier)}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  );
 
   // ────────────────────────────────────────
-  // Organizations Table Component
+  // Subscriptions Table Component
   // ────────────────────────────────────────
 
-  const OrganizationsTable: React.FC<{ products: Product[] }> = () => (
-    <Card data-testid={TestIds.organizations.table}>
+  const SubscriptionsTable: React.FC = () => (
+    <Card data-testid={TestIds.subscriptions.table}>
       <CardContent>
         <Box
           sx={{
@@ -453,28 +981,28 @@ const Organizations: React.FC = () => {
           }}
         >
           <Typography variant="h6">
-            Organizations ({pagination.total})
+            Subscriptions ({pagination.total})
           </Typography>
           <Button
             {...getButtonProps('create')}
-            onClick={() => setCreateDialogOpen(true)}
-            data-testid={TestIds.organizations.createButton}
+            onClick={handleOpenCreateDialog}
+            data-testid={TestIds.subscriptions.createButton}
           >
-            Create Organization
+            Create Subscription
           </Button>
         </Box>
 
-        {organizations.loading ? (
+        {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress data-testid={TestIds.common.loadingSpinner} />
           </Box>
-        ) : organizations.error ? (
+        ) : error ? (
           <Alert
             severity="error"
             sx={{ mb: 2 }}
             data-testid={TestIds.common.errorAlert}
           >
-            {organizations.error}
+            {error}
           </Alert>
         ) : (
           <>
@@ -482,28 +1010,30 @@ const Organizations: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Tenant Name</TableCell>
-                    <TableCell>Domain</TableCell>
+                    <TableCell>Organization</TableCell>
+                    <TableCell>Product</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Subscriptions</TableCell>
+                    <TableCell>Tier</TableCell>
+                    <TableCell>Current Usage</TableCell>
+                    <TableCell>End Date</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {organizations.organizations.map(org => (
-                    <TableRow key={org.organizationId}>
+                  {subscriptions.map(subscription => (
+                    <TableRow key={subscription.id}>
                       <TableCell>
-                        <Typography variant="subtitle2">
-                          {org.tenantName}
-                        </Typography>
+                        {getOrganizationName(subscription.organization_id)}
                       </TableCell>
-                      <TableCell>{org.organizationDomain}</TableCell>
+                      <TableCell>
+                        {getProductName(subscription.product_id)}
+                      </TableCell>
                       <TableCell>
                         <Chip
-                          label={org.status}
+                          label={subscription.status}
                           style={{
                             backgroundColor: getStatusBackgroundColor(
-                              org.status
+                              subscription.status
                             ),
                             color: '#ffffff',
                           }}
@@ -511,93 +1041,48 @@ const Organizations: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        {org.subscriptions && org.subscriptions.length > 0 ? (
-                          <Box>
-                            {org.subscriptions.map((sub, index) => (
-                              <Card
-                                key={index}
-                                sx={{ mb: 1, p: 1, backgroundColor: 'grey.50' }}
-                              >
-                                <Grid container spacing={1} alignItems="center">
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Product:
-                                    </Typography>
-                                    <Typography variant="body2" component="div">
-                                      {(sub as any).product_name}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Tier:
-                                    </Typography>
-                                    <Chip
-                                      label={formatTierName((sub as any).tier)}
-                                      size="small"
-                                      color={getTierColor((sub as any).tier)}
-                                    />
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      Usage:
-                                    </Typography>
-                                    <Typography variant="body2" component="div">
-                                      {(sub as any).current_usage || 0} /{' '}
-                                      {(sub as any).usage_limit || 'Unlimited'}
-                                    </Typography>
-                                  </Grid>
-                                </Grid>
-                              </Card>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            No subscriptions
-                          </Typography>
-                        )}
+                        <Chip
+                          label={formatTierName(getTierName(subscription))}
+                          color={getTierColor(getTierName(subscription))}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {getMaxLimit(subscription)
+                          ? `${subscription.current_usage}/${getMaxLimit(subscription)}`
+                          : `${subscription.current_usage}`}
+                      </TableCell>
+                      <TableCell>
+                        {subscription.ends_at
+                          ? new Date(subscription.ends_at).toLocaleDateString()
+                          : 'No end date'}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="View Details">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedOrg(org);
-                                setEditMode(false);
-                              }}
-                              data-testid={TestIds.organizations.viewDetails(
-                                org.organizationId
-                              )}
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Organization">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedOrg(org);
-                                setEditMode(true);
-                              }}
-                              data-testid={TestIds.organizations.edit(
-                                org.organizationId
-                              )}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedSubscription(subscription);
+                              setEditMode(false);
+                            }}
+                            data-testid={TestIds.subscriptions.viewDetails(
+                              subscription.id
+                            )}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedSubscription(subscription);
+                              setEditMode(true);
+                            }}
+                            data-testid={TestIds.subscriptions.edit(
+                              subscription.id
+                            )}
+                          >
+                            <EditIcon />
+                          </IconButton>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -622,54 +1107,249 @@ const Organizations: React.FC = () => {
     </Card>
   );
 
+  // ────────────────────────────────────────
+  // View Subscription Dialog Component
+  // ────────────────────────────────────────
+
+  interface ViewSubscriptionDialogProps {
+    subscription: Subscription;
+    onClose: () => void;
+    organizations: Organization[];
+    products: Product[];
+  }
+
+  const ViewSubscriptionDialog: React.FC<ViewSubscriptionDialogProps> = ({
+    subscription,
+    onClose,
+    organizations,
+    products,
+  }) => {
+    const getOrganizationName = (organizationId: number): string => {
+      const org = organizations.find(o => o.id === organizationId);
+      return org
+        ? org.name || `Organization ${organizationId}`
+        : `Organization ${organizationId}`;
+    };
+
+    const getProductName = (productId: string): string => {
+      const product = products.find(p => p.id === productId);
+      if (!product) return `Product ${productId}`;
+
+      // Use name field instead of display_name
+      return product.name || `Product ${productId}`;
+    };
+
+    // Use helper functions for tier and limit
+    const tierName = getTierName(subscription);
+    const maxLimit = getMaxLimit(subscription);
+
+    const usageDisplay = maxLimit
+      ? `${subscription.current_usage}/${maxLimit}`
+      : `${subscription.current_usage}`;
+
+    return (
+      <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>Subscription Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Organization
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {getOrganizationName(subscription.organization_id)}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Product
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {getProductName(subscription.product_id)}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Status
+                </Typography>
+                <Chip
+                  label={subscription.status}
+                  style={{
+                    backgroundColor: getStatusBackgroundColor(
+                      subscription.status
+                    ),
+                    color: '#ffffff',
+                  }}
+                  size="small"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Tier
+                </Typography>
+                <Chip
+                  label={formatTierName(tierName)}
+                  color={getTierColor(tierName)}
+                  size="small"
+                  sx={{ mb: 2 }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Current Usage / Max Limit
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {usageDisplay}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Auto Renewal
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {subscription.auto_renewal ? 'Yes' : 'No'}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Start Date
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {new Date(subscription.starts_at).toLocaleDateString()}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  End Date
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {subscription.ends_at
+                    ? new Date(subscription.ends_at).toLocaleDateString()
+                    : 'No end date'}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Billing Period Start
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {new Date(
+                    subscription.billing_period_start
+                  ).toLocaleDateString()}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Billing Period End
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {subscription.billing_period_end
+                    ? new Date(
+                        subscription.billing_period_end
+                      ).toLocaleDateString()
+                    : 'No end date'}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {new Date(subscription.updated_at).toLocaleDateString()}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={onClose}
+            data-testid={TestIds.subscriptions.viewDialog.closeButton}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   return (
-    <Box data-testid={TestIds.organizations.page}>
+    <Box data-testid={TestIds.subscriptions.page}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Organizations
+        Subscriptions
       </Typography>
 
-      <FilterSection
-        filters={filters}
-        onFiltersChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-      />
-
-      <OrganizationsTable products={products} />
-
-      <CreateOrganizationDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateOrganization}
-        products={products}
-      />
-
-      {selectedOrg && !editMode && (
-        <ViewOrganizationDialog
-          organization={selectedOrg}
-          onClose={() => setSelectedOrg(null)}
-          onUpdate={() => setEditMode(true)}
-        />
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          data-testid={TestIds.common.errorAlert}
+        >
+          {error}
+        </Alert>
       )}
 
-      {selectedOrg && editMode && (
-        <EditOrganizationDialog
-          organization={selectedOrg}
-          onClose={() => {
-            setSelectedOrg(null);
-            setEditMode(false);
-          }}
-          onSubmit={handleUpdateOrganization}
-        />
+      <FilterSection />
+
+      <SubscriptionsTable />
+
+      <CreateSubscriptionDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSubmit={handleCreateSubscription}
+        organizations={organizations}
+        products={products}
+        getTierOptions={getTierOptions}
+      />
+
+      {selectedSubscription && (
+        <>
+          {!editMode && (
+            <ViewSubscriptionDialog
+              subscription={selectedSubscription}
+              onClose={() => {
+                setSelectedSubscription(null);
+                setEditMode(false);
+              }}
+              organizations={organizations}
+              products={products}
+            />
+          )}
+          {editMode && (
+            <EditSubscriptionDialog
+              subscription={selectedSubscription}
+              onClose={() => {
+                setSelectedSubscription(null);
+                setEditMode(false);
+              }}
+              onSubmit={handleUpdateSubscription}
+              getTierOptions={getTierOptions}
+            />
+          )}
+        </>
       )}
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
+          sx={{ width: '100%' }}
           data-testid={
             snackbar.severity === 'success'
               ? TestIds.common.successAlert
@@ -683,976 +1363,8 @@ const Organizations: React.FC = () => {
   );
 };
 
-// ────────────────────────────────────────
-// Subscription Form Component
-// ────────────────────────────────────────
-
-interface SubscriptionFormProps {
-  subscriptions: ProductSubscriptionRequest[];
-  onSubscriptionsChange: (subscriptions: ProductSubscriptionRequest[]) => void;
-  products: Product[];
-}
-
-const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
-  subscriptions,
-  onSubscriptionsChange,
-  products,
-}) => {
-  const addSubscription = () => {
-    const newSubscription: ProductSubscriptionRequest = {
-      product_id: '',
-      tier_name: '',
-      auto_renewal: true,
-      ends_at: new Date().toISOString().split('T')[0], // Default to today in YYYY-MM-DD format
-    };
-    onSubscriptionsChange([...subscriptions, newSubscription]);
-  };
-
-  const removeSubscription = (index: number) => {
-    const newSubscriptions = subscriptions.filter((_, i) => i !== index);
-    onSubscriptionsChange(newSubscriptions);
-  };
-
-  const updateSubscription = (
-    index: number,
-    field: keyof ProductSubscriptionRequest,
-    value: any
-  ) => {
-    const newSubscriptions = [...subscriptions];
-    newSubscriptions[index] = { ...newSubscriptions[index], [field]: value };
-    onSubscriptionsChange(newSubscriptions);
-  };
-
-  const getTierOptions = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return [];
-
-    // Generate tier options based on product name
-    const productName = product.name.toLowerCase();
-    if (productName.includes('transcript')) {
-      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
-    } else if (productName.includes('admission')) {
-      return ['admissions_200', 'admissions_500', 'admissions_1000'];
-    }
-    return ['tier_1', 'tier_2', 'tier_3'];
-  };
-
-  return (
-    <Box data-testid={TestIds.organizations.subscriptionForm.container}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-        }}
-      >
-        <Typography variant="h6">Initial Subscriptions</Typography>
-        <Button
-          startIcon={<AddIcon />}
-          onClick={addSubscription}
-          variant="outlined"
-          size="small"
-          data-testid={TestIds.organizations.subscriptionForm.addButton}
-        >
-          Add Subscription
-        </Button>
-      </Box>
-
-      {subscriptions.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Please add at least one subscription for the organization.
-        </Alert>
-      )}
-
-      {subscriptions.map((subscription, index) => (
-        <Card
-          key={index}
-          sx={{ mb: 2, p: 2 }}
-          data-testid={TestIds.organizations.subscriptionForm.subscriptionCard(
-            index
-          )}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2,
-            }}
-          >
-            <Typography variant="subtitle1">
-              Subscription {index + 1}
-            </Typography>
-            <IconButton
-              onClick={() => removeSubscription(index)}
-              color="error"
-              size="small"
-              data-testid={TestIds.organizations.subscriptionForm.removeButton(
-                index
-              )}
-            >
-              <RemoveIcon />
-            </IconButton>
-          </Box>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Product</InputLabel>
-                <Select
-                  value={subscription.product_id}
-                  onChange={e =>
-                    updateSubscription(index, 'product_id', e.target.value)
-                  }
-                  label="Product"
-                  data-testid={TestIds.organizations.subscriptionForm.productSelect(
-                    index
-                  )}
-                  inputProps={{
-                    'aria-label': 'Product selection',
-                  }}
-                >
-                  {products.map(product => (
-                    <MenuItem
-                      key={product.id}
-                      value={product.id}
-                      data-testid={TestIds.organizations.subscriptionForm.productSelectOption(
-                        index,
-                        product.id
-                      )} // ✅ test ID for each item
-                    >
-                      {product.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Tier</InputLabel>
-                <Select
-                  value={subscription.tier_name}
-                  onChange={e =>
-                    updateSubscription(index, 'tier_name', e.target.value)
-                  }
-                  label="Tier"
-                  disabled={!subscription.product_id}
-                  data-testid={TestIds.organizations.subscriptionForm.tierSelect(
-                    index
-                  )}
-                  inputProps={{
-                    'aria-label': 'Tier selection',
-                  }}
-                >
-                  {getTierOptions(subscription.product_id).map(tier => (
-                    <MenuItem
-                      key={tier}
-                      value={tier}
-                      data-testid={TestIds.organizations.subscriptionForm.tierSelectOption(
-                        index,
-                        tier
-                      )} // ✅ Unique per option
-                    >
-                      {formatTierName(tier)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Ends At"
-                type="date"
-                value={subscription.ends_at}
-                onChange={e =>
-                  updateSubscription(index, 'ends_at', e.target.value)
-                }
-                fullWidth
-                placeholder="e.g., 2024-01-01"
-                data-testid={TestIds.organizations.subscriptionForm.endDate(
-                  index
-                )}
-                inputProps={{
-                  'data-testid':
-                    TestIds.organizations.subscriptionForm.endDate(index),
-                  'aria-label': 'Subscription end date input',
-                }}
-              />
-            </Grid>
-
-            {/* Auto Renewal control hidden as requested
-            <Grid item xs={12} sm={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={subscription.auto_renewal ?? true}
-                    onChange={(e) =>
-                      updateSubscription(
-                        index,
-                        'auto_renewal',
-                        e.target.checked
-                      )
-                    }
-                  />
-                }
-                label="Auto Renewal"
-              />
-            </Grid>
-            */}
-          </Grid>
-        </Card>
-      ))}
-    </Box>
-  );
-};
-
-// ────────────────────────────────────────
-// Create Organization Dialog Component
-// ────────────────────────────────────────
-
-interface CreateOrganizationDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: CreateOrganizationRequest) => Promise<void>;
-  products: Product[];
-}
-
-const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  products,
-}) => {
-  const [formData, setFormData] = useState<CreateOrganizationRequest>({
-    tenantName: '',
-    organizationDomain: '',
-    initialAdminEmail: '',
-    initialSubscriptions: [],
-    initialStatus: 'Active',
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleChange = (field: keyof CreateOrganizationRequest, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleSubscriptionsChange = (
-    subscriptions: ProductSubscriptionRequest[]
-  ) => {
-    setFormData(prev => ({ ...prev, initialSubscriptions: subscriptions }));
-  };
-
-  const validateDomainName = (name: string): boolean => {
-    const domainRegex =
-      /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    return domainRegex.test(name);
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.tenantName?.trim()) {
-      newErrors.tenantName = 'Tenant name is required';
-    }
-
-    if (!formData.organizationDomain?.trim()) {
-      newErrors.organizationDomain = 'Organization domain is required';
-    } else if (!validateDomainName(formData.organizationDomain)) {
-      newErrors.organizationDomain =
-        'Please enter a valid domain name (e.g., company.com)';
-    }
-
-    if (!formData.initialAdminEmail?.trim()) {
-      newErrors.initialAdminEmail = 'Admin email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.initialAdminEmail)) {
-      newErrors.initialAdminEmail = 'Please enter a valid email address';
-    }
-
-    if (formData.initialSubscriptions.length === 0) {
-      newErrors.subscriptions = 'Please add at least one subscription';
-    } else {
-      const invalidSubscriptions = formData.initialSubscriptions.filter(
-        sub => !sub.product_id || !sub.tier_name
-      );
-
-      if (invalidSubscriptions.length > 0) {
-        newErrors.subscriptions =
-          'Please complete all subscription details (product and tier are required)';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      await onSubmit(formData);
-      setFormData({
-        tenantName: '',
-        organizationDomain: '',
-        initialAdminEmail: '',
-        initialSubscriptions: [],
-        initialStatus: 'Active',
-      });
-      setErrors({});
-    } catch (error: any) {
-      console.error('Error in create dialog:', error);
-      // Handle specific domain-related errors
-      const errorMessage =
-        error.response?.data?.message || 'Failed to create organization';
-      const userFriendlyMessage =
-        ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
-        errorMessage;
-
-      // Set specific field errors if available
-      if (errorMessage.includes('domain') || errorMessage.includes('Domain')) {
-        setErrors(prev => ({
-          ...prev,
-          organizationDomain: userFriendlyMessage,
-        }));
-      } else {
-        setErrors(prev => ({ ...prev, general: userFriendlyMessage }));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClose = () => {
-    setFormData({
-      tenantName: '',
-      organizationDomain: '',
-      initialAdminEmail: '',
-      initialSubscriptions: [],
-      initialStatus: 'Active',
-    });
-    setErrors({});
-    onClose();
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      data-testid={TestIds.organizations.createDialog.container}
-    >
-      <DialogTitle data-testid={TestIds.organizations.createDialog.title}>
-        Create New Organization
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1 }}>
-          {errors.general && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              data-testid={TestIds.organizations.createDialog.error}
-            >
-              {errors.general}
-            </Alert>
-          )}
-
-          <TextField
-            label="Tenant Name"
-            value={formData.tenantName}
-            onChange={e => handleChange('tenantName', e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            error={!!errors.tenantName}
-            helperText={errors.tenantName}
-            data-testid={TestIds.organizations.createDialog.tenantName}
-            inputProps={{
-              'data-testid': TestIds.organizations.createDialog.tenantName,
-              'aria-label': 'Tenant name input',
-            }}
-          />
-          <TextField
-            label="Organization Domain"
-            value={formData.organizationDomain}
-            onChange={e => handleChange('organizationDomain', e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            placeholder="example.com"
-            error={!!errors.organizationDomain}
-            helperText={
-              errors.organizationDomain ||
-              'Enter a unique domain name for the organization'
-            }
-            data-testid={TestIds.organizations.createDialog.organizationDomain}
-            inputProps={{
-              'data-testid':
-                TestIds.organizations.createDialog.organizationDomain,
-              'aria-label': 'Organization domain input',
-            }}
-          />
-          <TextField
-            label="Initial Admin Email"
-            type="email"
-            value={formData.initialAdminEmail}
-            onChange={e => handleChange('initialAdminEmail', e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            error={!!errors.initialAdminEmail}
-            helperText={errors.initialAdminEmail}
-            data-testid={TestIds.organizations.createDialog.adminEmail}
-            inputProps={{
-              'data-testid': TestIds.organizations.createDialog.adminEmail,
-              'aria-label': 'Admin email input',
-            }}
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Initial Status</InputLabel>
-            <Select
-              value={formData.initialStatus || 'Active'}
-              onChange={e => handleChange('initialStatus', e.target.value)}
-              label="Initial Status"
-              data-testid={TestIds.organizations.createDialog.status}
-              inputProps={{
-                'data-testid': TestIds.organizations.createDialog.status,
-                'aria-label': 'Initial status selection',
-              }}
-            >
-              <MenuItem
-                value="Active"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Active'
-                )}
-              >
-                Active
-              </MenuItem>
-              <MenuItem
-                value="Suspended"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Suspended'
-                )}
-              >
-                Suspended
-              </MenuItem>
-              <MenuItem
-                value="Trial"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Trial'
-                )}
-              >
-                Trial
-              </MenuItem>
-              <MenuItem
-                value="Inactive"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Inactive'
-                )}
-              >
-                Inactive
-              </MenuItem>
-            </Select>
-          </FormControl>
-
-          <Divider sx={{ my: 3 }} />
-
-          <SubscriptionForm
-            subscriptions={formData.initialSubscriptions}
-            onSubscriptionsChange={handleSubscriptionsChange}
-            products={products}
-          />
-
-          {errors.subscriptions && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {errors.subscriptions}
-            </Alert>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={handleClose}
-          data-testid={TestIds.organizations.createDialog.cancel}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={loading || formData.initialSubscriptions.length === 0}
-          data-testid={TestIds.organizations.createDialog.submit}
-        >
-          {loading ? 'Creating...' : 'Create'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-// ────────────────────────────────────────
-// View Organization Dialog Component
-// ────────────────────────────────────────
-
-interface ViewOrganizationDialogProps {
-  organization: Organization;
-  onClose: () => void;
-  onUpdate: () => void;
-}
-
-const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
-  organization,
-  onClose,
-  // onUpdate,
-}) => {
-  // const [metrics, setMetrics] = useState<OrganizationMetrics | null>(null);
-  // const [loading, setLoading] = useState<boolean>(false);
-
-  // const fetchMetrics = async (): Promise<void> => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await apiHelpers.getOrganizationMetrics(organization.organizationId);
-  //     console.log('Organization metrics response:', response.data);
-  //     setMetrics(response.data);
-  //   } catch (error) {
-  //     console.error('Error fetching metrics:', error);
-  //     setMetrics({ error: 'Failed to load metrics' });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   fetchMetrics();
-  // }, [organization.organizationId]);
-
-  const [activeTab, setActiveTab] = useState<number>(0);
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  const renderOrganizationDetails = () => (
-    <Box sx={{ pt: 1 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Organization ID
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.organizationId}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Tenant Name
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.tenantName}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Primary Domain
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {organization.organizationDomain}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Status
-          </Typography>
-          <Chip
-            label={organization.status}
-            style={{
-              backgroundColor: getStatusBackgroundColor(organization.status),
-              color: '#ffffff',
-            }}
-            size="small"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            component="div"
-          >
-            Created
-          </Typography>
-          <Typography variant="body1" gutterBottom component="div">
-            {new Date(organization.createdAt).toLocaleString()}
-          </Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            gutterBottom
-            component="div"
-          >
-            Subscriptions
-          </Typography>
-          {organization.subscriptions &&
-          organization.subscriptions.length > 0 ? (
-            <Box>
-              {organization.subscriptions.map((sub, index) => (
-                <Card key={index} sx={{ mb: 1, p: 1 }}>
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Product:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).product_name ||
-                          `Product ID: ${sub.product_id}`}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Tier:
-                      </Typography>
-                      <Chip
-                        label={formatTierName(
-                          (sub as any).tier || sub.tier_name
-                        )}
-                        size="small"
-                        color={getTierColor((sub as any).tier || sub.tier_name)}
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Status:
-                      </Typography>
-                      <Chip
-                        label={(sub as any).status || sub.status}
-                        size="small"
-                        color={
-                          (sub as any).status === 'active'
-                            ? 'success'
-                            : 'default'
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        Usage:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).current_usage || 0} /{' '}
-                        {(sub as any).usage_limit || 'Unlimited'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                      >
-                        End Date:
-                      </Typography>
-                      <Typography variant="body1" component="div">
-                        {(sub as any).ends_at
-                          ? new Date((sub as any).ends_at).toLocaleDateString()
-                          : 'No end date'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Card>
-              ))}
-            </Box>
-          ) : (
-            <Typography variant="body1" color="text.secondary" component="div">
-              No subscriptions
-            </Typography>
-          )}
-        </Grid>
-      </Grid>
-
-      {/* Metrics section temporarily hidden
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <CircularProgress />
-        </Box>
-      ) : metrics && !metrics.error ? (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Additional Metrics
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="primary">
-                    {metrics.total_users || metrics.users_count || metrics.user_count || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Users
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h4" color="primary">
-                    {metrics.active_subscriptions || metrics.subscriptions_count || metrics.subscription_count || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Subscriptions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Box>
-      ) : metrics?.error ? (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {metrics.error}
-        </Alert>
-      ) : null}
-      */}
-    </Box>
-  );
-
-  const renderDomainManagement = () => (
-    <Box sx={{ pt: 1 }}>
-      <DomainManagement
-        organizationId={organization.organizationId}
-        organizationName={organization.tenantName}
-      />
-    </Box>
-  );
-
-  return (
-    <Dialog open={!!organization} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>
-        Organization Details: {organization?.tenantName}
-      </DialogTitle>
-      <DialogContent>
-        {organization && (
-          <>
-            <Tabs
-              value={activeTab}
-              onChange={handleTabChange}
-              sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-            >
-              <Tab label="Details" />
-              <Tab label="Domain Management" />
-            </Tabs>
-
-            {activeTab === 0 && renderOrganizationDetails()}
-            {activeTab === 1 && renderDomainManagement()}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={onClose}
-          data-testid={TestIds.organizations.viewDialog.closeButton}
-        >
-          Close
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-// ────────────────────────────────────────
-// Edit Organization Dialog Component
-// ────────────────────────────────────────
-
-interface EditOrganizationDialogProps {
-  organization: Organization;
-  onClose: () => void;
-  onSubmit: (data: UpdateOrganizationRequest) => Promise<void>;
-}
-
-const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
-  organization,
-  onClose,
-  onSubmit,
-}) => {
-  const [formData, setFormData] = useState<UpdateOrganizationRequest>({
-    tenantName: organization.tenantName,
-    organizationDomain: organization.organizationDomain,
-    status: organization.status,
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const handleSubmit = async (): Promise<void> => {
-    if (!formData.tenantName?.trim() || !formData.organizationDomain?.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await onSubmit(formData);
-    } catch (error) {
-      console.error('Error in edit dialog:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog
-      open={!!organization}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      data-testid={TestIds.organizations.editDialog.container}
-    >
-      <DialogTitle data-testid={TestIds.organizations.editDialog.title}>
-        Edit Organization
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1 }}>
-          <TextField
-            fullWidth
-            label="Tenant Name"
-            value={formData.tenantName}
-            onChange={e =>
-              setFormData({ ...formData, tenantName: e.target.value })
-            }
-            margin="normal"
-            required
-            data-testid={TestIds.organizations.editDialog.tenantName}
-            inputProps={{
-              'data-testid': TestIds.organizations.editDialog.tenantName,
-              'aria-label': 'Tenant name input',
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Organization Domain"
-            value={formData.organizationDomain}
-            onChange={e =>
-              setFormData({ ...formData, organizationDomain: e.target.value })
-            }
-            margin="normal"
-            required
-            data-testid={TestIds.organizations.editDialog.organizationDomain}
-            inputProps={{
-              'data-testid':
-                TestIds.organizations.editDialog.organizationDomain,
-              'aria-label': 'Organization domain input',
-            }}
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              onChange={e =>
-                setFormData({ ...formData, status: e.target.value as any })
-              }
-              label="Status"
-              data-testid={TestIds.organizations.editDialog.status}
-              inputProps={{
-                'data-testid': TestIds.organizations.editDialog.status,
-                'aria-label': 'Status selection',
-              }}
-            >
-              <MenuItem
-                value="Active"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Active'
-                )}
-              >
-                Active
-              </MenuItem>
-              <MenuItem
-                value="Suspended"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Suspended'
-                )}
-              >
-                Suspended
-              </MenuItem>
-              <MenuItem
-                value="Trial"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Trial'
-                )}
-              >
-                Trial
-              </MenuItem>
-              <MenuItem
-                value="Inactive"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Inactive'
-                )}
-              >
-                Inactive
-              </MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={onClose}
-          data-testid={TestIds.organizations.editDialog.cancel}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={loading}
-          data-testid={TestIds.organizations.editDialog.submit}
-        >
-          {loading ? 'Updating...' : 'Update'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-export default Organizations;
+export default Subscriptions;
 
 // ──────────────────────────────────────────────────
-// End of File: client/src/components/Organizations.tsx
+// End of File: client/src/components/Subscriptions.tsx
 // ──────────────────────────────────────────────────

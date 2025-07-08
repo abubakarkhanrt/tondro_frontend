@@ -1,10 +1,10 @@
 /**
  * ──────────────────────────────────────────────────
  * File: src/config/env.ts
- * Description: Environment configuration for TondroAI CRM Next.js app
+ * Description: Environment configuration for TondroAI CRM
  * Author: Muhammad Abubakar Khan
- * Created: 19-06-2025
- * Last Updated: 26-06-2025
+ * Created: 18-06-2025
+ * Last Updated: 01-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -14,14 +14,9 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  //API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'https://8080-tondroai-rolus.cluster-sjj3zsn3ffchivwccxsgsswqek.cloudworkstations.dev/api',
-  API_BASE_URL:
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.REACT_APP_API_BASE_URL ||
-    'http://localhost:8081/api',
-  API_TIMEOUT: parseInt(
-    process.env.NEXT_PUBLIC_TIMEOUT || process.env.REACT_APP_TIMEOUT || '10000'
-  ),
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
+  API_BASE_PATH: process.env.NEXT_PUBLIC_API_BASE_PATH || '/crm',
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -43,14 +38,17 @@ export const ENV_CONFIG = {
     (process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT ||
       process.env.REACT_APP_ENABLE_DOMAIN_MANAGEMENT ||
       'true') !== 'false',
+  USE_STATIC_ROLES: process.env.NEXT_PUBLIC_USE_STATIC_ROLES === 'true',
+  ENABLE_DEBUG_LOGGING: process.env.NEXT_PUBLIC_ENABLE_DEBUG_LOGGING === 'true',
 
   // Authentication
-  JWT_STORAGE_KEY: 'jwt_token',
+  JWT_STORAGE_KEY: 'access_token',
+  //JWT_STORAGE_KEY: 'jwt_token',
   USER_EMAIL_STORAGE_KEY: 'user_email',
 
   // Default Values
   DEFAULT_PAGE_SIZE: 10,
-  DEFAULT_TIMEOUT: 10000,
+  DEFAULT_TIMEOUT: 100000,
 } as const;
 
 // ────────────────────────────────────────
