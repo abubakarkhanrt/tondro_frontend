@@ -18,10 +18,13 @@ export const ENV_CONFIG = {
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
   API_BASE_PATH: process.env.NEXT_PUBLIC_API_BASE_PATH || '/crm',
 
-
   // Transcripts API Configuration (separate service)
-  TRANSCRIPTS_API_BASE_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL || 'http://127.0.0.1:8000',
-  TRANSCRIPTS_API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000', 10), // Longer timeout for file processing
+  TRANSCRIPTS_API_BASE_URL:
+    process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL || 'http://127.0.0.1:8000',
+  TRANSCRIPTS_API_TIMEOUT: parseInt(
+    process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000',
+    10
+  ), // Longer timeout for file processing
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',

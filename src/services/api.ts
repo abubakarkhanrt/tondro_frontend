@@ -231,10 +231,10 @@ transcriptsApi.interceptors.request.use(
     // if (transcriptsToken) {
     //   config.headers.Authorization = `Bearer ${transcriptsToken}`;
     // }
-    
+
     return config;
   },
-  (error) => Promise.reject(error)
+  error => Promise.reject(error)
 );
 
 // ────────────────────────────────────────
@@ -320,7 +320,7 @@ transcriptsApi.interceptors.response.use(
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
-    
+
     // Enhanced transcripts API error handling
     const errorInfo = {
       message: 'Transcripts API Error',
@@ -330,16 +330,16 @@ transcriptsApi.interceptors.response.use(
       method: error.config?.method,
       data: error.response?.data,
     };
-    
+
     // Log transcripts API errors for debugging
     if (ENV_CONFIG.IS_DEVELOPMENT) {
       console.error('Transcripts API Error:', errorInfo);
     }
-    
+
     // Add transcripts-specific error context
     error.transcriptsApiError = true;
     error.errorInfo = errorInfo;
-    
+
     return Promise.reject(error);
   }
 );
@@ -359,7 +359,10 @@ export const getTranscriptsApiErrorInfo = (error: any) => {
 };
 
 // Utility function to validate and log API responses
-export const validateApiResponse = (response: any, apiType: 'crm' | 'transcripts' = 'crm') => {
+export const validateApiResponse = (
+  response: any,
+  apiType: 'crm' | 'transcripts' = 'crm'
+) => {
   if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
     console.log(`${apiType.toUpperCase()} API Response Validation:`, {
       hasData: !!response?.data,
@@ -1114,7 +1117,7 @@ export const apiHelpers = {
   > => {
     // Add tenant_id to the FormData
     formData.append('tenant_id', tenantId);
-    
+
     // Override Content-Type for multipart form data
     const config = {
       headers: {
@@ -1122,26 +1125,42 @@ export const apiHelpers = {
       },
       signal: signal as GenericAbortSignal,
     };
-    
-    return transcriptsApi.post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
+
+    return transcriptsApi
+      .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
       .catch(error => {
         // Enhanced error handling for transcripts API
         if (error.transcriptsApiError) {
-          console.error('Transcripts API Job Submission Error:', error.errorInfo);
-          
+          console.error(
+            'Transcripts API Job Submission Error:',
+            error.errorInfo
+          );
+
           // Provide user-friendly error messages
           if (error.response?.status === 413) {
-            throw new Error('File too large. Please select a smaller file (max 10MB).');
+            throw new Error(
+              'File too large. Please select a smaller file (max 10MB).'
+            );
           } else if (error.response?.status === 415) {
-            throw new Error('Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.');
+            throw new Error(
+              'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
+            );
           } else if (error.response?.status === 503) {
-            throw new Error('Transcripts service is temporarily unavailable. Please try again later.');
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
           } else if (error.response?.status >= 500) {
-            throw new Error('Transcripts service error. Please try again later.');
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
           } else if (error.response?.status >= 400) {
-            throw new Error('Invalid request. Please check your file and try again.');
+            throw new Error(
+              'Invalid request. Please check your file and try again.'
+            );
           } else if (!error.response) {
-            throw new Error('Unable to connect to transcripts service. Please check your connection.');
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
           }
         }
         throw error;
@@ -1165,26 +1184,36 @@ export const apiHelpers = {
       };
     }>
   > =>
-    transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
-      signal: signal as GenericAbortSignal,
-    }).catch(error => {
-      // Enhanced error handling for transcripts API
-      if (error.transcriptsApiError) {
-        console.error('Transcripts API Job Status Error:', error.errorInfo);
-        
-        // Provide user-friendly error messages
-        if (error.response?.status === 404) {
-          throw new Error(`Job not found. The job may have been deleted or expired.`);
-        } else if (error.response?.status === 503) {
-          throw new Error('Transcripts service is temporarily unavailable. Please try again later.');
-        } else if (error.response?.status >= 500) {
-          throw new Error('Transcripts service error. Please try again later.');
-        } else if (!error.response) {
-          throw new Error('Unable to connect to transcripts service. Please check your connection.');
+    transcriptsApi
+      .get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
+        signal: signal as GenericAbortSignal,
+      })
+      .catch(error => {
+        // Enhanced error handling for transcripts API
+        if (error.transcriptsApiError) {
+          console.error('Transcripts API Job Status Error:', error.errorInfo);
+
+          // Provide user-friendly error messages
+          if (error.response?.status === 404) {
+            throw new Error(
+              `Job not found. The job may have been deleted or expired.`
+            );
+          } else if (error.response?.status === 503) {
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
+          } else if (error.response?.status >= 500) {
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
+          } else if (!error.response) {
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
+          }
         }
-      }
-      throw error;
-    }),
+        throw error;
+      }),
 
   getJobDetailedResults: (
     jobId: string,
@@ -1203,26 +1232,39 @@ export const apiHelpers = {
       };
     }>
   > =>
-    transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_DETAILED(jobId), {
-      signal: signal as GenericAbortSignal,
-    }).catch(error => {
-      // Enhanced error handling for transcripts API
-      if (error.transcriptsApiError) {
-        console.error('Transcripts API Detailed Results Error:', error.errorInfo);
-        
-        // Provide user-friendly error messages
-        if (error.response?.status === 404) {
-          throw new Error(`Detailed results not found. The job may have been deleted or expired.`);
-        } else if (error.response?.status === 503) {
-          throw new Error('Transcripts service is temporarily unavailable. Please try again later.');
-        } else if (error.response?.status >= 500) {
-          throw new Error('Transcripts service error. Please try again later.');
-        } else if (!error.response) {
-          throw new Error('Unable to connect to transcripts service. Please check your connection.');
+    transcriptsApi
+      .get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_DETAILED(jobId), {
+        signal: signal as GenericAbortSignal,
+      })
+      .catch(error => {
+        // Enhanced error handling for transcripts API
+        if (error.transcriptsApiError) {
+          console.error(
+            'Transcripts API Detailed Results Error:',
+            error.errorInfo
+          );
+
+          // Provide user-friendly error messages
+          if (error.response?.status === 404) {
+            throw new Error(
+              `Detailed results not found. The job may have been deleted or expired.`
+            );
+          } else if (error.response?.status === 503) {
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
+          } else if (error.response?.status >= 500) {
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
+          } else if (!error.response) {
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
+          }
         }
-      }
-      throw error;
-    }),
+        throw error;
+      }),
 };
 
 // Also export for backward compatibility

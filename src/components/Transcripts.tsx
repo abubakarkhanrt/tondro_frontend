@@ -6,7 +6,7 @@
  * Created: 25-06-2025
  * Last Updated: 08-07-2025
  * ──────────────────────────────────────────────────
- * 
+ *
  * This component handles transcript file uploads and analysis using an asynchronous job-based API.
  * Features:
  * - File upload with validation (PDF, JPG, JPEG, PNG, max 10MB)
@@ -15,7 +15,7 @@
  * - Detailed analysis results display
  * - Error handling with retry logic
  * - Support for both first-pass and final-pass analysis results
- * 
+ *
  * API Flow:
  * 1. Submit file → Receive job_id
  * 2. Poll job status until completed/failed
@@ -174,8 +174,12 @@ interface TranscriptAnalysisResponse {
 const Transcripts: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [jobStatus, setJobStatus] = useState<
+    'idle' | 'processing' | 'completed' | 'failed'
+  >('idle');
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [response, setResponse] = useState<TranscriptAnalysisResponse | null>(
     null
@@ -276,17 +280,20 @@ const Transcripts: React.FC = () => {
       formData.append('file', selectedFile);
 
       // Call the new job submission API endpoint with tenant_id
-      const apiResponse = await apiHelpers.submitTranscriptJob(formData, tenantId);
+      const apiResponse = await apiHelpers.submitTranscriptJob(
+        formData,
+        tenantId
+      );
       const jobId = apiResponse.data.job_id;
       setJobId(jobId);
       setJobStatus('processing');
       setProcessingProgress(10);
-      
+
       // Start polling for job status
       startPolling(jobId);
     } catch (err: any) {
       console.error('Error uploading transcript:', err);
-      
+
       // Handle specific API errors
       if (err?.response?.data?.error?.code) {
         const errorMessage = getErrorMessage(
@@ -297,13 +304,17 @@ const Transcripts: React.FC = () => {
       } else if (err?.response?.status === 413) {
         setError('File too large. Please use a smaller file (max 10MB).');
       } else if (err?.response?.status === 415) {
-        setError('Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.');
+        setError(
+          'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.'
+        );
       } else if (err?.response?.status >= 500) {
         setError('Server error. Please try again later or contact support.');
       } else if (err?.code === 'NETWORK_ERROR') {
         setError('Network error. Please check your connection and try again.');
       } else {
-        setError(err?.message || 'Failed to process transcript. Please try again.');
+        setError(
+          err?.message || 'Failed to process transcript. Please try again.'
+        );
       }
     } finally {
       setLoading(false);
@@ -383,7 +394,7 @@ const Transcripts: React.FC = () => {
         setProcessingProgress(100);
         setJobStatus('completed');
         stopPolling();
-        
+
         // Transform the result to match the expected format
         if (result) {
           const now = new Date();
@@ -398,7 +409,8 @@ const Transcripts: React.FC = () => {
                 uploaded_at: now.toISOString(),
                 processing_started_at: now.toISOString(),
                 processing_completed_at: now.toISOString(),
-                total_processing_time_seconds: Math.round((now.getTime() - Date.now()) / 1000) || 0,
+                total_processing_time_seconds:
+                  Math.round((now.getTime() - Date.now()) / 1000) || 0,
               },
               analysis_results: {
                 first_pass: result.pass_1_extraction || {},
@@ -419,25 +431,29 @@ const Transcripts: React.FC = () => {
         setJobStatus('failed');
         setProcessingProgress(0);
         stopPolling();
-        
+
         // Provide specific error messages based on error code
         const errorMessage = getErrorMessage(error?.code, error?.message);
         setError(errorMessage);
       }
     } catch (err: any) {
       console.error('Error polling job status:', err);
-      
+
       // Handle network errors with retry logic
       if (retryCount < maxRetries) {
         setRetryCount(prev => prev + 1);
-        setError(`Network error. Retrying... (${retryCount + 1}/${maxRetries})`);
-        
+        setError(
+          `Network error. Retrying... (${retryCount + 1}/${maxRetries})`
+        );
+
         // Retry after 5 seconds
         setTimeout(() => {
           pollJobStatus(jobId);
         }, 5000);
       } else {
-        setError('Failed to check job status after multiple attempts. Please try again later.');
+        setError(
+          'Failed to check job status after multiple attempts. Please try again later.'
+        );
         stopPolling();
         setRetryCount(0);
       }
@@ -454,7 +470,10 @@ const Transcripts: React.FC = () => {
    * @param defaultMessage - Default message if code is not recognized
    * @returns User-friendly error message
    */
-  const getErrorMessage = (errorCode?: string, defaultMessage?: string): string => {
+  const getErrorMessage = (
+    errorCode?: string,
+    defaultMessage?: string
+  ): string => {
     if (!errorCode) {
       return defaultMessage || 'Job processing failed';
     }
@@ -475,7 +494,9 @@ const Transcripts: React.FC = () => {
       case 'UNSUPPORTED_LANGUAGE':
         return 'The document language is not supported. Please use English documents.';
       default:
-        return defaultMessage || 'An unexpected error occurred. Please try again.';
+        return (
+          defaultMessage || 'An unexpected error occurred. Please try again.'
+        );
     }
   };
 
@@ -491,19 +512,23 @@ const Transcripts: React.FC = () => {
     try {
       const apiResponse = await apiHelpers.getJobDetailedResults(jobId);
       const { result } = apiResponse.data;
-      
+
       if (result) {
         // Update the response with detailed results if needed
         setResponse(prevResponse => {
           if (!prevResponse?.data) return prevResponse;
-          
+
           return {
             ...prevResponse,
             data: {
               ...prevResponse.data,
               analysis_results: {
-                first_pass: result.pass_1_extraction || prevResponse.data.analysis_results.first_pass,
-                final_pass: result.pass_2_correction || prevResponse.data.analysis_results.final_pass,
+                first_pass:
+                  result.pass_1_extraction ||
+                  prevResponse.data.analysis_results.first_pass,
+                final_pass:
+                  result.pass_2_correction ||
+                  prevResponse.data.analysis_results.final_pass,
               },
             },
           };
@@ -576,7 +601,7 @@ const Transcripts: React.FC = () => {
               <CircularProgress size={20} sx={{ ml: 1 }} />
             )}
           </Box>
-          
+
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {getStatusMessage()}
           </Typography>
@@ -917,7 +942,7 @@ const Transcripts: React.FC = () => {
               </Typography>
             </Grid>
           </Grid>
-          
+
           {/* Optional: Fetch detailed results */}
           <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
