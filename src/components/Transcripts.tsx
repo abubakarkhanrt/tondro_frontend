@@ -386,7 +386,7 @@ const Transcripts: React.FC = () => {
     try {
       const apiResponse = await apiHelpers.getJobStatus(jobId);
       console.log('Poll response:', apiResponse.data); // Debug log
-      
+
       const { status, result, error } = apiResponse.data;
       console.log('Status:', status, 'Result:', result); // Debug log
 

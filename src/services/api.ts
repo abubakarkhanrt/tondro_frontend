@@ -161,7 +161,8 @@ const API_ENDPOINTS = {
   TRANSCRIPTS: {
     SUBMIT_JOB: '/api/transcripts/jobs',
     GET_JOB_STATUS: (jobId: string): string => `/api/transcripts/jobs/${jobId}`,
-    GET_JOB_DETAILED: (jobId: string): string => `/api/transcripts/jobs/${jobId}?view=detailed`,
+    GET_JOB_DETAILED: (jobId: string): string =>
+      `/api/transcripts/jobs/${jobId}?view=detailed`,
   },
 } as const;
 
