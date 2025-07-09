@@ -159,9 +159,9 @@ const API_ENDPOINTS = {
 
   // Transcript Analysis (uses transcriptsApi instance)
   TRANSCRIPTS: {
-    SUBMIT_JOB: '/jobs',
-    GET_JOB_STATUS: (jobId: string): string => `/jobs/${jobId}`,
-    GET_JOB_DETAILED: (jobId: string): string => `/jobs/${jobId}?view=detailed`,
+    SUBMIT_JOB: '/api/transcripts/jobs',
+    GET_JOB_STATUS: (jobId: string): string => `/api/transcripts/jobs/${jobId}`,
+    GET_JOB_DETAILED: (jobId: string): string => `/api/transcripts/jobs/${jobId}?view=detailed`,
   },
 } as const;
 
@@ -180,7 +180,7 @@ const api: AxiosInstance = axios.create({
 
 // Transcripts API instance (separate service)
 const transcriptsApi: AxiosInstance = axios.create({
-  baseURL: ENV_CONFIG.TRANSCRIPTS_API_BASE_URL || '',
+  baseURL: '', // Use relative URLs since we're now proxying through Next.js
   timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',

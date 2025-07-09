@@ -4,7 +4,7 @@
  * Description: Transcripts management page for TondroAI CRM with asynchronous job-based processing
  * Author: Muhammad Abubakar Khan
  * Created: 25-06-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 09-07-2025
  * ──────────────────────────────────────────────────
  *
  * This component handles transcript file uploads and analysis using an asynchronous job-based API.
@@ -359,10 +359,10 @@ const Transcripts: React.FC = () => {
       clearInterval(pollingInterval);
     }
 
-    // Start new polling interval (every 3 seconds)
+    // Start new polling interval (every 6 seconds)
     const interval = setInterval(async () => {
       await pollJobStatus(jobId);
-    }, 3000);
+    }, 6000);
 
     setPollingInterval(interval);
   };
@@ -385,15 +385,19 @@ const Transcripts: React.FC = () => {
   const pollJobStatus = async (jobId: string) => {
     try {
       const apiResponse = await apiHelpers.getJobStatus(jobId);
+      console.log('Poll response:', apiResponse.data); // Debug log
+      
       const { status, result, error } = apiResponse.data;
+      console.log('Status:', status, 'Result:', result); // Debug log
 
       // Update progress based on status
       if (status === 'processing') {
         setProcessingProgress(prev => Math.min(prev + 15, 90)); // Increment progress
       } else if (status === 'completed') {
+        console.log('Job completed, stopping polling...'); // Debug log
         setProcessingProgress(100);
         setJobStatus('completed');
-        stopPolling();
+        stopPolling(); // This should stop the polling
 
         // Transform the result to match the expected format
         if (result) {
@@ -413,11 +417,12 @@ const Transcripts: React.FC = () => {
                   Math.round((now.getTime() - Date.now()) / 1000) || 0,
               },
               analysis_results: {
-                first_pass: result.pass_1_extraction || {},
-                final_pass: result.pass_2_correction || {},
+                // FIX: Use the result directly since it contains the analysis data
+                first_pass: result || {},
+                final_pass: result || {}, // Since your API returns the final result directly
               },
               processing_metadata: {
-                first_pass_confidence: 0.8, // Default values - could be enhanced with actual confidence scores
+                first_pass_confidence: 0.8,
                 final_pass_confidence: 0.9,
                 improvement_score: 0.1,
                 processing_warnings: [],
