@@ -78,12 +78,16 @@ const Products: React.FC = () => {
     setEntityState,
     setPagination,
     {
-      fetchFunction: async (options) => {
+      fetchFunction: async options => {
         const response = await apiHelpers.getProducts(options?.signal);
         const responseData = response.data;
-        
+
         // Handle different response formats
-        if (responseData && typeof responseData === 'object' && 'products' in responseData) {
+        if (
+          responseData &&
+          typeof responseData === 'object' &&
+          'products' in responseData
+        ) {
           // New format: ProductsResponse
           return {
             data: {

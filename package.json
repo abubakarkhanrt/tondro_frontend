@@ -10,9 +10,14 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,less,md,html,json}\"",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,less,md,html,json}": "prettier --write"
   },
   "dependencies": {
     "@emotion/react": "^11.11.0",
@@ -38,6 +43,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0"
   }

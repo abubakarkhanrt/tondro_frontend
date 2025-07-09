@@ -19,7 +19,10 @@ interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -65,10 +68,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             >
               Try again?
             </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.location.reload()}
-            >
+            <Button variant="outlined" onClick={() => window.location.reload()}>
               Refresh Page
             </Button>
           </Alert>
@@ -85,4 +85,4 @@ export default ErrorBoundary;
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/components/ErrorBoundary.tsx
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────

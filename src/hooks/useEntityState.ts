@@ -41,19 +41,19 @@ interface UseEntityStateReturn<T, F = Record<string, any>> {
   // Entity state
   entityState: BaseEntityState<T>;
   setEntityState: React.Dispatch<React.SetStateAction<BaseEntityState<T>>>;
-  
+
   // Pagination state
   pagination: PaginationState;
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
-  
+
   // Filter state
   filters: F;
   setFilters: React.Dispatch<React.SetStateAction<F>>;
-  
+
   // Snackbar state
   snackbar: SnackbarState;
   setSnackbar: React.Dispatch<React.SetStateAction<SnackbarState>>;
-  
+
   // Dialog states
   createDialogOpen: boolean;
   setCreateDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -61,7 +61,7 @@ interface UseEntityStateReturn<T, F = Record<string, any>> {
   setSelectedEntity: React.Dispatch<React.SetStateAction<T | null>>;
   editMode: boolean;
   setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
-  
+
   // Utility functions
   resetEntityState: () => void;
   resetPagination: () => void;
@@ -141,33 +141,36 @@ export function useEntityState<T, F = Record<string, any>>(
     });
   }, []);
 
-  const resetAll = useCallback((defaultFilters: F) => {
-    resetEntityState();
-    resetPagination();
-    resetFilters(defaultFilters);
-    resetSnackbar();
-    setCreateDialogOpen(false);
-    setSelectedEntity(null);
-    setEditMode(false);
-  }, [resetEntityState, resetPagination, resetFilters, resetSnackbar]);
+  const resetAll = useCallback(
+    (defaultFilters: F) => {
+      resetEntityState();
+      resetPagination();
+      resetFilters(defaultFilters);
+      resetSnackbar();
+      setCreateDialogOpen(false);
+      setSelectedEntity(null);
+      setEditMode(false);
+    },
+    [resetEntityState, resetPagination, resetFilters, resetSnackbar]
+  );
 
   return {
     // Entity state
     entityState,
     setEntityState,
-    
+
     // Pagination state
     pagination,
     setPagination,
-    
+
     // Filter state
     filters,
     setFilters,
-    
+
     // Snackbar state
     snackbar,
     setSnackbar,
-    
+
     // Dialog states
     createDialogOpen,
     setCreateDialogOpen,
@@ -175,7 +178,7 @@ export function useEntityState<T, F = Record<string, any>>(
     setSelectedEntity,
     editMode,
     setEditMode,
-    
+
     // Utility functions
     resetEntityState,
     resetPagination,
@@ -187,4 +190,4 @@ export function useEntityState<T, F = Record<string, any>>(
 
 // ────────────────────────────────────────
 // End of File: src/hooks/useEntityState.ts
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────

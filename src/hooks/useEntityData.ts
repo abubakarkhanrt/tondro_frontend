@@ -23,7 +23,9 @@ interface FetchOptions {
 }
 
 interface UseEntityDataOptions<T, F = Record<string, any>> {
-  fetchFunction: (options?: FetchOptions) => Promise<{ data: T[] | { items: T[]; total: number } }>;
+  fetchFunction: (
+    options?: FetchOptions
+  ) => Promise<{ data: T[] | { items: T[]; total: number } }>;
   filters: F;
   pagination: PaginationState;
   enabled?: boolean;
@@ -48,7 +50,14 @@ export function useEntityData<T, F = Record<string, any>>(
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>,
   options: UseEntityDataOptions<T, F>
 ): UseEntityDataReturn {
-  const { fetchFunction, filters, pagination, enabled = true, onSuccess, onError } = options;
+  const {
+    fetchFunction,
+    filters,
+    pagination,
+    enabled = true,
+    onSuccess,
+    onError,
+  } = options;
   const isInitializedRef = useRef<boolean>(false);
 
   // ────────────────────────────────────────
@@ -86,9 +95,11 @@ export function useEntityData<T, F = Record<string, any>>(
 
       // Remove empty parameters
       Object.keys(apiParams).forEach(key => {
-        if (apiParams[key as keyof typeof apiParams] === '' || 
-            apiParams[key as keyof typeof apiParams] === null || 
-            apiParams[key as keyof typeof apiParams] === undefined) {
+        if (
+          apiParams[key as keyof typeof apiParams] === '' ||
+          apiParams[key as keyof typeof apiParams] === null ||
+          apiParams[key as keyof typeof apiParams] === undefined
+        ) {
           delete apiParams[key as keyof typeof apiParams];
         }
       });
@@ -154,7 +165,8 @@ export function useEntityData<T, F = Record<string, any>>(
       if (error.response?.status === 401) {
         errorMessage = 'Authentication failed. Please login again.';
       } else if (error.response?.status === 403) {
-        errorMessage = 'Access denied. You do not have permission to view this data.';
+        errorMessage =
+          'Access denied. You do not have permission to view this data.';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -232,4 +244,4 @@ export function useEntityData<T, F = Record<string, any>>(
 
 // ────────────────────────────────────────
 // End of File: src/hooks/useEntityData.ts
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────

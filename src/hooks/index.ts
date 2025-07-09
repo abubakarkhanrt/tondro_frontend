@@ -12,7 +12,12 @@
 // Shared Hooks
 // ────────────────────────────────────────
 
-export { useEntityState, type PaginationState, type SnackbarState, type BaseEntityState } from './useEntityState';
+export {
+  useEntityState,
+  type PaginationState,
+  type SnackbarState,
+  type BaseEntityState,
+} from './useEntityState';
 export { usePagination } from './usePagination';
 export { useEntityData } from './useEntityData';
 
@@ -20,8 +25,12 @@ export { useEntityData } from './useEntityData';
 // Feature-Specific Hooks
 // ────────────────────────────────────────
 
-export { useProductTiers, useProductTier, useProductTiersByProduct } from './useProductTiers';
+export {
+  useProductTiers,
+  useProductTier,
+  useProductTiersByProduct,
+} from './useProductTiers';
 
 // ────────────────────────────────────────
 // End of File: src/hooks/index.ts
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────
