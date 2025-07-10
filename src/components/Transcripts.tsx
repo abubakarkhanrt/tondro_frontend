@@ -288,14 +288,18 @@ const Transcripts: React.FC = () => {
           if (data?.error?.code) {
             errorMessage = getErrorMessage(data.error.code, data.error.message);
           } else if (status === 413) {
-            errorMessage = 'File too large. Please use a smaller file (max 10MB).';
+            errorMessage =
+              'File too large. Please use a smaller file (max 10MB).';
           } else if (status === 415) {
-            errorMessage = 'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.';
+            errorMessage =
+              'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.';
           } else if (status >= 500) {
-            errorMessage = 'Server error. Please try again later or contact support.';
+            errorMessage =
+              'Server error. Please try again later or contact support.';
           }
         } else {
-          errorMessage = 'Network error. Please check your connection and try again.';
+          errorMessage =
+            'Network error. Please check your connection and try again.';
         }
       } else if (err instanceof Error) {
         errorMessage = err.message;
@@ -345,9 +349,9 @@ const Transcripts: React.FC = () => {
 
   const pollJobStatus = async (id: number) => {
     try {
-      const apiResponse = (await apiHelpers.getJobStatus(
-        id
-      )) as AxiosResponse<JobDiagnosticsResponse[]>;
+      const apiResponse = (await apiHelpers.getJobStatus(id)) as AxiosResponse<
+        JobDiagnosticsResponse[]
+      >;
 
       // New nested response structure
       const job = apiResponse.data?.[0];
@@ -366,7 +370,10 @@ const Transcripts: React.FC = () => {
           pollJobStatus(id);
         }, pollingDelayRef.current);
         // Increase delay for next time
-        pollingDelayRef.current = Math.min(pollingDelayRef.current * 1.5, 10000);
+        pollingDelayRef.current = Math.min(
+          pollingDelayRef.current * 1.5,
+          10000
+        );
       } else if (status === 'completed') {
         setProcessingProgress(100);
         setJobStatus('completed');
@@ -426,7 +433,10 @@ const Transcripts: React.FC = () => {
           pollJobStatus(id);
         }, pollingDelayRef.current);
         // Increase delay for next time
-        pollingDelayRef.current = Math.min(pollingDelayRef.current * 1.5, 10000);
+        pollingDelayRef.current = Math.min(
+          pollingDelayRef.current * 1.5,
+          10000
+        );
       } else {
         setError('Failed to get job status after multiple retries.');
         if (pollingRef.current) clearTimeout(pollingRef.current);
@@ -953,7 +963,9 @@ const Transcripts: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!selectedFile || loading || jobStatus === 'processing'}
+                disabled={
+                  !selectedFile || loading || jobStatus === 'processing'
+                }
                 data-testid={TestIds.transcripts.submitButton}
               >
                 {loading ? (

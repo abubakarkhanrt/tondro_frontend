@@ -1135,17 +1135,29 @@ export const apiHelpers = {
             error.errorInfo
           );
           if (error.response?.status === 413) {
-            throw new Error('File too large. Please select a smaller file (max 10MB).');
+            throw new Error(
+              'File too large. Please select a smaller file (max 10MB).'
+            );
           } else if (error.response?.status === 415) {
-            throw new Error('Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.');
+            throw new Error(
+              'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
+            );
           } else if (error.response?.status === 503) {
-            throw new Error('Transcripts service is temporarily unavailable. Please try again later.');
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
           } else if (error.response?.status >= 500) {
-            throw new Error('Transcripts service error. Please try again later.');
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
           } else if (error.response?.status >= 400) {
-            throw new Error('Invalid request. Please check your file and try again.');
+            throw new Error(
+              'Invalid request. Please check your file and try again.'
+            );
           } else if (!error.response) {
-            throw new Error('Unable to connect to transcripts service. Please check your connection.');
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
           }
         }
         throw error;
@@ -1164,13 +1176,21 @@ export const apiHelpers = {
         if (error.transcriptsApiError) {
           console.error('Transcripts API Job Status Error:', error.errorInfo);
           if (error.response?.status === 404) {
-            throw new Error(`Job not found. The job may have been deleted or expired.`);
+            throw new Error(
+              `Job not found. The job may have been deleted or expired.`
+            );
           } else if (error.response?.status === 503) {
-            throw new Error('Transcripts service is temporarily unavailable. Please try again later.');
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
           } else if (error.response?.status >= 500) {
-            throw new Error('Transcripts service error. Please try again later.');
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
           } else if (!error.response) {
-            throw new Error('Unable to connect to transcripts service. Please check your connection.');
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
           }
         }
         throw error;
