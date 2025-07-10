@@ -139,7 +139,14 @@ const Jobs: React.FC = () => {
 
   return (
     <Box data-testid={TestIds.jobs.pageContainer}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Jobs
         </Typography>
@@ -155,7 +162,10 @@ const Jobs: React.FC = () => {
 
       <Card>
         <CardContent>
-          <TableContainer component={Paper} data-testid={TestIds.jobs.jobsTable}>
+          <TableContainer
+            component={Paper}
+            data-testid={TestIds.jobs.jobsTable}
+          >
             <Table>
               <TableHead>
                 <TableRow>
@@ -167,9 +177,14 @@ const Jobs: React.FC = () => {
               </TableHead>
               <TableBody>
                 {paginatedJobs.map(job => (
-                  <TableRow key={job.id} data-testid={TestIds.jobs.jobRow(job.id)}>
+                  <TableRow
+                    key={job.id}
+                    data-testid={TestIds.jobs.jobRow(job.id)}
+                  >
                     <TableCell>Job #{job.id}</TableCell>
-                    <TableCell>{formatTimestamp(job.created_timestamp)}</TableCell>
+                    <TableCell>
+                      {formatTimestamp(job.created_timestamp)}
+                    </TableCell>
                     <TableCell>
                       {job.processing_duration_seconds !== null
                         ? `${job.processing_duration_seconds.toFixed(1)}s`
@@ -188,7 +203,7 @@ const Jobs: React.FC = () => {
             </Table>
           </TableContainer>
           <TablePagination
-            rowsPerPageOptions={[10, 25,50,100]}
+            rowsPerPageOptions={[10, 25, 50, 100]}
             component="div"
             count={jobs.length}
             rowsPerPage={rowsPerPage}
@@ -202,4 +217,4 @@ const Jobs: React.FC = () => {
   );
 };
 
-export { Jobs }; 
+export { Jobs };
