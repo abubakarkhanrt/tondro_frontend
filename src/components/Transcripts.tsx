@@ -25,7 +25,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { AxiosResponse } from 'axios';
-import axios from 'axios'; // Import axios for type guards
 import {
   Box,
   Card,
@@ -54,7 +53,7 @@ import { apiHelpers } from '../services/api';
 // ────────────────────────────────────────
 
 interface TranscriptAnalysisData {
-  [key: string]: unknown; // Allow any dynamic structure, prefer unknown over any
+  [key: string]: any; // Allow any dynamic structure
   // Keep the original structure as optional for backward compatibility
   documentInfo?: {
     documentInfo_issuing_university_name: string | null;
@@ -165,7 +164,7 @@ interface TranscriptAnalysisResponse {
   error?: {
     code: string;
     message: string;
-    details?: Record<string, unknown>; // Use unknown for better type safety
+    details?: Record<string, any>;
   };
 }
 
@@ -272,39 +271,36 @@ const Transcripts: React.FC = () => {
       const apiResponse = await apiHelpers.submitTranscriptJob(formData);
 
       const newJobId = apiResponse.data.job_id;
-
       setJobId(newJobId);
       setJobStatus('processing');
       setProcessingProgress(10);
       jobStartTimeRef.current = Date.now(); // Record start time in ref
       startPolling(newJobId);
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Error uploading transcript:', err);
 
-      let errorMessage = 'Failed to process transcript. Please try again.';
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          const { status, data } = err.response;
-          if (data?.error?.code) {
-            errorMessage = getErrorMessage(data.error.code, data.error.message);
-          } else if (status === 413) {
-            errorMessage =
-              'File too large. Please use a smaller file (max 10MB).';
-          } else if (status === 415) {
-            errorMessage =
-              'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.';
-          } else if (status >= 500) {
-            errorMessage =
-              'Server error. Please try again later or contact support.';
-          }
-        } else {
-          errorMessage =
-            'Network error. Please check your connection and try again.';
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
+      // Handle specific API errors
+      if (err?.response?.data?.error?.code) {
+        const errorMessage = getErrorMessage(
+          err.response.data.error.code,
+          err.response.data.error.message
+        );
+        setError(errorMessage);
+      } else if (err?.response?.status === 413) {
+        setError('File too large. Please use a smaller file (max 10MB).');
+      } else if (err?.response?.status === 415) {
+        setError(
+          'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.'
+        );
+      } else if (err?.response?.status >= 500) {
+        setError('Server error. Please try again later or contact support.');
+      } else if (err?.code === 'NETWORK_ERROR') {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(
+          err?.message || 'Failed to process transcript. Please try again.'
+        );
       }
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -349,9 +345,9 @@ const Transcripts: React.FC = () => {
 
   const pollJobStatus = async (id: number) => {
     try {
-      const apiResponse = (await apiHelpers.getJobStatus(id)) as AxiosResponse<
-        JobDiagnosticsResponse[]
-      >;
+      const apiResponse = (await apiHelpers.getJobStatus(
+        id
+      )) as AxiosResponse<JobDiagnosticsResponse[]>;
 
       // New nested response structure
       const job = apiResponse.data?.[0];
@@ -370,10 +366,7 @@ const Transcripts: React.FC = () => {
           pollJobStatus(id);
         }, pollingDelayRef.current);
         // Increase delay for next time
-        pollingDelayRef.current = Math.min(
-          pollingDelayRef.current * 1.5,
-          10000
-        );
+        pollingDelayRef.current = Math.min(pollingDelayRef.current * 1.5, 10000);
       } else if (status === 'completed') {
         setProcessingProgress(100);
         setJobStatus('completed');
@@ -433,10 +426,7 @@ const Transcripts: React.FC = () => {
           pollJobStatus(id);
         }, pollingDelayRef.current);
         // Increase delay for next time
-        pollingDelayRef.current = Math.min(
-          pollingDelayRef.current * 1.5,
-          10000
-        );
+        pollingDelayRef.current = Math.min(pollingDelayRef.current * 1.5, 10000);
       } else {
         setError('Failed to get job status after multiple retries.');
         if (pollingRef.current) clearTimeout(pollingRef.current);
@@ -963,9 +953,7 @@ const Transcripts: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={
-                  !selectedFile || loading || jobStatus === 'processing'
-                }
+                disabled={!selectedFile || loading || jobStatus === 'processing'}
                 data-testid={TestIds.transcripts.submitButton}
               >
                 {loading ? (

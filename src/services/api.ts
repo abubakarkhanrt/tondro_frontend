@@ -69,6 +69,25 @@ interface JobDiagnosticsResponse {
   }[];
 }
 
+// Interfaces for the /jobs endpoint
+export interface JobDocument {
+  id: string;
+  document_type: string;
+  original_filename: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
+export interface Job {
+  id: number;
+  created_timestamp: string;
+  completion_timestamp: string | null;
+  processing_duration_seconds: number | null;
+  overall_status: 'completed' | 'processing' | 'failed';
+  documents: JobDocument[];
+}
+
+export type JobsApiResponse = Job[];
+
 // ────────────────────────────────────────
 // API Endpoint Constants
 // ────────────────────────────────────────
@@ -179,6 +198,7 @@ const API_ENDPOINTS = {
     SUBMIT_JOB: '/api/transcripts/jobs',
     GET_JOB_STATUS: (jobId: number): string =>
       `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
+    LIST_JOBS: '/api/transcripts/jobs',
   },
 } as const;
 
@@ -1167,34 +1187,17 @@ export const apiHelpers = {
   getJobStatus: (
     jobId: number,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<JobDiagnosticsResponse[]>> =>
-    transcriptsApi
-      .get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
-        signal: signal as GenericAbortSignal,
-      })
-      .catch(error => {
-        if (error.transcriptsApiError) {
-          console.error('Transcripts API Job Status Error:', error.errorInfo);
-          if (error.response?.status === 404) {
-            throw new Error(
-              `Job not found. The job may have been deleted or expired.`
-            );
-          } else if (error.response?.status === 503) {
-            throw new Error(
-              'Transcripts service is temporarily unavailable. Please try again later.'
-            );
-          } else if (error.response?.status >= 500) {
-            throw new Error(
-              'Transcripts service error. Please try again later.'
-            );
-          } else if (!error.response) {
-            throw new Error(
-              'Unable to connect to transcripts service. Please check your connection.'
-            );
-          }
-        }
-        throw error;
-      }),
+  ): Promise<AxiosResponse<JobDiagnosticsResponse[]>> => {
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
+      signal: signal as GenericAbortSignal,
+    });
+  },
+
+  // --- Jobs List --- //
+  getJobsList: (): Promise<AxiosResponse<JobsApiResponse>> => {
+    // This now correctly uses the transcriptsApi instance
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.LIST_JOBS);
+  },
 };
 
 // Also export for backward compatibility
