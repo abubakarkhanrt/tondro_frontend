@@ -23,8 +23,7 @@
  * 4. Display analysis with confidence scores
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import type { AxiosResponse } from 'axios';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -33,7 +32,6 @@ import {
   Button,
   Alert,
   CircularProgress,
-  LinearProgress,
   Paper,
   Chip,
   Grid,
@@ -169,6 +167,7 @@ interface TranscriptAnalysisResponse {
 }
 
 // Update the interface to match the actual API response
+/*
 interface JobDiagnosticsResponse {
   id: number;
   tenant_id: string;
@@ -190,7 +189,7 @@ interface JobDiagnosticsResponse {
     };
   }[];
 }
-
+*/
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
@@ -289,8 +288,7 @@ const Transcripts: React.FC = () => {
 
       if (status === 'completed' && result) {
         setJobStatus('completed');
-        
-        
+
         const transformedResponse: TranscriptAnalysisResponse = {
           success: true,
           data: {
@@ -302,7 +300,8 @@ const Transcripts: React.FC = () => {
               uploaded_at: job.created_timestamp,
               processing_started_at: job.created_timestamp,
               processing_completed_at: document.completed_at,
-              total_processing_time_seconds: job.processing_duration_seconds || 0, // Use the actual processing duration from API
+              total_processing_time_seconds:
+                job.processing_duration_seconds || 0, // Use the actual processing duration from API
             },
             analysis_results: {
               first_pass: result.pass_1_extraction || {},
@@ -325,7 +324,9 @@ const Transcripts: React.FC = () => {
       } else {
         // If still processing, show a message that it may take time
         setJobStatus('processing');
-        setError('Processing is taking longer than expected. Please check back later or try again.');
+        setError(
+          'Processing is taking longer than expected. Please check back later or try again.'
+        );
       }
     } catch (err: any) {
       console.error('Error processing transcript:', err);
@@ -453,8 +454,6 @@ const Transcripts: React.FC = () => {
           return '';
       }
     };
-
-
 
     return (
       <Card sx={{ mt: 2, mb: 2 }}>
