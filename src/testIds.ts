@@ -4,7 +4,7 @@
  * Description: Central test ID constants for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 10-07-2025
+ * Last Updated: 12-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -409,7 +409,7 @@ export const TestIds = {
     errorAlert: 'jobs-error-alert',
     refreshButton: 'jobs-refresh-button',
     jobsTable: 'jobs-table',
-    jobRow: (jobId: number) => `job-row-${jobId}`,
+    jobRow: (jobId: string | number) => `jobs-job-row-${jobId}`,
   },
 };
 

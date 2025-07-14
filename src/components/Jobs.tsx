@@ -4,7 +4,7 @@
  * Description: Displays a list of all processing jobs for the user.
  * Author: Muhammad Abubakar Khan
  * Created: 11-07-2024
- * Last Updated: 10-07-2025
+ * Last Updated: 12-07-2025
  * ──────────────────────────────────────────────────
  */
 import React, { useState, useEffect, useCallback } from 'react';
@@ -68,7 +68,7 @@ const Jobs: React.FC = () => {
   // Pagination Handlers
   // ────────────────────────────────────────
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -97,7 +97,7 @@ const Jobs: React.FC = () => {
   const getStatusChipColor = (
     status: string
   ): 'success' | 'primary' | 'error' | 'default' => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
         return 'success';
       case 'processing':
@@ -178,12 +178,12 @@ const Jobs: React.FC = () => {
               <TableBody>
                 {paginatedJobs.map(job => (
                   <TableRow
-                    key={job.id}
-                    data-testid={TestIds.jobs.jobRow(job.id)}
+                    key={job.job_id}
+                    data-testid={TestIds.jobs.jobRow(job.job_id)}
                   >
-                    <TableCell>Job #{job.id}</TableCell>
+                    <TableCell>Job #{job.job_id}</TableCell>
                     <TableCell>
-                      {formatTimestamp(job.created_timestamp)}
+                      {formatTimestamp(job.upload_timestamp)}
                     </TableCell>
                     <TableCell>
                       {job.processing_duration_seconds !== null
@@ -192,9 +192,10 @@ const Jobs: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={job.overall_status}
-                        color={getStatusChipColor(job.overall_status)}
+                        label={job.status}
+                        color={getStatusChipColor(job.status)}
                         size="small"
+                        sx={{ textTransform: 'capitalize' }}
                       />
                     </TableCell>
                   </TableRow>

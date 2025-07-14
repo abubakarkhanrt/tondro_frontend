@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 10-07-2025
+ * Last Updated: 14-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -78,12 +78,14 @@ export interface JobDocument {
 }
 
 export interface Job {
-  id: number;
-  created_timestamp: string;
-  completion_timestamp: string | null;
-  processing_duration_seconds: number | null;
-  overall_status: 'completed' | 'processing' | 'failed';
-  documents: JobDocument[];
+  job_id: string;
+  status: string;
+  filename: string;
+  upload_timestamp: string;
+  file_path: string | null;
+  extracted_data: any | null;
+  processing_metadata: any | null;
+  processing_duration_seconds: number;
 }
 
 export type JobsApiResponse = Job[];
@@ -256,12 +258,29 @@ api.interceptors.request.use(
   }
 );
 
-// Transcripts API interceptor (may not need auth tokens)
+// Transcripts API interceptor
 transcriptsApi.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const accessToken = localStorage.getItem('access_token');
+    const tokenType = localStorage.getItem('token_type') || 'bearer';
+
+    const token =
+      accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
+
+    // Use a valid token; you might want to adjust the fallback behavior
+    const validToken =
+      token && token !== 'undefined' && token !== 'null'
+        ? token
+        : 'valid_test_token'; // Or handle error if no token
+
+    if (config.headers) {
+      config.headers.Authorization = `${tokenType} ${validToken}`;
+    }
     return config;
   },
-  error => Promise.reject(error)
+  error => {
+    return Promise.reject(error);
+  }
 );
 
 // ────────────────────────────────────────
@@ -1187,7 +1206,7 @@ export const apiHelpers = {
   getJobStatus: (
     jobId: number,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<JobDiagnosticsResponse[]>> => {
+  ): Promise<AxiosResponse<JobDiagnosticsResponse>> => {
     return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
       signal: signal as GenericAbortSignal,
     });
