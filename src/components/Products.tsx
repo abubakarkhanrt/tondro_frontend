@@ -43,138 +43,90 @@ import {
   type Product,
   type CreateProductRequest,
   type UpdateProductRequest,
-  type ProductsResponse,
 } from '../types';
-import axios from 'axios';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
-
-// ────────────────────────────────────────
-// Type Definitions
-// ────────────────────────────────────────
-
-interface PaginationState {
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Products: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 0,
-    pageSize: 50,
-    total: 0,
-  });
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  // Use shared state management hook
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    snackbar,
+    setSnackbar,
+    createDialogOpen,
+    setCreateDialogOpen,
+    selectedEntity: selectedProduct,
+    setSelectedEntity: setSelectedProduct,
+    editMode,
+    setEditMode,
+  } = useEntityState<Product>({}, 50);
+
+  // Use shared pagination hook
+  const paginationHandlers = usePagination(pagination, setPagination);
+
+  // Use shared data fetching hook
+  const { fetchData, refetch } = useEntityData(
+    entityState,
+    setEntityState,
+    setPagination,
+    {
+      fetchFunction: async options => {
+        const response = await apiHelpers.getProducts(options?.signal);
+        const responseData = response.data;
+
+        // Handle different response formats
+        if (
+          responseData &&
+          typeof responseData === 'object' &&
+          'products' in responseData
+        ) {
+          // New format: ProductsResponse
+          return {
+            data: {
+              items: responseData.products || [],
+              total: responseData.total || 0,
+            },
+          };
+        } else {
+          // Legacy format: direct array
+          return {
+            data: responseData as Product[],
+          };
+        }
+      },
+      filters: {},
+      pagination,
+      enabled: false, // We'll manually trigger the fetch
+    }
+  );
 
   useEffect(() => {
     // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        fetchProducts();
+        fetchData();
       } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
+        setEntityState(prev => ({
+          ...prev,
+          error: 'No authentication token found. Please login again.',
+          loading: false,
+        }));
       }
     }, 100); // Small delay to ensure token is set
 
     return () => {
       clearTimeout(timer);
-      // Cancel any ongoing requests when component unmounts
-      if (abortController) {
-        abortController.abort();
-      }
     };
-  }, []);
-
-  const fetchProducts = async (): Promise<void> => {
-    // Cancel any existing request
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create new abort controller
-    const controller = apiHelpers.createAbortController();
-    setAbortController(controller);
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Double-check token before making request
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      const response = await apiHelpers.getProducts(controller.signal);
-      const responseData = response.data;
-
-      let productsArray: Product[];
-      let totalCount: number;
-
-      // Check if response is in new format (has success property)
-      if (
-        responseData &&
-        typeof responseData === 'object' &&
-        'success' in responseData
-      ) {
-        const productsResponse = responseData as ProductsResponse;
-        productsArray = productsResponse.products || [];
-        totalCount = productsResponse.total || 0;
-      } else {
-        // Legacy format - direct array
-        productsArray = responseData as Product[];
-        totalCount = productsArray.length;
-      }
-
-      setProducts(productsArray);
-      setPagination(prev => ({
-        ...prev,
-        total: totalCount,
-      }));
-    } catch (error: any) {
-      // Don't show error for cancelled requests
-      if (axios.isCancel(error)) {
-        return;
-      }
-
-      console.error('Error fetching products:', error);
-      if (error.response && error.response.status === 401) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Failed to load products. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setAbortController(null);
-    }
-  };
+  }, [fetchData, setEntityState]);
 
   const handleCreateProduct = async (
     formData: CreateProductRequest
@@ -187,7 +139,7 @@ const Products: React.FC = () => {
         severity: 'success',
       });
       setCreateDialogOpen(false);
-      fetchProducts();
+      refetch();
     } catch (error) {
       console.error('Error creating product:', error);
       setSnackbar({
@@ -196,20 +148,6 @@ const Products: React.FC = () => {
         severity: 'error',
       });
     }
-  };
-
-  const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setPagination(prev => ({
-      ...prev,
-      pageSize: parseInt(event.target.value, 10),
-      page: 0,
-    }));
   };
 
   const handleUpdateProduct = async (
@@ -227,7 +165,7 @@ const Products: React.FC = () => {
         severity: 'success',
       });
       setSelectedProduct(null);
-      fetchProducts();
+      refetch();
     } catch (error) {
       console.error('Error updating product:', error);
       setSnackbar({
@@ -263,17 +201,17 @@ const Products: React.FC = () => {
           </Button>
         </Box>
 
-        {loading ? (
+        {entityState.loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress data-testid={TestIds.common.loadingSpinner} />
           </Box>
-        ) : error ? (
+        ) : entityState.error ? (
           <Alert
             severity="error"
             sx={{ mb: 2 }}
             data-testid={TestIds.common.errorAlert}
           >
-            {error}
+            {entityState.error}
           </Alert>
         ) : (
           <>
@@ -288,7 +226,7 @@ const Products: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {products.map(product => (
+                  {entityState.data.map(product => (
                     <TableRow key={product.id}>
                       <TableCell>
                         <Typography variant="subtitle2">
@@ -339,9 +277,9 @@ const Products: React.FC = () => {
               component="div"
               count={pagination.total}
               page={pagination.page}
-              onPageChange={handlePageChange}
+              onPageChange={paginationHandlers.handlePageChange}
               rowsPerPage={pagination.pageSize}
-              onRowsPerPageChange={handlePageSizeChange}
+              onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
             />
@@ -357,13 +295,13 @@ const Products: React.FC = () => {
         Products
       </Typography>
 
-      {error && (
+      {entityState.error && (
         <Alert
           severity="error"
           sx={{ mb: 2 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {entityState.error}
         </Alert>
       )}
 
