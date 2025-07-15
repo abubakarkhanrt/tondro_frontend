@@ -1034,6 +1034,34 @@ export const apiHelpers = {
 
 // Also export for backward compatibility
 export default apiHelpers;
+// ────────────────────────────────────────
+// Auth API Instance (dedicated backend via proxy)
+// ────────────────────────────────────────
+const authApi: AxiosInstance = axios.create({
+  baseURL: '/api/auth', // Proxy to dedicated auth backend
+  timeout: ENV_CONFIG.API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const apiAuthHelpers = {
+  login: (
+    credentials: { username: string; password: string },
+    signal?: AbortSignal
+  ) =>
+    authApi.post('/jwt/login', credentials, {
+      signal: signal as GenericAbortSignal,
+    }),
+  logout: (signal?: AbortSignal) =>
+    authApi.post('/jwt/logout', {}, { signal: signal as GenericAbortSignal }),
+  refresh: (signal?: AbortSignal) =>
+    authApi.post('/jwt/refresh', {}, { signal: signal as GenericAbortSignal }),
+  getCurrentUser: (signal?: AbortSignal) =>
+    authApi.get('/jwt/me', { signal: signal as GenericAbortSignal }),
+  getCsrfToken: (signal?: AbortSignal) =>
+    authApi.get('/jwt/csrf-token', { signal: signal as GenericAbortSignal }),
+};
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/services/api.ts

@@ -24,7 +24,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { apiHelpers } from '../services/api';
+import { apiAuthHelpers } from '../services/api';
 import { TestIds } from '../testIds';
 
 // ────────────────────────────────────────
@@ -73,18 +73,14 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      // Use proper login API
-      console.log('🔐 Attempting login with credentials:', {
-        username: formData.username,
-        password: '***', // Don't log actual password
-      });
+      // First, get CSRF token
+      await apiAuthHelpers.getCsrfToken();
 
-      const response = await apiHelpers.login({
+      // Then, login
+      const response = await apiAuthHelpers.login({
         username: formData.username,
         password: formData.password,
       });
-
-      console.log('✅ Login successful! Response:', response.data);
 
       // Store token and user info in new format
       localStorage.setItem('access_token', response.data.access_token);

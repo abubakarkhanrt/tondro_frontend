@@ -26,6 +26,9 @@ export const ENV_CONFIG = {
     10
   ), // Longer timeout for file processing
 
+  // Auth API Configuration (dedicated auth backend)
+  AUTH_API_BASE_URL: process.env.NEXT_PUBLIC_AUTH_API_BASE_URL,
+
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
   IS_DEVELOPMENT: (process.env.NODE_ENV || 'development') === 'development',
