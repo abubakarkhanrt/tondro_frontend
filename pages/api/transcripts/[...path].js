@@ -4,7 +4,7 @@
  * Description: Transcripts API proxy endpoint for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 08-07-2025
- * Last Updated: 11-07-2025
+ * Last Updated: 15-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -63,13 +63,15 @@ export default async function handler(req, res) {
             });
           });
 
-          // --- THIS IS THE NEW, MORE ROBUST WAY TO SUBMIT ---
-          // Use the submit method of the form-data library
+          // --- FIXED: Use correct HTTP/HTTPS module based on protocol ---
+          const backendUrl = new URL(BACKEND_BASE_URL);
+          const isHttps = backendUrl.protocol === 'https:';
+          
           const requestOptions = {
             method: 'POST',
-            host: new URL(BACKEND_BASE_URL).hostname,
+            host: backendUrl.hostname,
             path: '/jobs',
-            port: new URL(BACKEND_BASE_URL).port || 80,
+            port: backendUrl.port || (isHttps ? 443 : 80),
             // Merge form-data headers with the Authorization header
             headers: {
               ...formData.getHeaders(),
@@ -79,7 +81,9 @@ export default async function handler(req, res) {
             },
           };
 
-          const backendReq = require('http').request(requestOptions, (backendRes) => {
+          // Use the appropriate HTTP/HTTPS module based on the protocol
+          const httpModule = isHttps ? require('https') : require('http');
+          const backendReq = httpModule.request(requestOptions, (backendRes) => {
             let body = '';
             backendRes.on('data', (chunk) => {
               body += chunk;
