@@ -67,6 +67,8 @@ interface JobDiagnosticsResponse {
       message: string;
     };
   }[];
+  created_timestamp: string;
+  processing_duration_seconds: number;
 }
 
 // Interfaces for the /jobs endpoint

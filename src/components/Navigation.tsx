@@ -10,33 +10,41 @@ interface MenuItem {
 
 const Navigation: React.FC = () => {
   const router = useRouter();
-  const [, forceUpdate] = useState({});
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkToken = (): void => {
-      forceUpdate({});
+    const checkToken = () => {
+      const storedToken = localStorage.getItem('access_token');
+      setToken(storedToken);
     };
+
+    // Check the token immediately on mount
     checkToken();
-    const timeoutId = setTimeout(checkToken, 100);
+
+    // Set up listeners to re-check when storage or a logout event occurs.
+    // This replaces the need for `forceUpdate`.
     window.addEventListener('storage', checkToken);
     window.addEventListener('logout', checkToken);
+
+    // Cleanup function to remove listeners
     return () => {
-      clearTimeout(timeoutId);
       window.removeEventListener('storage', checkToken);
       window.removeEventListener('logout', checkToken);
     };
-  }, []);
+  }, []); // Empty dependency array ensures this setup runs only once on mount
 
   const handleLogout = (): void => {
-    // Clear all token formats for backward compatibility
+    // Clear all tokens
     localStorage.removeItem('access_token');
     localStorage.removeItem('token_type');
     localStorage.removeItem('user');
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('user_email');
-    forceUpdate({});
+
+    // Dispatch events to notify other tabs/components of logout
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('logout'));
+
     router.push('/login');
   };
 
@@ -50,9 +58,6 @@ const Navigation: React.FC = () => {
     { text: 'Jobs', path: '/jobs' },
     { text: 'Audit Log', path: '/audit-log' },
   ];
-
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
   return (
     <AppBar position="static">

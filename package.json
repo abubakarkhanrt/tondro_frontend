@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:staging": "NODE_ENV=staging next dev",
     "build": "next build",
     "build:staging": "NODE_ENV=staging next build",
     "build:production": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,less,md,html,json}\"",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,less,md,html,json}": "prettier --write"
   },
   "dependencies": {
     "@emotion/react": "^11.11.0",
@@ -22,14 +26,14 @@
     "@mui/material": "^5.15.0",
     "@mui/x-date-pickers": "^8.5.2",
     "axios": "^1.6.7",
-    "form-data": "^4.0.3",    
+    "form-data": "^4.0.3",
     "lodash": "^4.17.21",
     "next": "15.3.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/form-data": "^2.2.1",    
+    "@types/form-data": "^2.2.1",
     "@types/lodash": "^4.17.18",
     "@types/node": "^20",
     "@types/react": "^18.2.0",
@@ -41,6 +45,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0"
   }

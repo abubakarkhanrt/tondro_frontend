@@ -299,7 +299,7 @@ const Transcripts: React.FC = () => {
               file_type: selectedFile?.type || 'application/pdf',
               uploaded_at: job.created_timestamp,
               processing_started_at: job.created_timestamp,
-              processing_completed_at: document.completed_at,
+              processing_completed_at: job.created_timestamp,
               total_processing_time_seconds:
                 job.processing_duration_seconds || 0, // Use the actual processing duration from API
             },
