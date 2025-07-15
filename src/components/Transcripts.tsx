@@ -9,7 +9,7 @@
  *
  * This component handles transcript file uploads and analysis using an asynchronous job-based API.
  * Features:
- * - File upload with validation (PDF, JPG, JPEG, PNG, max 10MB)
+ * - File upload with validation (PDF, max 10MB)
  * - Job submission and status polling
  * - Real-time progress tracking
  * - Detailed analysis results display
@@ -167,7 +167,8 @@ interface TranscriptAnalysisResponse {
 }
 
 // Update the interface to match the actual API response
-export interface JobDiagnosticsResponse {
+/*
+interface JobDiagnosticsResponse {
   id: number;
   tenant_id: string;
   created_timestamp: string;
@@ -188,7 +189,7 @@ export interface JobDiagnosticsResponse {
     };
   }[];
 }
-
+*/
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
@@ -225,7 +226,7 @@ const Transcripts: React.FC = () => {
         'image/png',
       ];
       if (!allowedTypes.includes(file.type)) {
-        setError('Please select a valid file type (PDF, JPG, JPEG, PNG)');
+        setError('Please select a valid file type (PDF)');
         setSelectedFile(null);
         return;
       }
@@ -298,7 +299,7 @@ const Transcripts: React.FC = () => {
               file_type: selectedFile?.type || 'application/pdf',
               uploaded_at: job.created_timestamp,
               processing_started_at: job.created_timestamp,
-              processing_completed_at: document.completed_at,
+              processing_completed_at: job.created_timestamp,
               total_processing_time_seconds:
                 job.processing_duration_seconds || 0, // Use the actual processing duration from API
             },
@@ -850,7 +851,7 @@ const Transcripts: React.FC = () => {
                 display="block"
                 color="text.secondary"
               >
-                Supported formats: PDF, JPG, JPEG, PNG (Max size: 10MB)
+                Supported formats: PDF, (Max size: 10MB)
               </Typography>
             </Box>
 
