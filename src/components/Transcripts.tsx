@@ -4,7 +4,7 @@
  * Description: Transcripts management page for TondroAI CRM with asynchronous job-based processing
  * Author: Muhammad Abubakar Khan
  * Created: 25-06-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 14-07-2025
  * ──────────────────────────────────────────────────
  *
  * This component handles transcript file uploads and analysis using an asynchronous job-based API.
@@ -32,7 +32,6 @@ import {
   Button,
   Alert,
   CircularProgress,
-  LinearProgress,
   Paper,
   Chip,
   Grid,
@@ -138,7 +137,7 @@ interface TranscriptAnalysisData {
 interface TranscriptAnalysisResponse {
   success: boolean;
   data?: {
-    job_id: string;
+    job_id: number; // Changed from string to number
     file_info: {
       filename: string;
       file_size: number;
@@ -167,27 +166,45 @@ interface TranscriptAnalysisResponse {
   };
 }
 
+// Update the interface to match the actual API response
+export interface JobDiagnosticsResponse {
+  id: number;
+  tenant_id: string;
+  created_timestamp: string;
+  processing_duration_seconds: number;
+  overall_status: string;
+  documents: {
+    id: string;
+    document_type: string;
+    status: 'processing' | 'completed' | 'failed';
+    completed_at?: string;
+    result?: {
+      pass_1_extraction: TranscriptAnalysisData;
+      pass_2_correction: TranscriptAnalysisData;
+    };
+    error?: {
+      code: string;
+      message: string;
+    };
+  }[];
+}
+
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Transcripts: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<number | null>(null);
   const [jobStatus, setJobStatus] = useState<
     'idle' | 'processing' | 'completed' | 'failed'
   >('idle');
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
-    null
-  );
-  const [processingProgress, setProcessingProgress] = useState<number>(0);
+  // Remove polling-related refs and state
   const [response, setResponse] = useState<TranscriptAnalysisResponse | null>(
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [retryCount, setRetryCount] = useState<number>(0);
-  const [maxRetries] = useState<number>(3);
 
   // ────────────────────────────────────────
   // File Upload Handlers
@@ -229,7 +246,7 @@ const Transcripts: React.FC = () => {
 
   /**
    * Submits the selected file for transcript analysis
-   * Creates a job and starts polling for status updates
+   * Creates a job and fetches results in a single flow
    */
   const handleSubmit = async () => {
     if (!selectedFile) {
@@ -240,59 +257,76 @@ const Transcripts: React.FC = () => {
     setLoading(true);
     setError('');
     setResponse(null);
+    setJobStatus('processing');
 
     try {
-      // Get current user ID from localStorage
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        throw new Error('User information not found. Please login again.');
-      }
-
-      const user = JSON.parse(userStr);
-      let tenantId: string;
-
-      // Extract tenant_id from user data
-      if (user.user_id) {
-        // Handle numeric user_id
-        if (typeof user.user_id === 'number') {
-          tenantId = user.user_id.toString();
-        } else if (typeof user.user_id === 'string') {
-          // Handle string user IDs - try to extract numeric part first
-          const numericMatch = user.user_id.match(/\d+/);
-          if (numericMatch) {
-            tenantId = numericMatch[0];
-          } else {
-            // Fallback to fixed value if no numeric part found
-            tenantId = '10';
-          }
-        } else {
-          tenantId = '10'; // Fallback
-        }
-      } else if (user.id) {
-        // Fallback to id field
-        tenantId = user.id.toString();
-      } else {
-        throw new Error('User ID not found. Please login again.');
-      }
-
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('document_type', 'transcript');
 
-      // Call the new job submission API endpoint with tenant_id
-      const apiResponse = await apiHelpers.submitTranscriptJob(
-        formData,
-        tenantId
-      );
-      const jobId = apiResponse.data.job_id;
-      setJobId(jobId);
-      setJobStatus('processing');
-      setProcessingProgress(10);
+      // Step 1: Submit the job
+      const submitResponse = await apiHelpers.submitTranscriptJob(formData);
+      const newJobId = submitResponse.data.job_id;
+      setJobId(newJobId);
 
-      // Start polling for job status
-      startPolling(jobId);
+      // Step 2: Wait a moment for processing to start, then fetch results
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 3: Fetch the job results
+      const statusResponse = await apiHelpers.getJobStatus(newJobId);
+      // Fix: The API returns a single job object, not an array
+      const job = statusResponse.data; // Remove the [0] indexing
+      const document = job?.documents?.[0];
+
+      if (!document) {
+        throw new Error('Invalid job structure received from API.');
+      }
+
+      const { status, result, error: docError } = document;
+
+      if (status === 'completed' && result) {
+        setJobStatus('completed');
+        
+        
+        const transformedResponse: TranscriptAnalysisResponse = {
+          success: true,
+          data: {
+            job_id: newJobId,
+            file_info: {
+              filename: selectedFile?.name || 'Unknown',
+              file_size: selectedFile?.size || 0,
+              file_type: selectedFile?.type || 'application/pdf',
+              uploaded_at: job.created_timestamp,
+              processing_started_at: job.created_timestamp,
+              processing_completed_at: document.completed_at,
+              total_processing_time_seconds: job.processing_duration_seconds || 0, // Use the actual processing duration from API
+            },
+            analysis_results: {
+              first_pass: result.pass_1_extraction || {},
+              final_pass: result.pass_2_correction || {},
+            },
+            processing_metadata: {
+              first_pass_confidence: 0.8, // Placeholder
+              final_pass_confidence: 0.9, // Placeholder
+              improvement_score: 0.1, // Placeholder
+              processing_warnings: [],
+              extraction_quality_score: 0.85, // Placeholder
+            },
+          },
+        };
+        setResponse(transformedResponse);
+      } else if (status === 'failed') {
+        setJobStatus('failed');
+        const errorMessage = getErrorMessage(docError?.code, docError?.message);
+        setError(errorMessage);
+      } else {
+        // If still processing, show a message that it may take time
+        setJobStatus('processing');
+        setError('Processing is taking longer than expected. Please check back later or try again.');
+      }
     } catch (err: any) {
-      console.error('Error uploading transcript:', err);
+      console.error('Error processing transcript:', err);
 
       // Handle specific API errors
       if (err?.response?.data?.error?.code) {
@@ -316,147 +350,26 @@ const Transcripts: React.FC = () => {
           err?.message || 'Failed to process transcript. Please try again.'
         );
       }
+      setJobStatus('failed');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Clears all state and stops any active polling
+   * Clears all state
    */
   const handleClear = () => {
     setSelectedFile(null);
     setJobId(null);
     setJobStatus('idle');
-    setProcessingProgress(0);
     setResponse(null);
     setError('');
     setLoading(false);
-    setRetryCount(0);
-    // Stop polling if active
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
     // Reset file input
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
-    }
-  };
-
-  // ────────────────────────────────────────
-  // Polling Logic
-  // ────────────────────────────────────────
-
-  /**
-   * Starts polling for job status updates
-   * @param jobId - The job ID to poll for
-   */
-  const startPolling = (jobId: string) => {
-    // Clear any existing polling
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-    }
-
-    // Start new polling interval (every 3 seconds)
-    const interval = setInterval(async () => {
-      await pollJobStatus(jobId);
-    }, 3000);
-
-    setPollingInterval(interval);
-  };
-
-  /**
-   * Stops the active polling interval
-   */
-  const stopPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-  };
-
-  /**
-   * Polls the job status and updates state accordingly
-   * Handles retries and error scenarios
-   * @param jobId - The job ID to check status for
-   */
-  const pollJobStatus = async (jobId: string) => {
-    try {
-      const apiResponse = await apiHelpers.getJobStatus(jobId);
-      const { status, result, error } = apiResponse.data;
-
-      // Update progress based on status
-      if (status === 'processing') {
-        setProcessingProgress(prev => Math.min(prev + 15, 90)); // Increment progress
-      } else if (status === 'completed') {
-        setProcessingProgress(100);
-        setJobStatus('completed');
-        stopPolling();
-
-        // Transform the result to match the expected format
-        if (result) {
-          const now = new Date();
-          const transformedResponse: TranscriptAnalysisResponse = {
-            success: true,
-            data: {
-              job_id: jobId,
-              file_info: {
-                filename: selectedFile?.name || 'Unknown',
-                file_size: selectedFile?.size || 0,
-                file_type: selectedFile?.type || 'application/pdf',
-                uploaded_at: now.toISOString(),
-                processing_started_at: now.toISOString(),
-                processing_completed_at: now.toISOString(),
-                total_processing_time_seconds:
-                  Math.round((now.getTime() - Date.now()) / 1000) || 0,
-              },
-              analysis_results: {
-                first_pass: result.pass_1_extraction || {},
-                final_pass: result.pass_2_correction || {},
-              },
-              processing_metadata: {
-                first_pass_confidence: 0.8, // Default values - could be enhanced with actual confidence scores
-                final_pass_confidence: 0.9,
-                improvement_score: 0.1,
-                processing_warnings: [],
-                extraction_quality_score: 0.85,
-              },
-            },
-          };
-          setResponse(transformedResponse);
-        }
-      } else if (status === 'failed') {
-        setJobStatus('failed');
-        setProcessingProgress(0);
-        stopPolling();
-
-        // Provide specific error messages based on error code
-        const errorMessage = getErrorMessage(error?.code, error?.message);
-        setError(errorMessage);
-      }
-    } catch (err: any) {
-      console.error('Error polling job status:', err);
-
-      // Handle network errors with retry logic
-      if (retryCount < maxRetries) {
-        setRetryCount(prev => prev + 1);
-        setError(
-          `Network error. Retrying... (${retryCount + 1}/${maxRetries})`
-        );
-
-        // Retry after 5 seconds
-        setTimeout(() => {
-          pollJobStatus(jobId);
-        }, 5000);
-      } else {
-        setError(
-          'Failed to check job status after multiple attempts. Please try again later.'
-        );
-        stopPolling();
-        setRetryCount(0);
-      }
     }
   };
 
@@ -504,42 +417,6 @@ const Transcripts: React.FC = () => {
   // Detailed Results Handler
   // ────────────────────────────────────────
 
-  /**
-   * Fetches detailed results for a completed job
-   * @param jobId - The job ID to fetch detailed results for
-   */
-  const fetchDetailedResults = async (jobId: string) => {
-    try {
-      const apiResponse = await apiHelpers.getJobDetailedResults(jobId);
-      const { result } = apiResponse.data;
-
-      if (result) {
-        // Update the response with detailed results if needed
-        setResponse(prevResponse => {
-          if (!prevResponse?.data) return prevResponse;
-
-          return {
-            ...prevResponse,
-            data: {
-              ...prevResponse.data,
-              analysis_results: {
-                first_pass:
-                  result.pass_1_extraction ||
-                  prevResponse.data.analysis_results.first_pass,
-                final_pass:
-                  result.pass_2_correction ||
-                  prevResponse.data.analysis_results.final_pass,
-              },
-            },
-          };
-        });
-      }
-    } catch (err: any) {
-      console.error('Error fetching detailed results:', err);
-      // Don't show error to user as this is optional
-    }
-  };
-
   // ────────────────────────────────────────
   // Cleanup Effect
   // ────────────────────────────────────────
@@ -547,18 +424,16 @@ const Transcripts: React.FC = () => {
   useEffect(() => {
     // Cleanup function to stop polling when component unmounts
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
+      // No polling to stop, but keep the effect for now
     };
-  }, [pollingInterval]);
+  }, []);
 
   // ────────────────────────────────────────
   // Progress Indicators
   // ────────────────────────────────────────
 
   /**
-   * Renders the progress indicator with status message and progress bar
+   * Renders the progress indicator with status message
    * @returns Progress indicator component
    */
   const renderProgressIndicator = () => {
@@ -577,18 +452,7 @@ const Transcripts: React.FC = () => {
       }
     };
 
-    const getProgressColor = () => {
-      switch (jobStatus) {
-        case 'processing':
-          return 'primary';
-        case 'completed':
-          return 'success';
-        case 'failed':
-          return 'error';
-        default:
-          return 'primary';
-      }
-    };
+
 
     return (
       <Card sx={{ mt: 2, mb: 2 }}>
@@ -606,21 +470,6 @@ const Transcripts: React.FC = () => {
             {getStatusMessage()}
           </Typography>
 
-          {jobStatus === 'processing' && (
-            <>
-              <LinearProgress
-                variant="determinate"
-                value={processingProgress}
-                color={getProgressColor() as any}
-                sx={{ mb: 1 }}
-                data-testid={TestIds.transcripts.progressBar}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {processingProgress}% complete
-              </Typography>
-            </>
-          )}
-
           {jobId && (
             <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
@@ -637,10 +486,10 @@ const Transcripts: React.FC = () => {
                 size="small"
                 onClick={() => {
                   setError('');
-                  setRetryCount(0);
                   setJobStatus('processing');
-                  setProcessingProgress(10);
-                  startPolling(jobId!);
+                  if (selectedFile) {
+                    handleSubmit();
+                  }
                 }}
                 data-testid={TestIds.transcripts.retryButton}
               >
@@ -879,7 +728,7 @@ const Transcripts: React.FC = () => {
   const renderProcessingInfo = () => {
     if (!response?.data) return null;
 
-    const { file_info, processing_metadata, job_id } = response.data;
+    const { file_info, processing_metadata } = response.data;
 
     return (
       <Card
@@ -942,21 +791,6 @@ const Transcripts: React.FC = () => {
               </Typography>
             </Grid>
           </Grid>
-
-          {/* Optional: Fetch detailed results */}
-          <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Need more detailed analysis results?
-            </Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => fetchDetailedResults(job_id)}
-              data-testid={TestIds.transcripts.detailedResultsButton}
-            >
-              Fetch Detailed Results
-            </Button>
-          </Box>
         </CardContent>
       </Card>
     );
@@ -1028,7 +862,9 @@ const Transcripts: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!selectedFile || loading}
+                disabled={
+                  !selectedFile || loading || jobStatus === 'processing'
+                }
                 data-testid={TestIds.transcripts.submitButton}
               >
                 {loading ? (

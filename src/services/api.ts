@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 14-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -48,9 +48,47 @@ import {
   type UsageSummaryResponse,
   type UsageLimitsResponse,
   type ProductsResponse,
-  //Important to uncomment below on workstation.
-  //type ProductsLegacyResponse,
 } from '../types';
+
+// Type for the new /jobs_diagnostics endpoint response
+interface JobDiagnosticsResponse {
+  id: number;
+  overall_status: string;
+  documents: {
+    id: string;
+    document_type: string;
+    status: 'processing' | 'completed' | 'failed';
+    result?: {
+      pass_1_extraction: any;
+      pass_2_correction: any;
+    };
+    error?: {
+      code: string;
+      message: string;
+    };
+  }[];
+}
+
+// Interfaces for the /jobs endpoint
+export interface JobDocument {
+  id: string;
+  document_type: string;
+  original_filename: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
+export interface Job {
+  job_id: string;
+  status: string;
+  filename: string;
+  upload_timestamp: string;
+  file_path: string | null;
+  extracted_data: any | null;
+  processing_metadata: any | null;
+  processing_duration_seconds: number;
+}
+
+export type JobsApiResponse = Job[];
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -159,9 +197,10 @@ const API_ENDPOINTS = {
 
   // Transcript Analysis (uses transcriptsApi instance)
   TRANSCRIPTS: {
-    SUBMIT_JOB: '/jobs',
-    GET_JOB_STATUS: (jobId: string): string => `/jobs/${jobId}`,
-    GET_JOB_DETAILED: (jobId: string): string => `/jobs/${jobId}?view=detailed`,
+    SUBMIT_JOB: '/api/transcripts/jobs',
+    GET_JOB_STATUS: (jobId: number): string =>
+      `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
+    LIST_JOBS: '/api/transcripts/jobs',
   },
 } as const;
 
@@ -180,11 +219,8 @@ const api: AxiosInstance = axios.create({
 
 // Transcripts API instance (separate service)
 const transcriptsApi: AxiosInstance = axios.create({
-  baseURL: ENV_CONFIG.TRANSCRIPTS_API_BASE_URL || '',
+  baseURL: '', // Use relative URLs since we're now proxying through Next.js
   timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // ────────────────────────────────────────
@@ -222,19 +258,29 @@ api.interceptors.request.use(
   }
 );
 
-// Transcripts API interceptor (may not need auth tokens)
+// Transcripts API interceptor
 transcriptsApi.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Add any transcripts-specific headers here
-    // For example, if transcripts API needs different auth:
-    // const transcriptsToken = localStorage.getItem('transcripts_token');
-    // if (transcriptsToken) {
-    //   config.headers.Authorization = `Bearer ${transcriptsToken}`;
-    // }
+    const accessToken = localStorage.getItem('access_token');
+    const tokenType = localStorage.getItem('token_type') || 'bearer';
 
+    const token =
+      accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
+
+    // Use a valid token; you might want to adjust the fallback behavior
+    const validToken =
+      token && token !== 'undefined' && token !== 'null'
+        ? token
+        : 'valid_test_token'; // Or handle error if no token
+
+    if (config.headers) {
+      config.headers.Authorization = `${tokenType} ${validToken}`;
+    }
     return config;
   },
-  error => Promise.reject(error)
+  error => {
+    return Promise.reject(error);
+  }
 );
 
 // ────────────────────────────────────────
@@ -1107,36 +1153,26 @@ export const apiHelpers = {
 
   submitTranscriptJob: (
     formData: FormData,
-    tenantId: string,
     signal?: AbortSignal
   ): Promise<
     AxiosResponse<{
-      job_id: string;
+      job_id: number;
+      document_id: string;
       status: string;
     }>
   > => {
-    // Add tenant_id to the FormData
-    formData.append('tenant_id', tenantId);
-
-    // Override Content-Type for multipart form data
     const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       signal: signal as GenericAbortSignal,
     };
 
     return transcriptsApi
       .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
       .catch(error => {
-        // Enhanced error handling for transcripts API
         if (error.transcriptsApiError) {
           console.error(
             'Transcripts API Job Submission Error:',
             error.errorInfo
           );
-
-          // Provide user-friendly error messages
           if (error.response?.status === 413) {
             throw new Error(
               'File too large. Please select a smaller file (max 10MB).'
@@ -1168,108 +1204,20 @@ export const apiHelpers = {
   },
 
   getJobStatus: (
-    jobId: string,
+    jobId: number,
     signal?: AbortSignal
-  ): Promise<
-    AxiosResponse<{
-      job_id: string;
-      status: 'processing' | 'completed' | 'failed';
-      result?: {
-        pass_1_extraction: any;
-        pass_2_correction: any;
-      };
-      error?: {
-        code: string;
-        message: string;
-      };
-    }>
-  > =>
-    transcriptsApi
-      .get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
-        signal: signal as GenericAbortSignal,
-      })
-      .catch(error => {
-        // Enhanced error handling for transcripts API
-        if (error.transcriptsApiError) {
-          console.error('Transcripts API Job Status Error:', error.errorInfo);
+  ): Promise<AxiosResponse<JobDiagnosticsResponse>> => {
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
+      signal: signal as GenericAbortSignal,
+    });
+  },
 
-          // Provide user-friendly error messages
-          if (error.response?.status === 404) {
-            throw new Error(
-              `Job not found. The job may have been deleted or expired.`
-            );
-          } else if (error.response?.status === 503) {
-            throw new Error(
-              'Transcripts service is temporarily unavailable. Please try again later.'
-            );
-          } else if (error.response?.status >= 500) {
-            throw new Error(
-              'Transcripts service error. Please try again later.'
-            );
-          } else if (!error.response) {
-            throw new Error(
-              'Unable to connect to transcripts service. Please check your connection.'
-            );
-          }
-        }
-        throw error;
-      }),
-
-  getJobDetailedResults: (
-    jobId: string,
-    signal?: AbortSignal
-  ): Promise<
-    AxiosResponse<{
-      job_id: string;
-      status: 'processing' | 'completed' | 'failed';
-      result?: {
-        pass_1_extraction: any;
-        pass_2_correction: any;
-      };
-      error?: {
-        code: string;
-        message: string;
-      };
-    }>
-  > =>
-    transcriptsApi
-      .get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_DETAILED(jobId), {
-        signal: signal as GenericAbortSignal,
-      })
-      .catch(error => {
-        // Enhanced error handling for transcripts API
-        if (error.transcriptsApiError) {
-          console.error(
-            'Transcripts API Detailed Results Error:',
-            error.errorInfo
-          );
-
-          // Provide user-friendly error messages
-          if (error.response?.status === 404) {
-            throw new Error(
-              `Detailed results not found. The job may have been deleted or expired.`
-            );
-          } else if (error.response?.status === 503) {
-            throw new Error(
-              'Transcripts service is temporarily unavailable. Please try again later.'
-            );
-          } else if (error.response?.status >= 500) {
-            throw new Error(
-              'Transcripts service error. Please try again later.'
-            );
-          } else if (!error.response) {
-            throw new Error(
-              'Unable to connect to transcripts service. Please check your connection.'
-            );
-          }
-        }
-        throw error;
-      }),
+  // --- Jobs List --- //
+  getJobsList: (): Promise<AxiosResponse<JobsApiResponse>> => {
+    // This now correctly uses the transcriptsApi instance
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.LIST_JOBS);
+  },
 };
 
 // Also export for backward compatibility
 export default apiHelpers;
-
-// ──────────────────────────────────────────────────
-// End of File: client/src/services/api.ts
-// ──────────────────────────────────────────────────

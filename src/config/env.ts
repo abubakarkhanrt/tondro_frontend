@@ -13,14 +13,15 @@
 // ────────────────────────────────────────
 
 export const ENV_CONFIG = {
-  // API Configuration
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  // API Configuration    
+  // API_BASE_URL is the proxy url
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_PATH,
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
-  API_BASE_PATH: process.env.NEXT_PUBLIC_API_BASE_PATH || '/crm',
+  API_BASE_PATH: 'api/crm',
 
   // Transcripts API Configuration (separate service)
   TRANSCRIPTS_API_BASE_URL:
-    process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL || 'http://127.0.0.1:8000',
+    process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL,
   TRANSCRIPTS_API_TIMEOUT: parseInt(
     process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000',
     10
