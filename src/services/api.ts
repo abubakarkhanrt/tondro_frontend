@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 04-07-2025
+ * Last Updated: 14-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -48,9 +48,49 @@ import {
   type UsageSummaryResponse,
   type UsageLimitsResponse,
   type ProductsResponse,
-  //Important to uncomment below on workstation.
-  //type ProductsLegacyResponse,
 } from '../types';
+
+// Type for the new /jobs_diagnostics endpoint response
+interface JobDiagnosticsResponse {
+  id: number;
+  overall_status: string;
+  documents: {
+    id: string;
+    document_type: string;
+    status: 'processing' | 'completed' | 'failed';
+    result?: {
+      pass_1_extraction: any;
+      pass_2_correction: any;
+    };
+    error?: {
+      code: string;
+      message: string;
+    };
+  }[];
+  created_timestamp: string;
+  processing_duration_seconds: number;
+}
+
+// Interfaces for the /jobs endpoint
+export interface JobDocument {
+  id: string;
+  document_type: string;
+  original_filename: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
+export interface Job {
+  job_id: string;
+  status: string;
+  filename: string;
+  upload_timestamp: string;
+  file_path: string | null;
+  extracted_data: any | null;
+  processing_metadata: any | null;
+  processing_duration_seconds: number;
+}
+
+export type JobsApiResponse = Job[];
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -157,9 +197,12 @@ const API_ENDPOINTS = {
     ROOT: '/',
   },
 
-  // Transcript Analysis
+  // Transcript Analysis (uses transcriptsApi instance)
   TRANSCRIPTS: {
-    ANALYZE: buildCrmEndpoint('/cv/analyze'),
+    SUBMIT_JOB: '/api/transcripts/jobs',
+    GET_JOB_STATUS: (jobId: number): string =>
+      `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
+    LIST_JOBS: '/api/transcripts/jobs',
   },
 } as const;
 
@@ -167,6 +210,7 @@ const API_ENDPOINTS = {
 // API Configuration
 // ────────────────────────────────────────
 
+// Main CRM API instance
 const api: AxiosInstance = axios.create({
   baseURL: ENV_CONFIG.API_BASE_URL || '',
   timeout: ENV_CONFIG.API_TIMEOUT,
@@ -175,10 +219,17 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+// Transcripts API instance (separate service)
+const transcriptsApi: AxiosInstance = axios.create({
+  baseURL: '', // Use relative URLs since we're now proxying through Next.js
+  timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
+});
+
 // ────────────────────────────────────────
-// Request Interceptor
+// Request Interceptors
 // ────────────────────────────────────────
 
+// Main CRM API interceptor
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Don't add Authorization header for login endpoint
@@ -209,18 +260,66 @@ api.interceptors.request.use(
   }
 );
 
+// Transcripts API interceptor
+transcriptsApi.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const accessToken = localStorage.getItem('access_token');
+    const tokenType = localStorage.getItem('token_type') || 'bearer';
+
+    const token =
+      accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
+
+    // Use a valid token; you might want to adjust the fallback behavior
+    const validToken =
+      token && token !== 'undefined' && token !== 'null'
+        ? token
+        : 'valid_test_token'; // Or handle error if no token
+
+    if (config.headers) {
+      config.headers.Authorization = `${tokenType} ${validToken}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
 // ────────────────────────────────────────
-// Response Interceptor
+// Response Interceptors
 // ────────────────────────────────────────
 
+// Main CRM API response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Add debugging information for successful responses in development
+    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
+      console.log('CRM API Response:', {
+        url: response.config.url,
+        method: response.config.method,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    }
     return response;
   },
   error => {
     // Don't redirect on cancelled requests
     if (axios.isCancel(error)) {
       return Promise.reject(error);
+    }
+
+    // Add CRM API error context for debugging
+    if (ENV_CONFIG.IS_DEVELOPMENT) {
+      const errorInfo = {
+        message: 'CRM API Error',
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.response?.data,
+      };
+      console.error('CRM API Error:', errorInfo);
     }
 
     if (error.response && error.response.status === 401) {
@@ -250,9 +349,78 @@ api.interceptors.response.use(
   }
 );
 
+// Transcripts API response interceptor (simpler, no auth redirects)
+transcriptsApi.interceptors.response.use(
+  (response: AxiosResponse) => {
+    // Add debugging information for successful responses in development
+    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
+      console.log('Transcripts API Response:', {
+        url: response.config.url,
+        method: response.config.method,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    }
+    return response;
+  },
+  error => {
+    // Don't redirect on cancelled requests
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
+    // Enhanced transcripts API error handling
+    const errorInfo = {
+      message: 'Transcripts API Error',
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      data: error.response?.data,
+    };
+
+    // Log transcripts API errors for debugging
+    if (ENV_CONFIG.IS_DEVELOPMENT) {
+      console.error('Transcripts API Error:', errorInfo);
+    }
+
+    // Add transcripts-specific error context
+    error.transcriptsApiError = true;
+    error.errorInfo = errorInfo;
+
+    return Promise.reject(error);
+  }
+);
+
 // ────────────────────────────────────────
 // API Helper Functions
 // ────────────────────────────────────────
+
+// Utility function to check if an error is from transcripts API
+export const isTranscriptsApiError = (error: any): boolean => {
+  return error && error.transcriptsApiError === true;
+};
+
+// Utility function to get transcripts API error info
+export const getTranscriptsApiErrorInfo = (error: any) => {
+  return error?.errorInfo || null;
+};
+
+// Utility function to validate and log API responses
+export const validateApiResponse = (
+  response: any,
+  apiType: 'crm' | 'transcripts' = 'crm'
+) => {
+  if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
+    console.log(`${apiType.toUpperCase()} API Response Validation:`, {
+      hasData: !!response?.data,
+      dataType: typeof response?.data,
+      isArray: Array.isArray(response?.data),
+      keys: response?.data ? Object.keys(response?.data) : [],
+    });
+  }
+  return response;
+};
 
 export const apiHelpers = {
   // Create a new AbortController for each request
@@ -982,59 +1150,76 @@ export const apiHelpers = {
   },
 
   // ────────────────────────────────────────
-  // Transcript Analysis
+  // Transcript Analysis (uses transcriptsApi instance)
   // ────────────────────────────────────────
 
-  analyzeTranscript: (
+  submitTranscriptJob: (
     formData: FormData,
     signal?: AbortSignal
   ): Promise<
     AxiosResponse<{
-      success: boolean;
-      data?: {
-        job_id: string;
-        file_info: {
-          filename: string;
-          file_size: number;
-          file_type: string;
-          uploaded_at: string;
-          processing_started_at: string;
-          processing_completed_at: string;
-          total_processing_time_seconds: number;
-        };
-        analysis_results: {
-          first_pass: any;
-          final_pass: any;
-        };
-        processing_metadata: {
-          first_pass_confidence: number;
-          final_pass_confidence: number;
-          improvement_score: number;
-          processing_warnings: string[];
-          extraction_quality_score: number;
-        };
-      };
-      error?: {
-        code: string;
-        message: string;
-        details?: Record<string, any>;
-      };
+      job_id: number;
+      document_id: string;
+      status: string;
     }>
   > => {
-    // Override Content-Type for multipart form data
     const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       signal: signal as GenericAbortSignal,
     };
-    return api.post(API_ENDPOINTS.TRANSCRIPTS.ANALYZE, formData, config);
+
+    return transcriptsApi
+      .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
+      .catch(error => {
+        if (error.transcriptsApiError) {
+          console.error(
+            'Transcripts API Job Submission Error:',
+            error.errorInfo
+          );
+          if (error.response?.status === 413) {
+            throw new Error(
+              'File too large. Please select a smaller file (max 10MB).'
+            );
+          } else if (error.response?.status === 415) {
+            throw new Error(
+              'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
+            );
+          } else if (error.response?.status === 503) {
+            throw new Error(
+              'Transcripts service is temporarily unavailable. Please try again later.'
+            );
+          } else if (error.response?.status >= 500) {
+            throw new Error(
+              'Transcripts service error. Please try again later.'
+            );
+          } else if (error.response?.status >= 400) {
+            throw new Error(
+              'Invalid request. Please check your file and try again.'
+            );
+          } else if (!error.response) {
+            throw new Error(
+              'Unable to connect to transcripts service. Please check your connection.'
+            );
+          }
+        }
+        throw error;
+      });
+  },
+
+  getJobStatus: (
+    jobId: number,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<JobDiagnosticsResponse>> => {
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
+      signal: signal as GenericAbortSignal,
+    });
+  },
+
+  // --- Jobs List --- //
+  getJobsList: (): Promise<AxiosResponse<JobsApiResponse>> => {
+    // This now correctly uses the transcriptsApi instance
+    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.LIST_JOBS);
   },
 };
 
 // Also export for backward compatibility
 export default apiHelpers;
-
-// ──────────────────────────────────────────────────
-// End of File: client/src/services/api.ts
-// ──────────────────────────────────────────────────

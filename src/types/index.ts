@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 04-07-2025
+ * Last Updated: 08-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -619,3 +619,41 @@ export interface ProductsResponse {
 
 // Add legacy response type for backward compatibility
 export interface ProductsLegacyResponse extends Array<Product> {}
+
+// ────────────────────────────────────────
+// Transcript Analysis Types
+// ────────────────────────────────────────
+
+export interface JobSubmissionResponse {
+  job_id: string;
+  status: string;
+}
+
+export interface JobStatusResponse {
+  job_id: string;
+  status: 'processing' | 'completed' | 'failed';
+  result?: {
+    pass_1_extraction: any;
+    pass_2_correction: any;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface JobDetailedResponse extends JobStatusResponse {
+  // Additional fields for detailed view
+  processing_metadata?: {
+    processing_time_seconds?: number;
+    file_info?: {
+      filename: string;
+      file_size: number;
+      file_type: string;
+    };
+  };
+}
+
+// ──────────────────────────────────────────────────
+// End of File: client/src/types/index.ts
+// ──────────────────────────────────────────────────
