@@ -184,21 +184,23 @@ export interface UserRoles {
 export interface User {
   id: number; // Changed from string to number
   email: string;
-  first_name: string;
-  last_name: string;
-  role: 'super_admin' | 'tenant_admin';
-  status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
+  first_name: string | null;
+  last_name: string | null;
+  role: 'global_admin' | 'tenant_admin';
+  status: 'active' | 'inactive' | 'pending' | 'invited';
   organization_id: number;
   domain_id?: number;
   created_at: string;
   updated_at: string;
+  mfa_enabled?: boolean;
+  mfa_setup_complete?: boolean;
 }
 
 export interface CreateUserRequest {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'super_admin' | 'tenant_admin';
+  role: 'global_admin' | 'tenant_admin';
   organization_id: number;
   domain_id?: number; // Made optional since we handle it separately
 }
@@ -207,7 +209,7 @@ export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role?: 'super_admin' | 'tenant_admin';
+  role?: 'global_admin' | 'tenant_admin';
   status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
   organization_id?: number;
 }
@@ -493,18 +495,18 @@ export interface TableProps<T> {
 // ────────────────────────────────────────
 
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface LoginResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   expires_in: number;
-  user: {
-    id: string;
-    username: string;
-  };
+  user: User;
+  mfa_required: boolean;
+  mfa_enrollment_required: boolean;
 }
 
 export interface AuthContextType {

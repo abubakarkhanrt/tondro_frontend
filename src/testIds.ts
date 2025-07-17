@@ -31,6 +31,15 @@ export const TestIds = {
     forgotDialogClose: 'login-forgot-dialog-close',
   },
 
+  // MFA
+  mfa: {
+    setupQrCode: 'mfa-setup-qr-code',
+    setupOtpInput: 'mfa-setup-otp-input',
+    setupSubmit: 'mfa-setup-submit',
+    verifyOtpInput: 'mfa-verify-otp-input',
+    verifySubmit: 'mfa-verify-submit',
+  },
+
   // Dashboard
   dashboard: {
     page: 'dashboard-page',

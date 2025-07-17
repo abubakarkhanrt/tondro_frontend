@@ -9,6 +9,14 @@
  */
 
 const AUTH_BACKEND_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
+const FRONTEND_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN;
+
+// This config object is the key. It disables the default Next.js body parser.
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -48,25 +56,28 @@ export default async function handler(req, res) {
 
     // Prepare request body
     const body =
-      req.method !== 'GET' && req.method !== 'HEAD'
+      req.method !== 'GET' && req.method !== 'HEAD' && req.body
         ? JSON.stringify(req.body)
         : undefined;
+
+    // Create a mutable copy of the headers for forwarding.
+    const forwardHeaders = { ...req.headers };
+
+    // Do not forward the original 'host' header. 'fetch' will automatically
+    // set the correct Host header based on the backendUrl.
+    delete forwardHeaders.host;
+
+    // It is also good practice to remove other hop-by-hop headers.
+    delete forwardHeaders.connection;
 
     // Forward the request to the auth backend
     const response = await fetch(backendUrl, {
       method: req.method,
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(req.headers.authorization && {
-          Authorization: req.headers.authorization,
-        }),
-        ...(req.headers.cookie && {
-          Cookie: req.headers.cookie,
-        }),
+        ...forwardHeaders,
+        Origin: FRONTEND_ORIGIN,
       },
       body: body,
-      credentials: 'include',
     });
 
     // Get response data
