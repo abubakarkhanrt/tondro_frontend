@@ -28,7 +28,7 @@ import {
 } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
-import type { Job } from '../services/api';
+import type { Job } from '../types';
 import { TestIds } from '../testIds';
 
 // ────────────────────────────────────────

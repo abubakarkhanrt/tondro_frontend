@@ -318,8 +318,8 @@ const Users: React.FC = () => {
             filteredUsers = filteredUsers.filter(
               user =>
                 user.email.toLowerCase().includes(searchLower) ||
-                user.first_name.toLowerCase().includes(searchLower) ||
-                user.last_name.toLowerCase().includes(searchLower)
+                user.first_name?.toLowerCase().includes(searchLower) ||
+                user.last_name?.toLowerCase().includes(searchLower)
             );
           }
 
@@ -1302,7 +1302,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               onChange={e =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as 'super_admin' | 'tenant_admin',
+                  role: e.target.value as 'global_admin' | 'tenant_admin',
                 })
               }
               label="Role"
@@ -1517,7 +1517,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
     role: user.role,
-    status: user.status,
+    status: user.status as 'active' | 'inactive' | 'pending' | 'invited',
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
@@ -1729,7 +1729,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               onChange={e =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as 'super_admin' | 'tenant_admin',
+                  role: e.target.value as 'global_admin' | 'tenant_admin',
                 })
               }
               label="Role"
@@ -1759,10 +1759,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 setFormData({
                   ...formData,
                   status: e.target.value as
-                    | 'Active'
-                    | 'Inactive'
-                    | 'Pending'
-                    | 'Invited',
+                    | 'active'
+                    | 'inactive'
+                    | 'pending'
+                    | 'invited',
                 })
               }
               label="Status"

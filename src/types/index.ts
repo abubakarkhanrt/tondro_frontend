@@ -210,7 +210,7 @@ export interface UpdateUserRequest {
   first_name?: string;
   last_name?: string;
   role?: 'global_admin' | 'tenant_admin';
-  status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
+  status?: 'active' | 'inactive' | 'pending' | 'invited';
   organization_id?: number;
 }
 
