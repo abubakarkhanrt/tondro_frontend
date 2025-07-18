@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 14-07-2025
+ * Last Updated: 17-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -202,7 +202,7 @@ const API_ENDPOINTS = {
     SUBMIT_JOB: '/api/transcripts/jobs',
     GET_JOB_STATUS: (jobId: number): string =>
       `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/api/transcripts/jobs',
+    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
   },
 } as const;
 
