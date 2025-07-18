@@ -33,8 +33,6 @@ import {
   type AuditLog,
   type ApiParams,
   type PaginatedResponse,
-  type LoginRequest,
-  type LoginResponse,
   type CreateOrganizationResponse,
   type Domain,
   type CreateDomainRequest,
@@ -48,49 +46,10 @@ import {
   type UsageSummaryResponse,
   type UsageLimitsResponse,
   type ProductsResponse,
+  type JobDiagnosticsResponse,
+  type JobsApiResponse,
 } from '../types';
-
-// Type for the new /jobs_diagnostics endpoint response
-interface JobDiagnosticsResponse {
-  id: number;
-  overall_status: string;
-  documents: {
-    id: string;
-    document_type: string;
-    status: 'processing' | 'completed' | 'failed';
-    result?: {
-      pass_1_extraction: any;
-      pass_2_correction: any;
-    };
-    error?: {
-      code: string;
-      message: string;
-    };
-  }[];
-  created_timestamp: string;
-  processing_duration_seconds: number;
-}
-
-// Interfaces for the /jobs endpoint
-export interface JobDocument {
-  id: string;
-  document_type: string;
-  original_filename: string;
-  status: 'completed' | 'processing' | 'failed';
-}
-
-export interface Job {
-  job_id: string;
-  status: string;
-  filename: string;
-  upload_timestamp: string;
-  file_path: string | null;
-  extracted_data: any | null;
-  processing_metadata: any | null;
-  processing_duration_seconds: number;
-}
-
-export type JobsApiResponse = Job[];
+import { apiAuthHelpers } from './authApi';
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -109,11 +68,6 @@ const buildCrmEndpointWithId =
 const API_ENDPOINTS = {
   // Base paths
   CRM: CRM_BASE,
-
-  // Authentication
-  AUTH: {
-    LOGIN: buildCrmEndpoint('/auth/login'),
-  },
 
   // Organizations
   ORGANIZATIONS: {
@@ -232,11 +186,6 @@ const transcriptsApi: AxiosInstance = axios.create({
 // Main CRM API interceptor
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Don't add Authorization header for login endpoint
-    if (config.url === API_ENDPOINTS.AUTH.LOGIN) {
-      return config;
-    }
-
     const accessToken = localStorage.getItem('access_token');
     const tokenType = localStorage.getItem('token_type') || 'bearer';
 
@@ -289,6 +238,21 @@ transcriptsApi.interceptors.request.use(
 // Response Interceptors
 // ────────────────────────────────────────
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 // Main CRM API response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
@@ -303,7 +267,9 @@ api.interceptors.response.use(
     }
     return response;
   },
-  error => {
+  async error => {
+    const originalRequest = error.config;
+
     // Don't redirect on cancelled requests
     if (axios.isCancel(error)) {
       return Promise.reject(error);
@@ -322,32 +288,68 @@ api.interceptors.response.use(
       console.error('CRM API Error:', errorInfo);
     }
 
-    if (error.response && error.response.status === 401) {
-      // Don't redirect if we're already on the login page
-      if (
-        typeof window !== 'undefined' &&
-        window.location.pathname === '/login'
-      ) {
-        return Promise.reject(error);
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            return axios(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
       }
 
-      // Clear all token formats for backward compatibility
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('token_type');
-      localStorage.removeItem('user');
-      localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
-      localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
+      originalRequest._retry = true;
+      isRefreshing = true;
 
-      // Dispatch events to notify components
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('logout'));
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+          handleAppLogout();
+        }
+        const { data } = await apiAuthHelpers.refresh(refreshToken || '');
+        const { access_token } = data;
 
-      // Redirect to login
-      window.location.href = '/login';
+        // Update local storage and original request
+        localStorage.setItem('access_token', access_token);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
+
+        processQueue(null, access_token);
+        return axios(originalRequest);
+      } catch (refreshError: any) {
+        processQueue(refreshError, null);
+
+        handleAppLogout();
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
     return Promise.reject(error);
   }
 );
+
+export const handleAppLogout = (): void => {
+  // Clear all token formats for backward compatibility
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('token_type');
+  localStorage.removeItem('user');
+  localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
+  localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
+
+  // Dispatch events to notify components
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('logout'));
+
+  // Redirect to login
+  window.location.href = '/login';
+};
 
 // Transcripts API response interceptor (simpler, no auth redirects)
 transcriptsApi.interceptors.response.use(
@@ -1086,28 +1088,12 @@ export const apiHelpers = {
     }),
 
   // ────────────────────────────────────────
-  // Authentication
-  // ────────────────────────────────────────
-
-  login: (
-    credentials: LoginRequest,
-    signal?: AbortSignal
-  ): Promise<AxiosResponse<LoginResponse>> => {
-    console.log('📡 API Login Request:', {
-      url: API_ENDPOINTS.AUTH.LOGIN,
-      credentials: { ...credentials, password: '***' },
-    });
-    return api.post(API_ENDPOINTS.AUTH.LOGIN, credentials, {
-      signal: signal as GenericAbortSignal,
-    });
-  },
-
-  // ────────────────────────────────────────
   // Health checks
   // ────────────────────────────────────────
 
   getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
-    axios.get(API_ENDPOINTS.STATUS.HEALTH, {
+    api.get(API_ENDPOINTS.STATUS.HEALTH, {
+      baseURL: '', // Override baseURL to hit the relative proxy endpoint
       signal: signal as GenericAbortSignal,
     }),
 
@@ -1223,3 +1209,7 @@ export const apiHelpers = {
 
 // Also export for backward compatibility
 export default apiHelpers;
+
+// ──────────────────────────────────────────────────
+// End of File: client/src/services/api.ts
+// ──────────────────────────────────────────────────

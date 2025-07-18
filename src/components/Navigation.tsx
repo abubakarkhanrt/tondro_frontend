@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
+import { apiAuthHelpers } from '../services/authApi';
 import { TestIds } from '../testIds';
+import { handleAppLogout } from '../services/api';
 
 interface MenuItem {
   text: string;
@@ -33,19 +35,22 @@ const Navigation: React.FC = () => {
     };
   }, []); // Empty dependency array ensures this setup runs only once on mount
 
-  const handleLogout = (): void => {
-    // Clear all tokens
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('token_type');
-    localStorage.removeItem('user');
-    localStorage.removeItem('jwt_token');
-    localStorage.removeItem('user_email');
+  const handleLogout = async (): Promise<void> => {
+    try {
+      const accessToken = localStorage.getItem('access_token');
+      const tokenType = localStorage.getItem('token_type') || 'Bearer';
+      await apiAuthHelpers.logout(undefined, {
+        Authorization: `${tokenType} ${accessToken}`,
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // NOTE: Even if the server-side logout fails, we proceed with client-side cleanup
+      // to ensure the user is logged out of the application interface.
+    } finally {
+      handleAppLogout();
 
-    // Dispatch events to notify other tabs/components of logout
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('logout'));
-
-    router.push('/login');
+      router.push('/login');
+    }
   };
 
   const menuItems: MenuItem[] = [
