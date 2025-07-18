@@ -44,10 +44,10 @@ You must adhere to the following project structure. When creating new files, pla
 │   ├── services/         # API clients, external service integrations (e.g., axios instance)
 │   ├── lib/ or /utils/   # General utility functions (formatters, validators)
 │   ├── theme/            # Global styles, MUI theme overrides (theme.ts)
-│   └── types/            # Shared TypeScript types and interfaces (use barrel files)
+│   └── types/            # Shared TypeScript types and interfaces (use barrel files for feature)
 └── ... (other root files)
 ```
-*   **Barrel Files:** Use `index.ts` files within directories (`components`, `hooks`, `types`) to aggregate and export modules for cleaner imports. (e.g., `import { UserTable, UserForm } from '@/components/users';`).
+*   **Barrel Files:** Use `{module/feature}.ts` files within directories (`components`, `hooks`, `types`) to aggregate and export modules for cleaner imports. (e.g., `import { UserTable, UserForm } from '@/components/users';`).
 
 ---
 

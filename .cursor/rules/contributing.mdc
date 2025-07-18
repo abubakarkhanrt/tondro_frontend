@@ -84,7 +84,7 @@ interface UserProfile {
 * ✅ Avoid `any`, use `unknown` + type guards when needed
 
 ```ts
-type UserRole = 'Super Admin' | 'Tenant Admin';
+type UserRole = 'Global Admin' | 'Tenant Admin';
 
 function getPermissions(role: UserRole): string[] { ... }
 ```

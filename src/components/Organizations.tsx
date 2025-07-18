@@ -68,6 +68,8 @@ import { TestIds } from '../testIds';
 import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { getButtonProps } from '../utils/buttonStyles';
 import DomainManagement from './DomainManagement';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
 
 // ────────────────────────────────────────
 // Component State Interfaces
@@ -128,6 +130,7 @@ const mapStatusFromApi = (apiStatus: string): string => {
 // ────────────────────────────────────────
 
 const Organizations: React.FC = () => {
+  const { hasPermission } = useAuth();
   // State management
   const [organizations, setOrganizations] = useState<OrganizationsState>({
     organizations: [],
@@ -638,7 +641,10 @@ const Organizations: React.FC = () => {
   // Organizations Table Component
   // ────────────────────────────────────────
 
-  const OrganizationsTable: React.FC<{ products: Product[] }> = () => (
+  const OrganizationsTable: React.FC<{
+    products: Product[];
+    hasPermission: (permission: string) => boolean;
+  }> = ({ products, hasPermission }) => (
     <Card data-testid={TestIds.organizations.table}>
       <CardContent>
         <Box
@@ -652,13 +658,15 @@ const Organizations: React.FC = () => {
           <Typography variant="h6">
             Organizations ({pagination.total})
           </Typography>
-          <Button
-            {...getButtonProps('create')}
-            onClick={() => setCreateDialogOpen(true)}
-            data-testid={TestIds.organizations.createButton}
-          >
-            Create Organization
-          </Button>
+          {hasPermission(PERMISSIONS.ORGANIZATION_CREATE) && (
+            <Button
+              {...getButtonProps('create')}
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid={TestIds.organizations.createButton}
+            >
+              Create Organization
+            </Button>
+          )}
         </Box>
 
         {organizations.loading ? (
@@ -801,32 +809,38 @@ const Organizations: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="View Details">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setSelectedOrg(org);
-                                  setEditMode(false);
-                                }}
-                                data-testid={TestIds.organizations.viewDetails(
-                                  org.id
-                                )}
-                              >
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit Organization">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setSelectedOrg(org);
-                                  setEditMode(true);
-                                }}
-                                data-testid={TestIds.organizations.edit(org.id)}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
+                            {hasPermission(PERMISSIONS.ORGANIZATION_READ) && (
+                              <Tooltip title="View Details">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setSelectedOrg(org);
+                                    setEditMode(false);
+                                  }}
+                                  data-testid={TestIds.organizations.viewDetails(
+                                    org.id
+                                  )}
+                                >
+                                  <VisibilityIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {hasPermission(PERMISSIONS.ORGANIZATION_UPDATE) && (
+                              <Tooltip title="Edit Organization">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setSelectedOrg(org);
+                                    setEditMode(true);
+                                  }}
+                                  data-testid={TestIds.organizations.edit(
+                                    org.id
+                                  )}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -864,7 +878,7 @@ const Organizations: React.FC = () => {
         onClearFilters={handleClearFilters}
       />
 
-      <OrganizationsTable products={products} />
+      <OrganizationsTable products={products} hasPermission={hasPermission} />
 
       <CreateOrganizationDialog
         open={createDialogOpen}

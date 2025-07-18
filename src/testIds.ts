@@ -20,6 +20,7 @@ export const TestIds = {
     jobs: 'navigation-jobs',
     auditLog: 'navigation-audit-log',
     logout: 'navigation-logout',
+    userMenu: 'navigation-user-menu',
   },
 
   // Login

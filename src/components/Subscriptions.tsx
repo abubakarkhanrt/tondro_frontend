@@ -59,6 +59,8 @@ import { getButtonProps } from '../utils/buttonStyles';
 import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { useProductTiers } from '../hooks/useProductTiers';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
 
 // Stub for current user ID (replace with real user context if available)
 // const currentUserId = 'demo-user-id';
@@ -477,6 +479,7 @@ interface SnackbarState {
 // ────────────────────────────────────────
 
 const Subscriptions: React.FC = () => {
+  const { hasPermission } = useAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -983,13 +986,15 @@ const Subscriptions: React.FC = () => {
           <Typography variant="h6">
             Subscriptions ({pagination.total})
           </Typography>
-          <Button
-            {...getButtonProps('create')}
-            onClick={handleOpenCreateDialog}
-            data-testid={TestIds.subscriptions.createButton}
-          >
-            Create Subscription
-          </Button>
+          {hasPermission(PERMISSIONS.SUBSCRIPTION_CREATE) && (
+            <Button
+              {...getButtonProps('create')}
+              onClick={handleOpenCreateDialog}
+              data-testid={TestIds.subscriptions.createButton}
+            >
+              Create Subscription
+            </Button>
+          )}
         </Box>
 
         {loading ? (
@@ -1059,30 +1064,34 @@ const Subscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedSubscription(subscription);
-                              setEditMode(false);
-                            }}
-                            data-testid={TestIds.subscriptions.viewDetails(
-                              subscription.id
-                            )}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedSubscription(subscription);
-                              setEditMode(true);
-                            }}
-                            data-testid={TestIds.subscriptions.edit(
-                              subscription.id
-                            )}
-                          >
-                            <EditIcon />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.SUBSCRIPTION_READ) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedSubscription(subscription);
+                                setEditMode(false);
+                              }}
+                              data-testid={TestIds.subscriptions.viewDetails(
+                                subscription.id
+                              )}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          )}
+                          {hasPermission(PERMISSIONS.SUBSCRIPTION_UPDATE) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedSubscription(subscription);
+                                setEditMode(true);
+                              }}
+                              data-testid={TestIds.subscriptions.edit(
+                                subscription.id
+                              )}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>

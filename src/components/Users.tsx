@@ -57,7 +57,8 @@ import {
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
-import { useUserRoles } from '../contexts/UserRolesContext';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
 import { debounce } from 'lodash';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
 
@@ -72,7 +73,7 @@ const getRoleColor = (
   const normalizedRole = role.toLowerCase().replace('_', ' ');
 
   switch (normalizedRole) {
-    case 'super admin':
+    case 'global admin':
       return 'error';
     case 'tenant admin':
       return 'warning';
@@ -83,31 +84,14 @@ const getRoleColor = (
 
 const getRoleDisplayName = (role: string): string => {
   switch (role) {
-    case 'super_admin':
-      return 'Super Admin';
+    case 'global_admin':
+      return 'Global Admin';
     case 'tenant_admin':
-      return 'Tenant Admin';
-    case 'Super Admin':
-      return 'Super Admin';
-    case 'Tenant Admin':
       return 'Tenant Admin';
     default:
       return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 };
-
-/*
-const getRoleInternalValue = (displayName: string): string => {
-  switch (displayName) {
-    case 'Super Admin':
-      return 'super_admin';
-    case 'Tenant Admin':
-      return 'tenant_admin';
-    default:
-      return displayName.toLowerCase().replace(' ', '_');
-  }
-};
-*/
 
 const getDomainName = (
   user: User,
@@ -141,14 +125,14 @@ const getDomainName = (
 };
 
 // Get available roles that match the expected role values
-const availableRoles = ['super_admin', 'tenant_admin'];
+const availableRoles = ['global_admin', 'tenant_admin'];
 
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Users: React.FC = () => {
-  const { userRoles } = useUserRoles();
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
@@ -566,7 +550,7 @@ const Users: React.FC = () => {
       <FilterSection
         filters={filters}
         organizations={organizations}
-        userRoles={userRoles}
+        userRoles={availableRoles}
         handleFilterChange={handleFilterChange}
         handleClearFilters={handleClearFilters}
       />
@@ -584,15 +568,18 @@ const Users: React.FC = () => {
         setSelectedUser={setSelectedUser}
         setCreateDialogOpen={setCreateDialogOpen}
         setEditMode={setEditMode}
+        hasPermission={hasPermission}
       />
 
-      <CreateUserDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateUser}
-        organizations={organizations}
-        domains={domains}
-      />
+      {hasPermission(PERMISSIONS.USER_CREATE) && (
+        <CreateUserDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={handleCreateUser}
+          organizations={organizations}
+          domains={domains}
+        />
+      )}
 
       {selectedUser && (
         <>
@@ -607,9 +594,10 @@ const Users: React.FC = () => {
               organizations={organizations}
               domains={domains}
               setEditMode={setEditMode}
+              hasPermission={hasPermission}
             />
           )}
-          {editMode && (
+          {editMode && hasPermission(PERMISSIONS.USER_UPDATE) && (
             <EditUserDialog
               user={selectedUser}
               onClose={() => {
@@ -619,7 +607,7 @@ const Users: React.FC = () => {
               onSubmit={handleUpdateUser}
               organizations={organizations}
               domains={domains}
-              userRoles={userRoles}
+              userRoles={availableRoles}
             />
           )}
         </>
@@ -830,6 +818,9 @@ interface UsersTableProps {
   setSelectedUser: (user: User) => void;
   setCreateDialogOpen: (open: boolean) => void;
   setEditMode: (edit: boolean) => void;
+  hasPermission: (
+    permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
+  ) => boolean;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
@@ -845,6 +836,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   setSelectedUser,
   setCreateDialogOpen,
   setEditMode,
+  hasPermission,
 }) => {
   return (
     <Card data-testid={TestIds.users.table}>
@@ -858,15 +850,17 @@ const UsersTable: React.FC<UsersTableProps> = ({
           }}
         >
           <Typography variant="h6">Users ({pagination.total})</Typography>
-          <Box>
-            <Button
-              {...getButtonProps('create')}
-              onClick={() => setCreateDialogOpen(true)}
-              data-testid={TestIds.users.createButton}
-            >
-              Create User
-            </Button>
-          </Box>
+          {hasPermission(PERMISSIONS.USER_CREATE) && (
+            <Box>
+              <Button
+                {...getButtonProps('create')}
+                onClick={() => setCreateDialogOpen(true)}
+                data-testid={TestIds.users.createButton}
+              >
+                Create User
+              </Button>
+            </Box>
+          )}
         </Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -949,24 +943,28 @@ const UsersTable: React.FC<UsersTableProps> = ({
                           >
                             <VisibilityIcon />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setEditMode(true);
-                            }}
-                            data-testid={TestIds.users.edit(user.id)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteUser(user.id)}
-                            data-testid={TestIds.users.deactivate(user.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.USER_UPDATE) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setEditMode(true);
+                              }}
+                              data-testid={TestIds.users.edit(user.id)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                          {hasPermission(PERMISSIONS.USER_DELETE) && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteUser(user.id)}
+                              data-testid={TestIds.users.deactivate(user.id)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1356,6 +1354,9 @@ interface ViewUserDialogProps {
   organizations: OrganizationV2[]; // Only OrganizationV2
   domains: Record<string, Domain[]>;
   setEditMode: (edit: boolean) => void;
+  hasPermission: (
+    permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
+  ) => boolean;
 }
 
 const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
@@ -1365,6 +1366,7 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
   organizations,
   domains,
   setEditMode,
+  hasPermission,
 }) => {
   return (
     <Dialog
@@ -1471,15 +1473,17 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button
-          onClick={() => {
-            // Set edit mode to true to switch to edit dialog
-            setEditMode(true);
-          }}
-          data-testid={TestIds.users.viewDialog.editButton}
-        >
-          Edit
-        </Button>
+        {hasPermission(PERMISSIONS.USER_UPDATE) && (
+          <Button
+            onClick={() => {
+              // Set edit mode to true to switch to edit dialog
+              setEditMode(true);
+            }}
+            data-testid={TestIds.users.viewDialog.editButton}
+          >
+            Edit
+          </Button>
+        )}
         <Button
           onClick={onClose}
           data-testid={TestIds.users.viewDialog.closeButton}

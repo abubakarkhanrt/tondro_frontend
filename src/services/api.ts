@@ -147,7 +147,7 @@ const API_ENDPOINTS = {
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
-    HEALTH: '/api/proxy/health',
+    HEALTH: buildCrmEndpoint('/health'),
     ROOT: '/',
   },
 
@@ -311,10 +311,11 @@ api.interceptors.response.use(
           handleAppLogout();
         }
         const { data } = await apiAuthHelpers.refresh(refreshToken || '');
-        const { access_token } = data;
+        const { access_token, refresh_token } = data;
 
         // Update local storage and original request
         localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
         originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
 
@@ -335,20 +336,14 @@ api.interceptors.response.use(
   }
 );
 
-export const handleAppLogout = (): void => {
+export const handleAppLogout = (navigateToLogin: boolean = true): void => {
   // Clear all token formats for backward compatibility
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('token_type');
-  localStorage.removeItem('user');
-  localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
-  localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
-
-  // Dispatch events to notify components
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('logout'));
+  localStorage.clear();
 
   // Redirect to login
-  window.location.href = '/login';
+  if (navigateToLogin) {
+    window.location.href = '/login';
+  }
 };
 
 // Transcripts API response interceptor (simpler, no auth redirects)
@@ -1093,7 +1088,6 @@ export const apiHelpers = {
 
   getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
     api.get(API_ENDPOINTS.STATUS.HEALTH, {
-      baseURL: '', // Override baseURL to hit the relative proxy endpoint
       signal: signal as GenericAbortSignal,
     }),
 
@@ -1116,7 +1110,7 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<{ roles: string[] }>> => {
     // Use environment configuration to decide whether to use static roles
     if (ENV_CONFIG.USE_STATIC_ROLES) {
-      const staticRoles = ['super_admin', 'tenant_admin'];
+      const staticRoles = ['global_admin', 'tenant_admin'];
 
       const mockResponse: AxiosResponse<{ roles: string[] }> = {
         data: { roles: staticRoles },

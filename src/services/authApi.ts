@@ -24,7 +24,6 @@ const authApi: AxiosInstance = axios.create({
   timeout: ENV_CONFIG.API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
-    Origin: ENV_CONFIG.ORIGIN,
   },
   withCredentials: true, // Crucial for sending cookies automatically
 });
