@@ -4,7 +4,7 @@
  * Description: TypeScript type definitions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -697,6 +697,16 @@ export interface Job {
 }
 
 export type JobsApiResponse = Job[];
+
+// ────────────────────────────────────────
+// Re-export transcripts types from transcriptsApi.ts for consistency
+// ────────────────────────────────────────
+export type {
+  JobDiagnosticsResponse as TranscriptsJobDiagnosticsResponse,
+  JobDocument as TranscriptsJobDocument,
+  Job as TranscriptsJob,
+  JobsApiResponse as TranscriptsJobsApiResponse,
+} from '../services/transcriptsApi';
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/types/index.ts
