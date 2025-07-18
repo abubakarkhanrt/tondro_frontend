@@ -4,7 +4,7 @@
  * Description: Environment configuration for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -18,12 +18,19 @@ export const ENV_CONFIG = {
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
   API_BASE_PATH: 'api/crm',
 
-  // Transcripts API Configuration (separate service)
-  TRANSCRIPTS_API_BASE_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL,
+  // Transcripts API Configuration (direct backend calls)
+  // Replace transcripts proxy URL with direct backend URL
+  TRANSCRIPTS_BACKEND_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_BACKEND_URL,
   TRANSCRIPTS_API_TIMEOUT: parseInt(
     process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000',
     10
   ), // Longer timeout for file processing
+
+  // Add frontend origin for CORS
+  FRONTEND_ORIGIN: process.env.NEXT_PUBLIC_FRONTEND_ORIGIN,
+
+  // Remove or rename old config
+  // TRANSCRIPTS_API_BASE_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL,
 
   // Auth API Configuration (dedicated auth backend)
   AUTH_API_BASE_URL: process.env.NEXT_PUBLIC_AUTH_API_BASE_PATH,
@@ -77,7 +84,7 @@ export const validateEnvironment = (): void => {
   if (ENV_CONFIG.IS_DEVELOPMENT) {
     console.log('Environment Configuration:', {
       API_BASE_URL: ENV_CONFIG.API_BASE_URL,
-      TRANSCRIPTS_API_BASE_URL: ENV_CONFIG.TRANSCRIPTS_API_BASE_URL,
+      TRANSCRIPTS_BACKEND_URL: ENV_CONFIG.TRANSCRIPTS_BACKEND_URL,
       NODE_ENV: ENV_CONFIG.NODE_ENV,
       DEBUG: ENV_CONFIG.DEBUG,
       ENABLE_AUDIT_LOG: ENV_CONFIG.ENABLE_AUDIT_LOG,
@@ -94,7 +101,7 @@ export const logEnvironment = (): void => {
   if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.DEBUG) {
     console.log('Environment Configuration:', {
       API_BASE_URL: ENV_CONFIG.API_BASE_URL,
-      TRANSCRIPTS_API_BASE_URL: ENV_CONFIG.TRANSCRIPTS_API_BASE_URL,
+      TRANSCRIPTS_BACKEND_URL: ENV_CONFIG.TRANSCRIPTS_BACKEND_URL,
       NODE_ENV: ENV_CONFIG.NODE_ENV,
       DEBUG: ENV_CONFIG.DEBUG,
       ENABLE_AUDIT_LOG: ENV_CONFIG.ENABLE_AUDIT_LOG,
