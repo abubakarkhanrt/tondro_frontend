@@ -109,24 +109,8 @@ const Products: React.FC = () => {
   );
 
   useEffect(() => {
-    // Add a small delay to ensure token is available after login
-    const timer = setTimeout(() => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        fetchData();
-      } else {
-        setEntityState(prev => ({
-          ...prev,
-          error: 'No authentication token found. Please login again.',
-          loading: false,
-        }));
-      }
-    }, 100); // Small delay to ensure token is set
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [fetchData, setEntityState]);
+    fetchData();
+  }, []);
 
   const handleCreateProduct = async (
     formData: CreateProductRequest

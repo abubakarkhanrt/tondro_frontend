@@ -184,21 +184,23 @@ export interface UserRoles {
 export interface User {
   id: number; // Changed from string to number
   email: string;
-  first_name: string;
-  last_name: string;
-  role: 'super_admin' | 'tenant_admin';
-  status: 'Active' | 'Inactive' | 'Pending' | 'Invited';
+  first_name: string | null;
+  last_name: string | null;
+  role: 'global_admin' | 'tenant_admin';
+  status: 'active' | 'inactive' | 'pending' | 'invited';
   organization_id: number;
   domain_id?: number;
   created_at: string;
   updated_at: string;
+  mfa_enabled?: boolean;
+  mfa_setup_complete?: boolean;
 }
 
 export interface CreateUserRequest {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'super_admin' | 'tenant_admin';
+  role: 'global_admin' | 'tenant_admin';
   organization_id: number;
   domain_id?: number; // Made optional since we handle it separately
 }
@@ -207,8 +209,8 @@ export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role?: 'super_admin' | 'tenant_admin';
-  status?: 'Active' | 'Inactive' | 'Pending' | 'Invited';
+  role?: 'global_admin' | 'tenant_admin';
+  status?: 'active' | 'inactive' | 'pending' | 'invited';
   organization_id?: number;
 }
 
@@ -493,18 +495,18 @@ export interface TableProps<T> {
 // ────────────────────────────────────────
 
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface LoginResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   expires_in: number;
-  user: {
-    id: string;
-    username: string;
-  };
+  user: User;
+  mfa_required: boolean;
+  mfa_enrollment_required: boolean;
 }
 
 export interface AuthContextType {
@@ -653,6 +655,48 @@ export interface JobDetailedResponse extends JobStatusResponse {
     };
   };
 }
+
+// Type for the new /jobs_diagnostics endpoint response
+export interface JobDiagnosticsResponse {
+  id: number;
+  overall_status: string;
+  documents: {
+    id: string;
+    document_type: string;
+    status: 'processing' | 'completed' | 'failed';
+    result?: {
+      pass_1_extraction: any;
+      pass_2_correction: any;
+    };
+    error?: {
+      code: string;
+      message: string;
+    };
+  }[];
+  created_timestamp: string;
+  processing_duration_seconds: number;
+}
+
+// Interfaces for the /jobs endpoint
+export interface JobDocument {
+  id: string;
+  document_type: string;
+  original_filename: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
+export interface Job {
+  job_id: string;
+  status: string;
+  filename: string;
+  upload_timestamp: string;
+  file_path: string | null;
+  extracted_data: any | null;
+  processing_metadata: any | null;
+  processing_duration_seconds: number;
+}
+
+export type JobsApiResponse = Job[];
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/types/index.ts

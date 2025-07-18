@@ -44,18 +44,22 @@ crm_frontend/
 ## 🛠️ Services Architecture
 
 ### Base API Client (`src/lib/api-client.ts`)
+
 - Centralized Axios configuration
 - Request/response interceptors
 - Authentication token handling
 - Error handling and redirects
 
 ### Component-Specific Services
+
 Each service contains:
+
 - **Types**: Domain-specific TypeScript interfaces
 - **API Methods**: CRUD operations and business logic
 - **Error Handling**: Service-specific error management
 
 #### Available Services:
+
 - `OrganizationsService` - Organization management
 - `UsersService` - User management
 - `SubscriptionsService` - Subscription handling
@@ -68,6 +72,7 @@ Each service contains:
 ### Custom Hooks
 
 #### `useApi<T>`
+
 ```typescript
 const { data, loading, error, refetch } = useApi(
   () => OrganizationsService.getOrganizations(),
@@ -76,10 +81,11 @@ const { data, loading, error, refetch } = useApi(
 ```
 
 #### `usePagination`
+
 ```typescript
 const { pagination, handlePageChange, handlePageSizeChange } = usePagination({
   initialPage: 1,
-  initialPageSize: 10
+  initialPageSize: 10,
 });
 ```
 
@@ -112,17 +118,23 @@ npm test
 ### Using Component-Specific Services
 
 ```typescript
-import { OrganizationsService, type Organization } from '../services/organizations';
+import {
+  OrganizationsService,
+  type Organization,
+} from '../services/organizations';
 
 // Fetch organizations
-const response = await OrganizationsService.getOrganizations({ page: 1, limit: 10 });
+const response = await OrganizationsService.getOrganizations({
+  page: 1,
+  limit: 10,
+});
 
 // Create organization
 const newOrg = await OrganizationsService.createOrganization({
   tenantName: 'My Company',
   organizationDomain: 'mycompany.com',
   initialAdminEmail: 'admin@mycompany.com',
-  initialSubscriptions: []
+  initialSubscriptions: [],
 });
 ```
 
@@ -164,9 +176,12 @@ Environment variables are configured in `src/config/env.ts`:
 ```typescript
 export const ENV_CONFIG = {
   API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081',
+  AUTH_API_BASE_URL:
+    process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8001',
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000'),
   JWT_STORAGE_KEY: process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || 'jwt_token',
-  USER_EMAIL_STORAGE_KEY: process.env.NEXT_PUBLIC_USER_EMAIL_STORAGE_KEY || 'user_email',
+  USER_EMAIL_STORAGE_KEY:
+    process.env.NEXT_PUBLIC_USER_EMAIL_STORAGE_KEY || 'user_email',
 };
 ```
 

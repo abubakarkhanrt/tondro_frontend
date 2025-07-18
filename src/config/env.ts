@@ -14,8 +14,7 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  // API_BASE_URL is the proxy url
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_PATH,
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_PATH, // proxy url
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10),
   API_BASE_PATH: 'api/crm',
 
@@ -25,6 +24,10 @@ export const ENV_CONFIG = {
     process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000',
     10
   ), // Longer timeout for file processing
+
+  // Auth API Configuration (dedicated auth backend)
+  AUTH_API_BASE_URL: process.env.NEXT_PUBLIC_AUTH_API_BASE_PATH,
+  ORIGIN: process.env.NEXT_PUBLIC_ORIGIN,
 
   // Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
