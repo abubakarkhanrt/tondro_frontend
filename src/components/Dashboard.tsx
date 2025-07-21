@@ -44,6 +44,12 @@ interface SummaryData {
   status: unknown | ErrorResponse | null;
 }
 
+interface DashboardState {
+  data: SummaryData;
+  loading: boolean;
+  error: string;
+}
+
 interface SummaryCardProps {
   title: string;
   data: SummaryData[keyof SummaryData];
@@ -58,29 +64,34 @@ interface SummaryCardProps {
 // ────────────────────────────────────────
 
 const Dashboard: React.FC = () => {
-  const [summaryData, setSummaryData] = useState<SummaryData>({
-    organizations: null,
-    users: null,
-    subscriptions: null,
-    products: null,
-    root: null,
-    health: null,
-    status: null,
+  const [summaryState, setSummaryState] = useState<DashboardState>({
+    data: {
+      organizations: null,
+      users: null,
+      subscriptions: null,
+      products: null,
+      root: null,
+      health: null,
+      status: null,
+    },
+    loading: true,
+    error: '',
   });
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Remove the artificial delay - token is available immediately after login
     const token = localStorage.getItem('access_token');
     if (token && token !== 'undefined' && token !== 'null') {
       fetchSummaryData();
     } else {
-      setError('No authentication token found. Please login again.');
-      setLoading(false);
+      setSummaryState(prev => ({
+        ...prev,
+        error: 'No authentication token found. Please login again.',
+        loading: false,
+      }));
     }
 
     return () => {
@@ -101,70 +112,88 @@ const Dashboard: React.FC = () => {
     const controller = new AbortController();
     setAbortController(controller);
 
-    setLoading(true);
-    setError('');
+    setSummaryState(prev => ({ ...prev, loading: true, error: '' }));
 
     try {
       // Double-check token before making request
       const token = localStorage.getItem('access_token');
       if (!token || token === 'undefined' || token === 'null') {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
+        setSummaryState(prev => ({
+          ...prev,
+          error: 'Authentication token not found. Please login again.',
+          loading: false,
+        }));
         return;
       }
 
       // Fetch summary data for each entity type using component-specific services
-      const orgsData = await apiHelpers
-        .getOrganizations({}, controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-      const usersData = await apiHelpers
-        .getUsers({}, controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-      const subsData = await apiHelpers
-        .getSubscriptions({}, controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-      const productsData = await apiHelpers
-        .getProducts(controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
+      const [
+        orgsData,
+        usersData,
+        subsData,
+        productsData,
+        rootData,
+        healthData,
+        statusData,
+      ] = await Promise.all([
+        apiHelpers
+          .getOrganizations({}, controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getUsers({}, controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getSubscriptions({}, controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getProducts(controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getRoot(controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getHealth(controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+        apiHelpers
+          .getStatus(controller.signal)
+          .catch((err: Error) => ({ error: err.message })),
+      ]);
 
-      // Fetch health check data through health service
-      const rootData = await apiHelpers
-        .getRoot(controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-      const healthData = await apiHelpers
-        .getHealth(controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-      const statusData = await apiHelpers
-        .getStatus(controller.signal)
-        .catch((err: Error) => ({ error: err.message }));
-
-      setSummaryData({
-        organizations:
-          'error' in orgsData ? { error: orgsData.error } : orgsData.data,
-        users:
-          'error' in usersData ? { error: usersData.error } : usersData.data,
-        subscriptions:
-          'error' in subsData
-            ? { error: subsData.error }
-            : Array.isArray(subsData.data)
-              ? {
-                  items: subsData.data,
-                  total: subsData.data.length,
-                  page: 1,
-                  page_size: 100,
-                  total_pages: 1,
-                }
-              : subsData.data,
-        products:
-          'error' in productsData
-            ? { error: productsData.error }
-            : productsData.data,
-        root: 'error' in rootData ? { error: rootData.error } : rootData.data,
-        health:
-          'error' in healthData ? { error: healthData.error } : healthData.data,
-        status:
-          'error' in statusData ? { error: statusData.error } : statusData.data,
-      });
+      setSummaryState(prev => ({
+        ...prev,
+        data: {
+          organizations:
+            'error' in orgsData ? { error: orgsData.error } : orgsData.data,
+          users:
+            'error' in usersData ? { error: usersData.error } : usersData.data,
+          subscriptions:
+            'error' in subsData
+              ? { error: subsData.error }
+              : Array.isArray(subsData.data)
+                ? {
+                    items: subsData.data,
+                    total: subsData.data.length,
+                    page: 1,
+                    page_size: 100,
+                    total_pages: 1,
+                  }
+                : subsData.data,
+          products:
+            'error' in productsData
+              ? { error: productsData.error }
+              : productsData.data,
+          root: 'error' in rootData ? { error: rootData.error } : rootData.data,
+          health:
+            'error' in healthData
+              ? { error: healthData.error }
+              : healthData.data,
+          status:
+            'error' in statusData
+              ? { error: statusData.error }
+              : statusData.data,
+        },
+        loading: false,
+      }));
     } catch (error: unknown) {
       // Don't show error for cancelled requests
       if (
@@ -177,18 +206,18 @@ const Dashboard: React.FC = () => {
       }
 
       console.error('Error fetching summary data:', error);
-      if (error && typeof error === 'object' && 'response' in error) {
-        const apiError = error as { response?: { status: number } };
-        if (apiError.response?.status === 401) {
-          setError('Authentication failed. Please login again.');
-        } else {
-          setError('Failed to load dashboard data. Please try again.');
-        }
-      } else {
-        setError('Failed to load dashboard data. Please try again.');
+      const apiError = error as { response?: { status: number } };
+      let errorMessage = 'Failed to load dashboard data. Please try again.';
+      if (apiError.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
       }
+
+      setSummaryState(prev => ({
+        ...prev,
+        error: errorMessage,
+        loading: false,
+      }));
     } finally {
-      setLoading(false);
       setAbortController(null);
     }
   };
@@ -428,7 +457,7 @@ const Dashboard: React.FC = () => {
     );
   };
 
-  if (loading) {
+  if (summaryState.loading) {
     return (
       <Box
         sx={{
@@ -449,13 +478,13 @@ const Dashboard: React.FC = () => {
         Dashboard
       </Typography>
 
-      {error && (
+      {summaryState.error && (
         <Alert
           severity="error"
           sx={{ mb: 3 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {summaryState.error}
         </Alert>
       )}
 
@@ -463,8 +492,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Organizations"
-            data={summaryData.organizations}
-            loading={loading}
+            data={summaryState.data.organizations}
+            loading={summaryState.loading}
             color="primary"
             path="/organizations"
             icon="🏢"
@@ -473,8 +502,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Users"
-            data={summaryData.users}
-            loading={loading}
+            data={summaryState.data.users}
+            loading={summaryState.loading}
             color="secondary"
             path="/users"
             icon="👥"
@@ -483,8 +512,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Subscriptions"
-            data={summaryData.subscriptions}
-            loading={loading}
+            data={summaryState.data.subscriptions}
+            loading={summaryState.loading}
             color="success"
             path="/subscriptions"
             icon="📋"
@@ -493,8 +522,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Products"
-            data={summaryData.products}
-            loading={loading}
+            data={summaryState.data.products}
+            loading={summaryState.loading}
             color="info"
             path="/products"
             icon="📦"
@@ -503,8 +532,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={4}>
           <SummaryCard
             title="API Status"
-            data={summaryData.status}
-            loading={loading}
+            data={summaryState.data.status}
+            loading={summaryState.loading}
             color="warning"
             path="/status"
             icon="🔌"
@@ -513,8 +542,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={4}>
           <SummaryCard
             title="Health Check"
-            data={summaryData.health}
-            loading={loading}
+            data={summaryState.data.health}
+            loading={summaryState.loading}
             color="success"
             path="/health"
             icon="❤️"
@@ -523,8 +552,8 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={4}>
           <SummaryCard
             title="Service Info"
-            data={summaryData.root}
-            loading={loading}
+            data={summaryState.data.root}
+            loading={summaryState.loading}
             color="info"
             path="/info"
             icon="ℹ️"

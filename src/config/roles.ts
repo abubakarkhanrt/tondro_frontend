@@ -111,5 +111,5 @@ const ROLES: Record<string, Permission[]> = {
  * @returns An array of permission strings. Returns empty array if role is not found.
  */
 export const getPermissionsForRole = (role: string): Permission[] => {
-  return ROLES[role] || [];
+  return ROLES[role.toUpperCase()] || [];
 };

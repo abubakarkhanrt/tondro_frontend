@@ -3,220 +3,85 @@ description:
 globs: 
 alwaysApply: true
 ---
-Run the project in venv and use port 3001
+### **2. Pull Request (PR) Process**
 
-## Documentation & Code Annotation Standards
+#### **Before Creating a PR**
 
-### File Header Template
+1.  ✅ **Build & Lint:** Ensure the application builds successfully (`npm run build`) and passes all linter checks (`npm run lint`).
+2.  ✅ **Testing:** Run all unit and integration tests (`npm test`) and confirm they all pass.
+3.  ✅ **Clean Code:** Remove any `console.log`, `debugger` statements, or temporary test data.
+4.  ✅ **Documentation:** Update any relevant documentation (e.g., README, component JSDoc) that is impacted by your changes.
 
-Every **JS/TS file** must include a standardized comment header in this format:
+#### **Creating the PR**
 
+*   **Clear Title & Description:** Write a concise title and a detailed description of what the PR accomplishes.
+*   **Link to Issue:** If the PR addresses a specific issue, link to it.
+*   **Testing Steps:** Provide clear, step-by-step instructions for how a reviewer can manually test your changes.
+*   **Screenshots/GIFs:** For any UI changes, include visual evidence of the new or updated interface.
+
+---
+
+### **3. Quality Assurance & Testing**
+
+#### **Testing Requirements**
+*   **Unit Tests:** All new business logic (utility functions, hooks) must be accompanied by unit tests using **Jest** and **React Testing Library**.
+*   **Integration Tests:** API endpoints should have integration tests to verify their behavior.
+*   **Manual Testing:** Always manually test your changes in a browser to catch issues not covered by automated tests. Check different screen sizes for responsiveness.
+*   **Edge Cases:** Test for edge cases like null/undefined inputs, empty states, and error conditions (e.g., 404s).
+
+#### **Centralized Test ID Management (`testIds.ts`)**
+
+To ensure stable and maintainable end-to-end and integration tests, all `data-testid` attributes **must** be sourced from a single, shared source of truth.
+
+**Workflow:**
+1.  **Locate or Create:** The file is located at `src/testIds.ts`.
+2.  **Define IDs First:** Before adding a `data-testid` to a component, you **must** first define a corresponding string constant in the `testIds.ts` file. Group IDs logically by component or page.
+3.  **Implement in Component:** Import the `TestIds` object and reference the specific ID in your component's `data-testid` prop.
+
+**Example `src/testIds.ts`:**
 ```ts
 /**
- * ──────────────────────────────────────────────────
- * File: path/to/your/file.ts[x] or .jsx
- * Description: $DESCRIPTION
- * Author: Muhammad Abubakar Khan
- * Created: $CREATED_DATE
- * Last Updated: $CURRENT_DATE
- * ──────────────────────────────────────────────────
+ * Central repository for all `data-testid` attributes used in the application.
+ * This ensures consistency and makes tests less brittle to UI changes.
  */
+export const TestIds = {
+    // IDs for the Login Page
+    LOGIN_PAGE: {
+      emailInput: 'login-email-input',
+      passwordInput: 'login-password-input',
+      submitButton: 'login-submit-button',
+    },
+
+    // IDs for the User Management Table
+    USER_TABLE: {
+      tableContainer: 'user-table-container',
+      addUserButton: 'user-table-add-user-btn',
+      // Use functions for dynamic IDs
+      rowById: (userId: string | number) => `user-table-row-${userId}`,
+    },
+};
 ```
 
-### Module Documentation
-
-Place a top-level comment block for files that define key modules/components:
-
-```ts
-/**
- * Component: UserDashboard
- * 
- * This component is responsible for rendering the main user dashboard.
- * Includes charts, tables, and summaries.
- * 
- * Key Features:
- * - Fetches data from `/api/dashboard`
- * - Uses Material UI components
- * - Responsive layout with Grid system
- * 
- * Example Usage:
- * <UserDashboard userId="12345" />
- */
-```
-
-### Component Documentation (React)
-
+**Example Component Usage:**
 ```tsx
-/**
- * LoginForm Component
- * 
- * Renders a login form using Material UI inputs.
- * 
- * Props:
- * - onSubmit: (data: { email: string; password: string }) => void
- * 
- * Example:
- * <LoginForm onSubmit={handleLogin} />
- */
-export const LoginForm = ({ onSubmit }: Props) => { ... }
+import { TestIds } from '@/testIds';
+import { Button } from '@mui/material';
+
+export const AddUserButton = () => (
+  <Button data-testid={TestIds.USER_TABLE.addUserButton}>
+    Add User
+  </Button>
+);
 ```
-
-### Property Documentation (for TypeScript classes or objects)
-
-```ts
-interface UserProfile {
-  /** Unique identifier for the user */
-  id: string;
-
-  /** Full name of the user */
-  name: string;
-
-  /** Optional profile picture URL */
-  avatarUrl?: string;
-}
-```
-
-### TypeScript Usage Guidelines
-
-* ✅ Use `interface` and `type` to define data shapes
-* ✅ All function inputs and outputs must be typed
-* ✅ Use `Record`, `Partial`, `Readonly`, etc., when applicable
-* ✅ Avoid `any`, use `unknown` + type guards when needed
-
-```ts
-type UserRole = 'Global Admin' | 'Tenant Admin';
-
-function getPermissions(role: UserRole): string[] { ... }
-```
-
-### Commenting Standards
-
-#### Inline Comments
-
-```ts
-// Retry fetching user data on initial failure
-await fetchUserData();
-
-// TODO: Add error fallback UI for disconnected state
-// NOTE: This is a temporary workaround until backend stabilizes
-```
-
-#### Code Section Separators
-
-```ts
-// ────────────────────────────────────────
-// API Handlers
-// ────────────────────────────────────────
-
-// ────────────────────────────────────────
-// Utility Functions
-// ────────────────────────────────────────
-
-// ────────────────────────────────────────
-// Component Logic
-// ────────────────────────────────────────
-```
-
-### Logging Standards (Node.js Backend)
-
-Use a logger like `winston` or `pino`. Avoid `console.log` in production.
-
-```ts
-import logger from '../utils/logger';
-
-logger.info('User created successfully');
-logger.error('User creation failed', { userId, error });
-```
-
 ---
 
-## Security Requirements
+### **4. Prohibited Activities**
 
-### Critical Security Rules
+*   ❌ **Committing Secrets:** Never commit `.env` files, API keys, or any other sensitive credentials.
+*   ❌ **Skipping Code Reviews:** All code must be reviewed and approved before merging.
+*   ❌ **Merging with Broken Tests:** Do not merge a PR if the test suite is failing.
+*   ❌ **Installing Unapproved Packages:** Get approval before adding new third-party dependencies to the project.
 
-* ❌ **Never commit `.env`, API keys, or secrets**
-* ❌ **No hardcoded credentials**
-* ✅ **Use `.env.local` for local config, and `.env.production` for deployed**
-* ✅ **Validate user input on both frontend and backend**
-* ✅ **Escape or sanitize HTML to prevent XSS**
-
-
-### Code Review Focus Areas
-
-* Authentication logic
-* Authorization guards (role checks, access control)
-* Input validation
-* Open redirects or token leakage
-* Console logs or exposed stack traces
-
----
-
-## Pull Request Process
-
-### Before Creating a PR
-
-1. ✅ Ensure the app builds (`npm run build`)
-2. ✅ Run lint (`npm run lint`) and tests (`npm test`)
-3. ✅ Remove `console.log`, `debugger`, and test data
-4. ✅ Update related documentation or README
-5. ✅ Format code using Prettier or ESLint
-
-### PR Template
-```md
-## What This PR Does
-[Short summary]
-
-## Changes Made
-- Updated LoginForm to use MUI v6
-- Removed deprecated axios usage
-
-## Testing
-- `npm run dev` to test locally
-- Click "Login" with test credentials
-
-## Security Considerations
-- Added input validation
-- Restricted access to admin routes
-``
-
----
-
-## Quality Assurance
-
-### Testing Requirements
-
-* Unit tests for all business logic
-* Integration tests for API endpoints
-* Manual testing of UI changes
-* Test mobile responsiveness (for frontend)
-* Edge cases: null, undefined, empty states, 404s, etc.
-
-### Documentation
-
-* Update or create README sections
-* Comment complex logic or algorithms
-* Add inline prop or hook usage descriptions
----
-
-## Prohibited Activities
-
-### Strictly Forbidden
-
-* ❌ Skipping code reviews
-* ❌ Merging with broken tests
-* ❌ Committing secrets or personal info
-* ❌ Installing packages without approval
-* ❌ Circumventing security or auth checks
-
----
-## Final Notes
-
-### Professional Standards
-
-* Maintain respectful communication
-* Deliver reliable, tested, readable code
-* Be responsive to code reviews
-* Prioritize security and user experience
 
 ---
 **Reminder**: Code quality and security are **non-negotiable**. Ask when in doubt. Document what you learn.

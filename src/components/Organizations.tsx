@@ -50,11 +50,9 @@ import {
   Remove as RemoveIcon,
 } from '@mui/icons-material';
 import { debounce } from 'lodash';
-import axios from 'axios';
 import { apiHelpers } from '../services/api';
 import {
   type Organization,
-  type OrganizationsResponse,
   type CreateOrganizationRequest,
   type UpdateOrganizationRequest,
   type Product,
@@ -70,34 +68,9 @@ import { getButtonProps } from '../utils/buttonStyles';
 import DomainManagement from './DomainManagement';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
-// ────────────────────────────────────────
-// Component State Interfaces
-// ────────────────────────────────────────
-
-interface OrganizationsState {
-  organizations: Organization[];
-  loading: boolean;
-  error: string;
-  abortController: AbortController | null;
-}
-
-interface FiltersState {
-  status: string;
-  search: string;
-}
-
-interface PaginationState {
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
+type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 // ────────────────────────────────────────
 // Utility Functions
@@ -113,111 +86,62 @@ const mapStatusToApi = (displayStatus: string): string => {
   return statusMap[displayStatus] || displayStatus;
 };
 
-// Map backend API values to frontend display values
-/*
-const mapStatusFromApi = (apiStatus: string): string => {
-  const statusMap: Record<string, string> = {
-    'active': 'Active',
-    'suspended': 'Suspended',
-    'pending': 'Trial', // Map 'pending' back to 'Trial' for display
-    'inactive': 'Inactive',
-  };
-  return statusMap[apiStatus] || apiStatus;
-};
-*/
 // ────────────────────────────────────────
 // Main Organizations Component
 // ────────────────────────────────────────
 
 const Organizations: React.FC = () => {
-  const { hasPermission } = useAuth();
-  // State management
-  const [organizations, setOrganizations] = useState<OrganizationsState>({
-    organizations: [],
-    loading: false,
-    error: '',
-    abortController: null,
-  });
+  const { hasPermission, user } = useAuth();
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    filters,
+    setFilters,
+    snackbar,
+    setSnackbar,
+    createDialogOpen,
+    setCreateDialogOpen,
+    selectedEntity: selectedOrg,
+    setSelectedEntity: setSelectedOrg,
+    editMode,
+    setEditMode,
+  } = useEntityState<Organization, { status: string; search: string }>(
+    { status: '', search: '' },
+    10
+  );
 
-  const [filters, setFilters] = useState<FiltersState>({
-    status: '',
-    search: '',
-  });
-
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 0,
-    pageSize: 10,
-    total: 0,
-  });
-
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'info',
-  });
-
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
+
+  const { fetchData: fetchOrganizations, refetch: refetchOrganizations } =
+    useEntityData(entityState, setEntityState, setPagination, {
+      fetchFunction: async options => {
+        const params = {
+          page: pagination.page + 1, // Convert to 1-based for API
+          limit: pagination.pageSize,
+          ...(filters.status && { status: mapStatusToApi(filters.status) }), // Map status to API format
+          ...(filters.search && { search: filters.search }),
+        };
+        const response = await apiHelpers.getOrganizations(
+          params,
+          options?.signal
+        );
+        return {
+          data: {
+            items: response.data.organizations,
+            total: response.data.total,
+          },
+        };
+      },
+      filters,
+      pagination,
+    });
 
   // ────────────────────────────────────────
   // API Functions
   // ────────────────────────────────────────
-
-  const fetchOrganizations = useCallback(async (): Promise<void> => {
-    // Cancel previous request if it exists
-    if (organizations.abortController) {
-      organizations.abortController.abort();
-    }
-
-    const abortController = apiHelpers.createAbortController();
-    setOrganizations(prev => ({
-      ...prev,
-      loading: true,
-      error: '',
-      abortController,
-    }));
-
-    try {
-      const params = {
-        page: pagination.page + 1, // Convert to 1-based for API
-        limit: pagination.pageSize,
-        ...(filters.status && { status: mapStatusToApi(filters.status) }), // Map status to API format
-        ...(filters.search && { search: filters.search }),
-      };
-
-      const response = await apiHelpers.getOrganizations(
-        params,
-        abortController.signal
-      );
-      const data: OrganizationsResponse = response.data;
-
-      setOrganizations(prev => ({
-        ...prev,
-        organizations: data.organizations,
-        loading: false,
-        error: '',
-      }));
-
-      setPagination(prev => ({
-        ...prev,
-        total: data.total,
-        page: data.page - 1, // Convert back to 0-based for MUI
-      }));
-    } catch (error: any) {
-      if (!axios.isCancel(error)) {
-        console.error('Error fetching organizations:', error);
-        setOrganizations(prev => ({
-          ...prev,
-          loading: false,
-          error:
-            error.response?.data?.message || 'Failed to fetch organizations',
-        }));
-      }
-    }
-  }, [pagination.page, pagination.pageSize, filters.status, filters.search]);
 
   const fetchProducts = useCallback(async (): Promise<void> => {
     try {
@@ -298,38 +222,19 @@ const Organizations: React.FC = () => {
       initialSubscriptions: ProductSubscriptionRequest[];
     }): Promise<void> => {
       try {
-        // Get current user from localStorage
-        const userStr = localStorage.getItem('user');
-        const currentUser = userStr ? JSON.parse(userStr) : null;
-
-        console.log('🔍 Current user from localStorage:', currentUser);
-
-        if (!currentUser) {
-          throw new Error('User information not found. Please login again.');
-        }
-
-        // The actual user ID is in user_id, not id
-        const userId = currentUser.user_id;
-
-        if (!userId) {
+        if (!user?.id) {
           throw new Error(
             'User ID not found in user information. Please login again.'
           );
         }
 
-        console.log('✅ Found user ID:', userId);
-
         // Try to extract numeric part from the user ID
         let createdByValue: number | undefined;
-        const userIdString = String(userId); // Convert to string first
+        const userIdString = String(user.id); // Convert to string first
         const numericMatch = userIdString.match(/\d+/);
         if (numericMatch) {
           createdByValue = parseInt(numericMatch[0], 10);
-          console.log('✅ Extracted numeric user ID:', createdByValue);
         } else {
-          console.log(
-            '⚠️ No numeric user ID found, proceeding without created_by'
-          );
           createdByValue = undefined;
         }
 
@@ -371,9 +276,7 @@ const Organizations: React.FC = () => {
                 ends_at: `${subscription.ends_at}T00:00:00`, // Convert date to datetime format
               };
 
-              console.log('📤 Creating subscription:', subscriptionRequestData);
               await apiHelpers.createSubscription(subscriptionRequestData);
-              console.log('✅ Subscription created successfully');
             } catch (subscriptionError: any) {
               console.error('Error creating subscription:', subscriptionError);
               // Continue with other subscriptions even if one fails
@@ -387,7 +290,7 @@ const Organizations: React.FC = () => {
           severity: 'success',
         });
         setCreateDialogOpen(false);
-        fetchOrganizations();
+        refetchOrganizations();
         fetchAllSubscriptions(); // Refresh subscriptions to show newly created ones
       } catch (error: any) {
         console.error('Error creating organization:', error);
@@ -400,7 +303,7 @@ const Organizations: React.FC = () => {
       }
     },
     [
-      fetchOrganizations,
+      refetchOrganizations,
       fetchAllSubscriptions,
       setSnackbar,
       setCreateDialogOpen,
@@ -436,7 +339,7 @@ const Organizations: React.FC = () => {
         });
         setSelectedOrg(null);
         setEditMode(false);
-        fetchOrganizations();
+        refetchOrganizations();
       } catch (error: any) {
         console.error('Error updating organization:', error);
         setSnackbar({
@@ -447,12 +350,20 @@ const Organizations: React.FC = () => {
         });
       }
     },
-    [selectedOrg, fetchOrganizations, setSnackbar, setSelectedOrg, setEditMode]
+    [
+      selectedOrg,
+      refetchOrganizations,
+      setSnackbar,
+      setSelectedOrg,
+      setEditMode,
+    ]
   );
 
   // ────────────────────────────────────────
   // Event Handlers
   // ────────────────────────────────────────
+
+  const paginationHandlers = usePagination(pagination, setPagination);
 
   const handleFilterChange = useCallback(
     (newFilters: { status: string; search: string }): void => {
@@ -460,25 +371,6 @@ const Organizations: React.FC = () => {
       setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
     },
     [setFilters, setPagination]
-  );
-
-  const handlePageChange = useCallback(
-    (_event: unknown, newPage: number): void => {
-      setPagination(prev => ({ ...prev, page: newPage }));
-    },
-    [setPagination]
-  );
-
-  const handlePageSizeChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const newPageSize = parseInt(event.target.value, 10);
-      setPagination(prev => ({
-        ...prev,
-        pageSize: newPageSize,
-        page: 0, // Reset to first page
-      }));
-    },
-    [setPagination]
   );
 
   const handleClearFilters = useCallback(() => {
@@ -499,18 +391,13 @@ const Organizations: React.FC = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Add this useEffect to refetch organizations when filters or pagination change
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
-
   // ────────────────────────────────────────
   // Filter Section Component
   // ────────────────────────────────────────
 
   interface FilterSectionProps {
-    filters: FiltersState;
-    onFiltersChange: (filters: FiltersState) => void;
+    filters: { status: string; search: string };
+    onFiltersChange: (filters: { status: string; search: string }) => void;
     onClearFilters: () => void;
   }
 
@@ -643,7 +530,7 @@ const Organizations: React.FC = () => {
 
   const OrganizationsTable: React.FC<{
     products: Product[];
-    hasPermission: (permission: string) => boolean;
+    hasPermission: (permission: Permission) => boolean;
   }> = ({ products, hasPermission }) => (
     <Card data-testid={TestIds.organizations.table}>
       <CardContent>
@@ -669,17 +556,17 @@ const Organizations: React.FC = () => {
           )}
         </Box>
 
-        {organizations.loading ? (
+        {entityState.loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress data-testid={TestIds.common.loadingSpinner} />
           </Box>
-        ) : organizations.error ? (
+        ) : entityState.error ? (
           <Alert
             severity="error"
             sx={{ mb: 2 }}
             data-testid={TestIds.common.errorAlert}
           >
-            {organizations.error}
+            {entityState.error}
           </Alert>
         ) : (
           <>
@@ -695,7 +582,7 @@ const Organizations: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {organizations.organizations.map(org => {
+                  {entityState.data.map(org => {
                     // Use the new organization format with 'id' field
                     const orgSubscriptions = getSubscriptionsForOrganization(
                       org.id
@@ -854,9 +741,9 @@ const Organizations: React.FC = () => {
               component="div"
               count={pagination.total}
               page={pagination.page}
-              onPageChange={handlePageChange}
+              onPageChange={paginationHandlers.handlePageChange}
               rowsPerPage={pagination.pageSize}
-              onRowsPerPageChange={handlePageSizeChange}
+              onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
             />

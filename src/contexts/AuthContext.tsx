@@ -12,9 +12,9 @@ import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   type ReactNode,
+  useEffect,
 } from 'react';
 import { useRouter } from 'next/router';
 import { getPermissionsForRole, PERMISSIONS } from '../config/roles';
@@ -32,6 +32,7 @@ interface AuthContextType {
   hasPermission: (permission: Permission) => boolean;
   logout: () => void;
   loading: boolean;
+  setAppAccess: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,17 +61,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     window.dispatchEvent(new Event('storage'));
   }, [router]);
 
-  useEffect(() => {
+  const setAppAccess = useCallback((_user: User) => {
     setLoading(true);
     try {
-      const storedUser = localStorage.getItem('user');
       const token = localStorage.getItem('access_token');
 
-      if (storedUser && token) {
-        const parsedUser: User = JSON.parse(storedUser);
-        setUser(parsedUser);
+      if (_user && token) {
+        setUser(_user);
         // Default to a safe, minimal role if not specified
-        const userRole = parsedUser.role || 'READ_ONLY_USER';
+        const userRole = _user.role || 'READ_ONLY_USER';
         const userPermissions = getPermissionsForRole(userRole);
         setPermissions(userPermissions);
       }
@@ -81,7 +80,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       setLoading(false);
     }
-  }, [handleLogout]);
+  }, []);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setAppAccess(parsedUser);
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   const hasPermission = useCallback(
     (permission: Permission): boolean => {
@@ -97,6 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     hasPermission,
     logout: handleLogout,
     loading,
+    setAppAccess,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

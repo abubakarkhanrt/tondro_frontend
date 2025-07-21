@@ -45,13 +45,11 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
-import axios from 'axios';
 import {
   type User,
   type OrganizationV2,
   type CreateUserRequest,
   type UpdateUserRequest,
-  type SnackbarState,
   type Domain,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
@@ -61,6 +59,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { debounce } from 'lodash';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -133,61 +132,79 @@ const availableRoles = ['global_admin', 'tenant_admin'];
 
 const Users: React.FC = () => {
   const { hasPermission } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    filters,
+    setFilters,
+    snackbar,
+    setSnackbar,
+    createDialogOpen,
+    setCreateDialogOpen,
+    selectedEntity: selectedUser,
+    setSelectedEntity: setSelectedUser,
+    editMode,
+    setEditMode,
+  } = useEntityState<User>({}, 50);
+
   const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
-  const [filters, setFilters] = useState({
-    organization_id: null as number | null, // Changed from 0 to null
-    role: '',
-    status: '',
-    search: '',
-  });
-  const [pagination, setPagination] = useState({
-    page: 0,
-    pageSize: 50,
-    total: 0,
-  });
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-
   const initialLoadRef = useRef<boolean>(false);
 
-  // Single useEffect for initial load
+  const { refetch } = useEntityData(
+    entityState,
+    setEntityState,
+    setPagination,
+    {
+      fetchFunction: async options => {
+        const response = await apiHelpers.getUsers(
+          options?.params,
+          options?.signal
+        );
+        const usersData = response.data.items || response.data || [];
+        const total =
+          response.data.total ||
+          (response.data.items ? response.data.items.length : usersData.length);
+        return {
+          data: {
+            items: usersData,
+            total,
+          },
+        };
+      },
+      filters,
+      pagination,
+    }
+  );
+
+  const fetchUsers = refetch;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        fetchUsers();
-        fetchOrganizations();
-        fetchDomains();
-        initialLoadRef.current = true;
+        if (!initialLoadRef.current) {
+          fetchOrganizations();
+          fetchDomains();
+          initialLoadRef.current = true;
+        }
       } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
+        setEntityState(prev => ({
+          ...prev,
+          error: 'No authentication token found. Please login again.',
+          loading: false,
+        }));
       }
     }, 100);
 
     return () => {
       clearTimeout(timer);
-      if (abortController) {
-        abortController.abort();
-      }
     };
-  }, []); // Empty dependency array
+  }, []);
 
-  // Separate useEffect for filters/pagination changes
   useEffect(() => {
-    // Only run if initial load is complete
     if (initialLoadRef.current) {
       const token = localStorage.getItem('access_token');
       if (token) {
@@ -195,142 +212,6 @@ const Users: React.FC = () => {
       }
     }
   }, [filters, pagination.page, pagination.pageSize]);
-
-  const fetchUsers = async (): Promise<void> => {
-    if (abortController) {
-      abortController.abort();
-    }
-    const controller = apiHelpers.createAbortController();
-    setAbortController(controller);
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      // Convert organization_id from string format to integer for API
-      const apiParams = {
-        page: pagination.page + 1,
-        page_size: pagination.pageSize,
-        ...filters,
-      };
-
-      // Remove empty parameters
-      Object.keys(apiParams).forEach(key => {
-        if (apiParams[key as keyof typeof apiParams] === '')
-          delete apiParams[key as keyof typeof apiParams];
-      });
-
-      // Convert parameters for API compatibility
-      const finalApiParams = {
-        ...apiParams,
-        ...(apiParams.organization_id !== null &&
-          apiParams.organization_id !== undefined && {
-            organization_id: apiParams.organization_id,
-          }),
-        ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
-      } as any;
-
-      // Try API filtering first, then fallback to frontend filtering
-      try {
-        const response = await apiHelpers.getUsers(
-          finalApiParams,
-          controller.signal
-        );
-        const usersData = response.data.items || response.data || [];
-        setUsers(usersData);
-        setPagination(prev => ({
-          ...prev,
-          total:
-            response.data.total ||
-            (response.data.items
-              ? response.data.items.length
-              : usersData.length),
-        }));
-      } catch (error: any) {
-        // If API filtering fails, fall back to frontend filtering
-        if (error.response?.status === 500 || error.response?.status === 400) {
-          console.log(
-            'API filtering failed, falling back to frontend filtering...'
-          );
-
-          // Remove all filters and fetch all users
-          const {
-            status,
-            role,
-            organization_id,
-            search,
-            ...paramsWithoutFilters
-          } = apiParams;
-          const response = await apiHelpers.getUsers(
-            paramsWithoutFilters,
-            controller.signal
-          );
-          const allUsers = response.data.items || response.data || [];
-
-          // Apply filters on the frontend
-          let filteredUsers = allUsers;
-
-          // Apply status filter
-          if (status) {
-            filteredUsers = filteredUsers.filter(
-              user => user.status.toLowerCase() === status.toLowerCase()
-            );
-          }
-
-          // Apply role filter
-          if (role) {
-            filteredUsers = filteredUsers.filter(
-              user => user.role.toLowerCase() === role.toLowerCase()
-            );
-          }
-
-          // Apply organization filter
-          if (organization_id) {
-            filteredUsers = filteredUsers.filter(
-              user => user.organization_id === organization_id
-            );
-          }
-
-          // Apply search filter
-          if (search) {
-            const searchLower = search.toLowerCase();
-            filteredUsers = filteredUsers.filter(
-              user =>
-                user.email.toLowerCase().includes(searchLower) ||
-                user.first_name?.toLowerCase().includes(searchLower) ||
-                user.last_name?.toLowerCase().includes(searchLower)
-            );
-          }
-
-          setUsers(filteredUsers);
-          setPagination(prev => ({
-            ...prev,
-            total: filteredUsers.length,
-          }));
-        } else {
-          throw error;
-        }
-      }
-    } catch (error: any) {
-      if (axios.isCancel(error)) {
-        return;
-      }
-      console.error('Error fetching users:', error);
-      if (error.response && error.response.status === 401) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Failed to load users. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setAbortController(null);
-    }
-  };
 
   const fetchOrganizations = async (): Promise<void> => {
     try {
@@ -449,19 +330,17 @@ const Users: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination(prev => ({ ...prev, page: newPage }));
+  const handleClearFilters = () => {
+    setFilters({
+      organization_id: null, // Changed from 0 to null
+      role: '',
+      status: '',
+      search: '',
+    });
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setPagination(prev => ({
-      ...prev,
-      pageSize: parseInt(event.target.value, 10),
-      page: 0,
-    }));
-  };
+  const paginationHandlers = usePagination(pagination, setPagination);
 
   const handleUpdateUser = async (
     formData: UpdateUserRequest
@@ -521,29 +400,19 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleClearFilters = () => {
-    setFilters({
-      organization_id: null, // Changed from 0 to null
-      role: '',
-      status: '',
-      search: '',
-    });
-    setPagination(prev => ({ ...prev, page: 0 }));
-  };
-
   return (
     <Box data-testid={TestIds.users.page}>
       <Typography variant="h4" component="h1" gutterBottom>
         Users
       </Typography>
 
-      {error && (
+      {entityState.error && (
         <Alert
           severity="error"
           sx={{ mb: 2 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {entityState.error}
         </Alert>
       )}
 
@@ -556,14 +425,14 @@ const Users: React.FC = () => {
       />
 
       <UsersTable
-        users={users}
+        users={entityState.data}
         organizations={organizations}
         domains={domains}
-        loading={loading}
-        error={error}
+        loading={entityState.loading}
+        error={entityState.error}
         pagination={pagination}
-        handlePageChange={handlePageChange}
-        handlePageSizeChange={handlePageSizeChange}
+        handlePageChange={paginationHandlers.handlePageChange}
+        handlePageSizeChange={paginationHandlers.handlePageSizeChange}
         handleDeleteUser={handleDeleteUser}
         setSelectedUser={setSelectedUser}
         setCreateDialogOpen={setCreateDialogOpen}

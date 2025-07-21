@@ -147,7 +147,7 @@ const API_ENDPOINTS = {
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
-    HEALTH: buildCrmEndpoint('/health'),
+    HEALTH: '/health',
     ROOT: '/',
   },
 
@@ -156,7 +156,7 @@ const API_ENDPOINTS = {
     SUBMIT_JOB: '/api/transcripts/jobs',
     GET_JOB_STATUS: (jobId: number): string =>
       `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/api/transcripts/jobs',
+    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
   },
 } as const;
 
@@ -256,15 +256,6 @@ const processQueue = (error: any, token: string | null = null) => {
 // Main CRM API response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('CRM API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   async error => {
@@ -349,15 +340,6 @@ export const handleAppLogout = (navigateToLogin: boolean = true): void => {
 // Transcripts API response interceptor (simpler, no auth redirects)
 transcriptsApi.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('Transcripts API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   error => {
@@ -597,7 +579,6 @@ export const apiHelpers = {
         'status' in error.response &&
         error.response.status === 500
       ) {
-        console.log('New organizations API failed, trying old structure...');
         try {
           // Try with old parameter names
           const oldParams = {
