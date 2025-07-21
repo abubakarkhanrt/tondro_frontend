@@ -147,7 +147,7 @@ const API_ENDPOINTS = {
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
-    HEALTH: '/api/proxy/health',
+    HEALTH: '/health',
     ROOT: '/',
   },
 
@@ -156,7 +156,7 @@ const API_ENDPOINTS = {
     SUBMIT_JOB: '/api/transcripts/jobs',
     GET_JOB_STATUS: (jobId: number): string =>
       `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/api/transcripts/jobs',
+    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
   },
 } as const;
 
@@ -256,15 +256,6 @@ const processQueue = (error: any, token: string | null = null) => {
 // Main CRM API response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('CRM API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   async error => {
@@ -311,10 +302,11 @@ api.interceptors.response.use(
           handleAppLogout();
         }
         const { data } = await apiAuthHelpers.refresh(refreshToken || '');
-        const { access_token } = data;
+        const { access_token, refresh_token } = data;
 
         // Update local storage and original request
         localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
         originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
 
@@ -335,34 +327,19 @@ api.interceptors.response.use(
   }
 );
 
-export const handleAppLogout = (): void => {
+export const handleAppLogout = (navigateToLogin: boolean = true): void => {
   // Clear all token formats for backward compatibility
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('token_type');
-  localStorage.removeItem('user');
-  localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
-  localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
-
-  // Dispatch events to notify components
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('logout'));
+  localStorage.clear();
 
   // Redirect to login
-  window.location.href = '/login';
+  if (navigateToLogin) {
+    window.location.href = '/login';
+  }
 };
 
 // Transcripts API response interceptor (simpler, no auth redirects)
 transcriptsApi.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('Transcripts API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   error => {
@@ -602,7 +579,6 @@ export const apiHelpers = {
         'status' in error.response &&
         error.response.status === 500
       ) {
-        console.log('New organizations API failed, trying old structure...');
         try {
           // Try with old parameter names
           const oldParams = {
@@ -1093,7 +1069,6 @@ export const apiHelpers = {
 
   getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
     api.get(API_ENDPOINTS.STATUS.HEALTH, {
-      baseURL: '', // Override baseURL to hit the relative proxy endpoint
       signal: signal as GenericAbortSignal,
     }),
 
@@ -1116,7 +1091,7 @@ export const apiHelpers = {
   ): Promise<AxiosResponse<{ roles: string[] }>> => {
     // Use environment configuration to decide whether to use static roles
     if (ENV_CONFIG.USE_STATIC_ROLES) {
-      const staticRoles = ['super_admin', 'tenant_admin'];
+      const staticRoles = ['global_admin', 'tenant_admin'];
 
       const mockResponse: AxiosResponse<{ roles: string[] }> = {
         data: { roles: staticRoles },

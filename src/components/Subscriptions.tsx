@@ -50,18 +50,16 @@ import {
   type Product,
   type CreateSubscriptionRequest,
   type UpdateSubscriptionRequest,
-  type PaginatedSubscriptionsResponse,
 } from '../types';
-import axios from 'axios';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
 import { formatTierName, getTierColor } from '../utils/tierFormatter';
 import { useProductTiers } from '../hooks/useProductTiers';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
-
-// Stub for current user ID (replace with real user context if available)
-// const currentUserId = 'demo-user-id';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
 // Stubs for missing dialog components (replace with real implementations if available)
 const CreateSubscriptionDialog = ({
@@ -444,195 +442,98 @@ const EditSubscriptionDialog = ({
 };
 
 // ────────────────────────────────────────
-// Type Definitions
-// ────────────────────────────────────────
-
-interface FiltersState {
-  organization_id: string;
-  product_id: string;
-  status: string;
-  tier: string;
-}
-
-interface PaginationState {
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
-
-// interface UsageData {
-//   quantity: number;
-//   event_type: string;
-//   timestamp: string;
-// }
-
-// ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Subscriptions: React.FC = () => {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const { hasPermission } = useAuth();
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    filters,
+    setFilters,
+    snackbar,
+    setSnackbar,
+    createDialogOpen,
+    setCreateDialogOpen,
+    selectedEntity: selectedSubscription,
+    setSelectedEntity: setSelectedSubscription,
+    editMode,
+    setEditMode,
+  } = useEntityState<Subscription>(
+    {
+      organization_id: '',
+      product_id: '',
+      status: '',
+      tier: '',
+    },
+    50
+  );
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
-  const [filters, setFilters] = useState<FiltersState>({
-    organization_id: '',
-    product_id: '',
-    status: '',
-    tier: '',
-  });
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 0,
-    pageSize: 50,
-    total: 0,
-  });
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [selectedSubscription, setSelectedSubscription] =
-    useState<Subscription | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
 
   // Product tiers hook for dynamic tier data
   const { tiers: productTiers } = useProductTiers();
 
+  const { fetchData: fetchSubscriptions, refetch: refetchSubscriptions } =
+    useEntityData(entityState, setEntityState, setPagination, {
+      fetchFunction: async options => {
+        const apiParams = {
+          ...options?.params,
+          ...(options?.params?.status && {
+            status_filter: options.params.status,
+          }),
+        };
+        delete apiParams.status;
+
+        const response = await apiHelpers.getSubscriptions(
+          apiParams,
+          options?.signal
+        );
+
+        let items: Subscription[] = [];
+        let total = 0;
+
+        if (Array.isArray(response.data)) {
+          items = response.data;
+          total = response.data.length;
+        } else if (response.data && 'items' in response.data) {
+          items = response.data.items || [];
+          total = response.data.total || 0;
+        }
+
+        return {
+          data: {
+            items,
+            total,
+          },
+        };
+      },
+      filters,
+      pagination,
+    });
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      setError('No authentication token found. Please login again.');
-      setLoading(false);
+      setEntityState(prev => ({
+        ...prev,
+        error: 'No authentication token found. Please login again.',
+        loading: false,
+      }));
       return;
     }
 
-    // Add a small delay to ensure token is available after login
     const timer = setTimeout(() => {
       fetchSubscriptions();
-      loadDropdownData(); // Load organizations and products for display
+      loadDropdownData();
     }, 100);
 
-    return () => {
-      clearTimeout(timer);
-      // Cancel any ongoing requests when component unmounts
-      if (abortController) {
-        abortController.abort();
-      }
-    };
-  }, [filters, pagination.page, pagination.pageSize]); // Include all dependencies
-
-  const fetchSubscriptions = async (): Promise<void> => {
-    // Cancel any existing request
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create new abort controller
-    const controller = apiHelpers.createAbortController();
-    setAbortController(controller);
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Double-check token before making request
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      const params = {
-        page: pagination.page + 1,
-        page_size: pagination.pageSize,
-        ...filters,
-      };
-
-      // Map frontend filter names to backend API parameter names
-      const apiParams = {
-        page: params.page,
-        page_size: params.page_size,
-        organization_id: params.organization_id,
-        product_id: params.product_id,
-        tier: params.tier,
-        // Map status to status_filter for backend compatibility
-        ...(params.status && { status_filter: params.status }),
-      };
-
-      // Remove empty filters
-      Object.keys(apiParams).forEach(key => {
-        if (apiParams[key as keyof typeof apiParams] === '')
-          delete apiParams[key as keyof typeof apiParams];
-      });
-
-      const response = await apiHelpers.getSubscriptions(
-        apiParams,
-        controller.signal
-      );
-
-      // Handle both paginated and direct array response formats
-      let subscriptionsData: Subscription[] = [];
-      let totalCount = 0;
-
-      if (Array.isArray(response.data)) {
-        // Direct array format (new backend format)
-        subscriptionsData = response.data;
-        totalCount = response.data.length;
-      } else if (
-        response.data &&
-        typeof response.data === 'object' &&
-        'items' in response.data
-      ) {
-        // Paginated format (old backend format)
-        const data: PaginatedSubscriptionsResponse = response.data;
-        subscriptionsData = data.items || [];
-        totalCount = data.total || 0;
-      } else {
-        console.warn(
-          'Unexpected subscriptions response format:',
-          response.data
-        );
-        subscriptionsData = [];
-        totalCount = 0;
-      }
-
-      setSubscriptions(subscriptionsData);
-      setPagination(prev => ({ ...prev, total: totalCount }));
-    } catch (error: any) {
-      // Don't show error for cancelled requests
-      if (axios.isCancel(error)) {
-        return;
-      }
-
-      console.error('Error fetching subscriptions:', error);
-
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        (error as any).response &&
-        (error as any).response.status === 401
-      ) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Failed to load subscriptions. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setAbortController(null);
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [filters, pagination.page, pagination.pageSize]);
 
   const fetchOrganizations = async (): Promise<void> => {
     try {
@@ -704,7 +605,7 @@ const Subscriptions: React.FC = () => {
         severity: 'success',
       });
       setCreateDialogOpen(false);
-      fetchSubscriptions();
+      refetchSubscriptions();
     } catch (error: any) {
       console.error('Error creating subscription:', error);
       setSnackbar({
@@ -767,20 +668,7 @@ const Subscriptions: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const newPageSize = parseInt(event.target.value, 10);
-    setPagination(prev => ({
-      ...prev,
-      pageSize: newPageSize,
-      page: 0, // Reset to first page
-    }));
-  };
+  const paginationHandlers = usePagination(pagination, setPagination);
 
   const getOrganizationName = (organizationId: number): string => {
     const org = organizations.find(o => o.id === organizationId);
@@ -811,7 +699,7 @@ const Subscriptions: React.FC = () => {
       });
       setSelectedSubscription(null);
       setEditMode(false);
-      fetchSubscriptions();
+      refetchSubscriptions();
     } catch (error: any) {
       console.error('Error updating subscription:', error);
       setSnackbar({
@@ -983,26 +871,28 @@ const Subscriptions: React.FC = () => {
           <Typography variant="h6">
             Subscriptions ({pagination.total})
           </Typography>
-          <Button
-            {...getButtonProps('create')}
-            onClick={handleOpenCreateDialog}
-            data-testid={TestIds.subscriptions.createButton}
-          >
-            Create Subscription
-          </Button>
+          {hasPermission(PERMISSIONS.SUBSCRIPTION_CREATE) && (
+            <Button
+              {...getButtonProps('create')}
+              onClick={handleOpenCreateDialog}
+              data-testid={TestIds.subscriptions.createButton}
+            >
+              Create Subscription
+            </Button>
+          )}
         </Box>
 
-        {loading ? (
+        {entityState.loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress data-testid={TestIds.common.loadingSpinner} />
           </Box>
-        ) : error ? (
+        ) : entityState.error ? (
           <Alert
             severity="error"
             sx={{ mb: 2 }}
             data-testid={TestIds.common.errorAlert}
           >
-            {error}
+            {entityState.error}
           </Alert>
         ) : (
           <>
@@ -1020,7 +910,7 @@ const Subscriptions: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {subscriptions.map(subscription => (
+                  {entityState.data.map(subscription => (
                     <TableRow key={subscription.id}>
                       <TableCell>
                         {getOrganizationName(subscription.organization_id)}
@@ -1059,30 +949,34 @@ const Subscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedSubscription(subscription);
-                              setEditMode(false);
-                            }}
-                            data-testid={TestIds.subscriptions.viewDetails(
-                              subscription.id
-                            )}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedSubscription(subscription);
-                              setEditMode(true);
-                            }}
-                            data-testid={TestIds.subscriptions.edit(
-                              subscription.id
-                            )}
-                          >
-                            <EditIcon />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.SUBSCRIPTION_READ) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedSubscription(subscription);
+                                setEditMode(false);
+                              }}
+                              data-testid={TestIds.subscriptions.viewDetails(
+                                subscription.id
+                              )}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          )}
+                          {hasPermission(PERMISSIONS.SUBSCRIPTION_UPDATE) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedSubscription(subscription);
+                                setEditMode(true);
+                              }}
+                              data-testid={TestIds.subscriptions.edit(
+                                subscription.id
+                              )}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1095,9 +989,9 @@ const Subscriptions: React.FC = () => {
               component="div"
               count={pagination.total}
               page={pagination.page}
-              onPageChange={handlePageChange}
+              onPageChange={paginationHandlers.handlePageChange}
               rowsPerPage={pagination.pageSize}
-              onRowsPerPageChange={handlePageSizeChange}
+              onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
             />
@@ -1291,13 +1185,13 @@ const Subscriptions: React.FC = () => {
         Subscriptions
       </Typography>
 
-      {error && (
+      {entityState.error && (
         <Alert
           severity="error"
           sx={{ mb: 2 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {entityState.error}
         </Alert>
       )}
 

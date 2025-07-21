@@ -62,7 +62,7 @@ export const UserRolesProvider: React.FC<UserRolesProviderProps> = ({
           : 'Failed to fetch user roles';
       setError(errorMessage);
       // Set default roles as fallback
-      setUserRoles(['Super Admin', 'Tenant Admin']);
+      setUserRoles(['Global Admin', 'Tenant Admin']);
     } finally {
       setLoading(false);
     }

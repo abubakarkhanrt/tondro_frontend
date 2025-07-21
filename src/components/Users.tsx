@@ -45,21 +45,21 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
-import axios from 'axios';
 import {
   type User,
   type OrganizationV2,
   type CreateUserRequest,
   type UpdateUserRequest,
-  type SnackbarState,
   type Domain,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
-import { useUserRoles } from '../contexts/UserRolesContext';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
 import { debounce } from 'lodash';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -72,7 +72,7 @@ const getRoleColor = (
   const normalizedRole = role.toLowerCase().replace('_', ' ');
 
   switch (normalizedRole) {
-    case 'super admin':
+    case 'global admin':
       return 'error';
     case 'tenant admin':
       return 'warning';
@@ -83,31 +83,14 @@ const getRoleColor = (
 
 const getRoleDisplayName = (role: string): string => {
   switch (role) {
-    case 'super_admin':
-      return 'Super Admin';
+    case 'global_admin':
+      return 'Global Admin';
     case 'tenant_admin':
-      return 'Tenant Admin';
-    case 'Super Admin':
-      return 'Super Admin';
-    case 'Tenant Admin':
       return 'Tenant Admin';
     default:
       return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 };
-
-/*
-const getRoleInternalValue = (displayName: string): string => {
-  switch (displayName) {
-    case 'Super Admin':
-      return 'super_admin';
-    case 'Tenant Admin':
-      return 'tenant_admin';
-    default:
-      return displayName.toLowerCase().replace(' ', '_');
-  }
-};
-*/
 
 const getDomainName = (
   user: User,
@@ -141,69 +124,87 @@ const getDomainName = (
 };
 
 // Get available roles that match the expected role values
-const availableRoles = ['super_admin', 'tenant_admin'];
+const availableRoles = ['global_admin', 'tenant_admin'];
 
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Users: React.FC = () => {
-  const { userRoles } = useUserRoles();
-  const [users, setUsers] = useState<User[]>([]);
+  const { hasPermission } = useAuth();
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    filters,
+    setFilters,
+    snackbar,
+    setSnackbar,
+    createDialogOpen,
+    setCreateDialogOpen,
+    selectedEntity: selectedUser,
+    setSelectedEntity: setSelectedUser,
+    editMode,
+    setEditMode,
+  } = useEntityState<User>({}, 50);
+
   const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
-  const [filters, setFilters] = useState({
-    organization_id: null as number | null, // Changed from 0 to null
-    role: '',
-    status: '',
-    search: '',
-  });
-  const [pagination, setPagination] = useState({
-    page: 0,
-    pageSize: 50,
-    total: 0,
-  });
-  const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-
   const initialLoadRef = useRef<boolean>(false);
 
-  // Single useEffect for initial load
+  const { refetch } = useEntityData(
+    entityState,
+    setEntityState,
+    setPagination,
+    {
+      fetchFunction: async options => {
+        const response = await apiHelpers.getUsers(
+          options?.params,
+          options?.signal
+        );
+        const usersData = response.data.items || response.data || [];
+        const total =
+          response.data.total ||
+          (response.data.items ? response.data.items.length : usersData.length);
+        return {
+          data: {
+            items: usersData,
+            total,
+          },
+        };
+      },
+      filters,
+      pagination,
+    }
+  );
+
+  const fetchUsers = refetch;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        fetchUsers();
-        fetchOrganizations();
-        fetchDomains();
-        initialLoadRef.current = true;
+        if (!initialLoadRef.current) {
+          fetchOrganizations();
+          fetchDomains();
+          initialLoadRef.current = true;
+        }
       } else {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
+        setEntityState(prev => ({
+          ...prev,
+          error: 'No authentication token found. Please login again.',
+          loading: false,
+        }));
       }
     }, 100);
 
     return () => {
       clearTimeout(timer);
-      if (abortController) {
-        abortController.abort();
-      }
     };
-  }, []); // Empty dependency array
+  }, []);
 
-  // Separate useEffect for filters/pagination changes
   useEffect(() => {
-    // Only run if initial load is complete
     if (initialLoadRef.current) {
       const token = localStorage.getItem('access_token');
       if (token) {
@@ -211,142 +212,6 @@ const Users: React.FC = () => {
       }
     }
   }, [filters, pagination.page, pagination.pageSize]);
-
-  const fetchUsers = async (): Promise<void> => {
-    if (abortController) {
-      abortController.abort();
-    }
-    const controller = apiHelpers.createAbortController();
-    setAbortController(controller);
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      // Convert organization_id from string format to integer for API
-      const apiParams = {
-        page: pagination.page + 1,
-        page_size: pagination.pageSize,
-        ...filters,
-      };
-
-      // Remove empty parameters
-      Object.keys(apiParams).forEach(key => {
-        if (apiParams[key as keyof typeof apiParams] === '')
-          delete apiParams[key as keyof typeof apiParams];
-      });
-
-      // Convert parameters for API compatibility
-      const finalApiParams = {
-        ...apiParams,
-        ...(apiParams.organization_id !== null &&
-          apiParams.organization_id !== undefined && {
-            organization_id: apiParams.organization_id,
-          }),
-        ...(apiParams.status && { status: apiParams.status.toLowerCase() }),
-      } as any;
-
-      // Try API filtering first, then fallback to frontend filtering
-      try {
-        const response = await apiHelpers.getUsers(
-          finalApiParams,
-          controller.signal
-        );
-        const usersData = response.data.items || response.data || [];
-        setUsers(usersData);
-        setPagination(prev => ({
-          ...prev,
-          total:
-            response.data.total ||
-            (response.data.items
-              ? response.data.items.length
-              : usersData.length),
-        }));
-      } catch (error: any) {
-        // If API filtering fails, fall back to frontend filtering
-        if (error.response?.status === 500 || error.response?.status === 400) {
-          console.log(
-            'API filtering failed, falling back to frontend filtering...'
-          );
-
-          // Remove all filters and fetch all users
-          const {
-            status,
-            role,
-            organization_id,
-            search,
-            ...paramsWithoutFilters
-          } = apiParams;
-          const response = await apiHelpers.getUsers(
-            paramsWithoutFilters,
-            controller.signal
-          );
-          const allUsers = response.data.items || response.data || [];
-
-          // Apply filters on the frontend
-          let filteredUsers = allUsers;
-
-          // Apply status filter
-          if (status) {
-            filteredUsers = filteredUsers.filter(
-              user => user.status.toLowerCase() === status.toLowerCase()
-            );
-          }
-
-          // Apply role filter
-          if (role) {
-            filteredUsers = filteredUsers.filter(
-              user => user.role.toLowerCase() === role.toLowerCase()
-            );
-          }
-
-          // Apply organization filter
-          if (organization_id) {
-            filteredUsers = filteredUsers.filter(
-              user => user.organization_id === organization_id
-            );
-          }
-
-          // Apply search filter
-          if (search) {
-            const searchLower = search.toLowerCase();
-            filteredUsers = filteredUsers.filter(
-              user =>
-                user.email.toLowerCase().includes(searchLower) ||
-                user.first_name?.toLowerCase().includes(searchLower) ||
-                user.last_name?.toLowerCase().includes(searchLower)
-            );
-          }
-
-          setUsers(filteredUsers);
-          setPagination(prev => ({
-            ...prev,
-            total: filteredUsers.length,
-          }));
-        } else {
-          throw error;
-        }
-      }
-    } catch (error: any) {
-      if (axios.isCancel(error)) {
-        return;
-      }
-      console.error('Error fetching users:', error);
-      if (error.response && error.response.status === 401) {
-        setError('Authentication failed. Please login again.');
-      } else {
-        setError('Failed to load users. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setAbortController(null);
-    }
-  };
 
   const fetchOrganizations = async (): Promise<void> => {
     try {
@@ -465,19 +330,17 @@ const Users: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination(prev => ({ ...prev, page: newPage }));
+  const handleClearFilters = () => {
+    setFilters({
+      organization_id: null, // Changed from 0 to null
+      role: '',
+      status: '',
+      search: '',
+    });
+    setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setPagination(prev => ({
-      ...prev,
-      pageSize: parseInt(event.target.value, 10),
-      page: 0,
-    }));
-  };
+  const paginationHandlers = usePagination(pagination, setPagination);
 
   const handleUpdateUser = async (
     formData: UpdateUserRequest
@@ -537,62 +400,55 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleClearFilters = () => {
-    setFilters({
-      organization_id: null, // Changed from 0 to null
-      role: '',
-      status: '',
-      search: '',
-    });
-    setPagination(prev => ({ ...prev, page: 0 }));
-  };
-
   return (
     <Box data-testid={TestIds.users.page}>
       <Typography variant="h4" component="h1" gutterBottom>
         Users
       </Typography>
 
-      {error && (
+      {entityState.error && (
         <Alert
           severity="error"
           sx={{ mb: 2 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {entityState.error}
         </Alert>
       )}
 
       <FilterSection
         filters={filters}
         organizations={organizations}
-        userRoles={userRoles}
+        userRoles={availableRoles}
         handleFilterChange={handleFilterChange}
         handleClearFilters={handleClearFilters}
       />
 
       <UsersTable
-        users={users}
+        users={entityState.data}
         organizations={organizations}
         domains={domains}
-        loading={loading}
-        error={error}
+        loading={entityState.loading}
+        error={entityState.error}
         pagination={pagination}
-        handlePageChange={handlePageChange}
-        handlePageSizeChange={handlePageSizeChange}
+        handlePageChange={paginationHandlers.handlePageChange}
+        handlePageSizeChange={paginationHandlers.handlePageSizeChange}
         handleDeleteUser={handleDeleteUser}
         setSelectedUser={setSelectedUser}
         setCreateDialogOpen={setCreateDialogOpen}
         setEditMode={setEditMode}
+        hasPermission={hasPermission}
       />
 
-      <CreateUserDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateUser}
-        organizations={organizations}
-        domains={domains}
-      />
+      {hasPermission(PERMISSIONS.USER_CREATE) && (
+        <CreateUserDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={handleCreateUser}
+          organizations={organizations}
+          domains={domains}
+        />
+      )}
 
       {selectedUser && (
         <>
@@ -607,9 +463,10 @@ const Users: React.FC = () => {
               organizations={organizations}
               domains={domains}
               setEditMode={setEditMode}
+              hasPermission={hasPermission}
             />
           )}
-          {editMode && (
+          {editMode && hasPermission(PERMISSIONS.USER_UPDATE) && (
             <EditUserDialog
               user={selectedUser}
               onClose={() => {
@@ -619,7 +476,7 @@ const Users: React.FC = () => {
               onSubmit={handleUpdateUser}
               organizations={organizations}
               domains={domains}
-              userRoles={userRoles}
+              userRoles={availableRoles}
             />
           )}
         </>
@@ -830,6 +687,9 @@ interface UsersTableProps {
   setSelectedUser: (user: User) => void;
   setCreateDialogOpen: (open: boolean) => void;
   setEditMode: (edit: boolean) => void;
+  hasPermission: (
+    permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
+  ) => boolean;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({
@@ -845,6 +705,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   setSelectedUser,
   setCreateDialogOpen,
   setEditMode,
+  hasPermission,
 }) => {
   return (
     <Card data-testid={TestIds.users.table}>
@@ -858,15 +719,17 @@ const UsersTable: React.FC<UsersTableProps> = ({
           }}
         >
           <Typography variant="h6">Users ({pagination.total})</Typography>
-          <Box>
-            <Button
-              {...getButtonProps('create')}
-              onClick={() => setCreateDialogOpen(true)}
-              data-testid={TestIds.users.createButton}
-            >
-              Create User
-            </Button>
-          </Box>
+          {hasPermission(PERMISSIONS.USER_CREATE) && (
+            <Box>
+              <Button
+                {...getButtonProps('create')}
+                onClick={() => setCreateDialogOpen(true)}
+                data-testid={TestIds.users.createButton}
+              >
+                Create User
+              </Button>
+            </Box>
+          )}
         </Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -949,24 +812,28 @@ const UsersTable: React.FC<UsersTableProps> = ({
                           >
                             <VisibilityIcon />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setEditMode(true);
-                            }}
-                            data-testid={TestIds.users.edit(user.id)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteUser(user.id)}
-                            data-testid={TestIds.users.deactivate(user.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.USER_UPDATE) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setEditMode(true);
+                              }}
+                              data-testid={TestIds.users.edit(user.id)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                          {hasPermission(PERMISSIONS.USER_DELETE) && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteUser(user.id)}
+                              data-testid={TestIds.users.deactivate(user.id)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1356,6 +1223,9 @@ interface ViewUserDialogProps {
   organizations: OrganizationV2[]; // Only OrganizationV2
   domains: Record<string, Domain[]>;
   setEditMode: (edit: boolean) => void;
+  hasPermission: (
+    permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
+  ) => boolean;
 }
 
 const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
@@ -1365,6 +1235,7 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
   organizations,
   domains,
   setEditMode,
+  hasPermission,
 }) => {
   return (
     <Dialog
@@ -1471,15 +1342,17 @@ const ViewUserDialog: React.FC<ViewUserDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button
-          onClick={() => {
-            // Set edit mode to true to switch to edit dialog
-            setEditMode(true);
-          }}
-          data-testid={TestIds.users.viewDialog.editButton}
-        >
-          Edit
-        </Button>
+        {hasPermission(PERMISSIONS.USER_UPDATE) && (
+          <Button
+            onClick={() => {
+              // Set edit mode to true to switch to edit dialog
+              setEditMode(true);
+            }}
+            data-testid={TestIds.users.viewDialog.editButton}
+          >
+            Edit
+          </Button>
+        )}
         <Button
           onClick={onClose}
           data-testid={TestIds.users.viewDialog.closeButton}

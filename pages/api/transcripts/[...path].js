@@ -11,6 +11,7 @@
 import formidable from 'formidable';
 import fs from 'fs';
 import FormData from 'form-data';
+import { proxy } from '../../../src/utils/proxy';
 
 // Disable Next.js body parsing for this route
 export const config = {
@@ -130,66 +131,6 @@ export default async function handler(req, res) {
     return; // End the function here for POST requests
   }
 
-  // ... rest of your handler for GET requests ...
-
-  try {
-    // Get the path segments and query parameters
-    const { path, ...queryParams } = req.query;
-    const apiPath = Array.isArray(path) ? path.join('/') : path || '';
-
-    // Build query string from query parameters (excluding 'path')
-    const queryString = Object.keys(queryParams)
-      .map(key => `${key}=${encodeURIComponent(queryParams[key])}`)
-      .join('&');
-
-    // Build the backend URL with query parameters
-    const backendUrl = queryString
-      ? `${BACKEND_BASE_URL}/${apiPath}?${queryString}`
-      : `${BACKEND_BASE_URL}/${apiPath}`;
-
-    console.log(
-      `Transcripts API: Proxying ${req.method} request to: ${backendUrl}`
-    );
-
-    // For transcripts API, we need to handle multipart form data differently
-    const headers = {
-      Accept: 'application/json',
-      // Forward authorization header if present
-      ...(req.headers.authorization && {
-        Authorization: req.headers.authorization,
-      }),
-    };
-
-    // Prepare request body
-    let body;
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-    }
-
-    // Forward the request to your transcripts backend
-    const response = await fetch(backendUrl, {
-      method: req.method,
-      headers: headers,
-      body: body,
-    });
-
-    // Get response data
-    const responseText = await response.text();
-
-    // Try to parse as JSON, fallback to text
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { data: responseText };
-    }
-
-    // Return the response
-    res.status(response.status).json(responseData);
-  } catch (error) {
-    console.error('Transcripts API Proxy error:', error);
-    res.status(500).json({
-      error: 'Transcripts API proxy request failed',
-      details: error.message,
-    });
-  }
+  // Handle GET requests using the reusable proxy
+  await proxy(req, res, BACKEND_BASE_URL);
 }
