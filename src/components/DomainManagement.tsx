@@ -50,6 +50,7 @@ import {
 } from '../types';
 import { getStatusColor } from '../theme';
 import { TestIds } from '../testIds';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DomainManagementProps {
   organizationId: string;
@@ -382,59 +383,13 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   validateDomainName,
   setSnackbar,
 }) => {
-  // Get current user from localStorage with improved extraction
-  const getCurrentUserId = (): number | undefined => {
-    try {
-      const userStr = localStorage.getItem('user');
-      console.log('User string from localStorage:', userStr);
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        console.log('Parsed user object:', user);
-
-        // Try multiple possible user ID fields
-        if (user.user_id) {
-          console.log(
-            'Found user_id:',
-            user.user_id,
-            'Type:',
-            typeof user.user_id
-          );
-          // Handle string format like "user_123" or direct number
-          if (typeof user.user_id === 'number') {
-            return user.user_id;
-          }
-          // Handle string user IDs - try to extract numeric part first
-          if (typeof user.user_id === 'string') {
-            const numericMatch = user.user_id.match(/\d+/);
-            if (numericMatch) {
-              const userId = parseInt(numericMatch[0], 10);
-              console.log('Extracted user ID from string:', userId);
-              return userId;
-            }
-            // If no numeric part found, use fixed value of 10
-            console.log('Using fixed user ID: 10');
-            return 10;
-          }
-        }
-
-        // Fallback to id field
-        if (user.id) {
-          console.log('Found id field:', user.id, 'Type:', typeof user.id);
-          return parseInt(user.id, 10);
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing user from localStorage:', error);
-    }
-    console.log('No user ID found');
-    return undefined;
-  };
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<CreateDomainRequest>({
     organization_id: organizationId,
     domain_name: '',
     is_primary: false,
-    user_id: getCurrentUserId(),
+    user_id: user?.id,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -463,9 +418,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    const currentUserId = getCurrentUserId();
-    console.log('Current user ID:', currentUserId);
-    if (!currentUserId) {
+    if (!user?.id) {
       setSnackbar({
         open: true,
         message: 'User ID not found. Please log in again.',
@@ -479,7 +432,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
       // Ensure user_id is included in the payload
       const payload = {
         ...formData,
-        user_id: currentUserId, // Get fresh user ID
+        user_id: user.id, // Get fresh user ID
       };
       console.log('Sending payload:', payload);
       await onSubmit(payload);
@@ -487,7 +440,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
         organization_id: organizationId,
         domain_name: '',
         is_primary: false,
-        user_id: currentUserId,
+        user_id: user.id,
       });
       setErrors({});
     } finally {
@@ -500,7 +453,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
       organization_id: organizationId,
       domain_name: '',
       is_primary: false,
-      user_id: getCurrentUserId(),
+      user_id: user?.id,
     });
     setErrors({});
     onClose();
@@ -574,53 +527,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   domain,
   validateDomainName,
 }) => {
-  // Get current user from localStorage with improved extraction
-  const getCurrentUserId = (): number | undefined => {
-    try {
-      const userStr = localStorage.getItem('user');
-      console.log('User string from localStorage:', userStr);
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        console.log('Parsed user object:', user);
-
-        // Try multiple possible user ID fields
-        if (user.user_id) {
-          console.log(
-            'Found user_id:',
-            user.user_id,
-            'Type:',
-            typeof user.user_id
-          );
-          // Handle string format like "user_123" or direct number
-          if (typeof user.user_id === 'number') {
-            return user.user_id;
-          }
-          // Handle string user IDs - try to extract numeric part first
-          if (typeof user.user_id === 'string') {
-            const numericMatch = user.user_id.match(/\d+/);
-            if (numericMatch) {
-              const userId = parseInt(numericMatch[0], 10);
-              console.log('Extracted user ID from string:', userId);
-              return userId;
-            }
-            // If no numeric part found, use fixed value of 10
-            console.log('Using fixed user ID: 10');
-            return 10;
-          }
-        }
-
-        // Fallback to id field
-        if (user.id) {
-          console.log('Found id field:', user.id, 'Type:', typeof user.id);
-          return parseInt(user.id, 10);
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing user from localStorage:', error);
-    }
-    console.log('No user ID found');
-    return undefined;
-  };
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<UpdateDomainRequest>({
     domain_name: '',
@@ -664,9 +571,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    const currentUserId = getCurrentUserId();
-    console.log('Current user ID for update:', currentUserId);
-    if (!currentUserId) {
+    if (!user?.id) {
       console.error('User ID not found for domain update');
       return;
     }
@@ -675,7 +580,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
     try {
       const updatePayload = {
         ...formData,
-        user_id: currentUserId, // Use the actual user ID
+        user_id: user.id,
       };
       console.log('Sending update payload with user_id:', updatePayload);
       await onSubmit(updatePayload);

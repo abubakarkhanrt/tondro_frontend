@@ -47,12 +47,15 @@ import {
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/roles';
 
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const Products: React.FC = () => {
+  const { hasPermission } = useAuth();
   // Use shared state management hook
   const {
     entityState,
@@ -176,13 +179,15 @@ const Products: React.FC = () => {
           }}
         >
           <Typography variant="h6">Products ({pagination.total})</Typography>
-          <Button
-            {...getButtonProps('create')}
-            onClick={() => setCreateDialogOpen(true)}
-            data-testid={TestIds.products.createButton}
-          >
-            Create Product
-          </Button>
+          {hasPermission(PERMISSIONS.PRODUCT_CREATE) && (
+            <Button
+              {...getButtonProps('create')}
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid={TestIds.products.createButton}
+            >
+              Create Product
+            </Button>
+          )}
         </Box>
 
         {entityState.loading ? (
@@ -225,30 +230,34 @@ const Products: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setEditMode(false);
-                            }}
-                            data-testid={TestIds.products.viewDetails(
-                              product.id as number
-                            )}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setEditMode(true);
-                            }}
-                            data-testid={TestIds.products.edit(
-                              product.id as number
-                            )}
-                          >
-                            <EditIcon />
-                          </IconButton>
+                          {hasPermission(PERMISSIONS.PRODUCT_READ) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setEditMode(false);
+                              }}
+                              data-testid={TestIds.products.viewDetails(
+                                product.id as number
+                              )}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          )}
+                          {hasPermission(PERMISSIONS.PRODUCT_UPDATE) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setEditMode(true);
+                              }}
+                              data-testid={TestIds.products.edit(
+                                product.id as number
+                              )}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>

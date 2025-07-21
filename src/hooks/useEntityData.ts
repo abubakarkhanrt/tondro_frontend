@@ -232,7 +232,7 @@ export function useEntityData<T, F = Record<string, any>>(
         entityState.abortController.abort();
       }
     };
-  }, [enabled, fetchData, entityState.abortController]);
+  }, []);
 
   return {
     fetchData,

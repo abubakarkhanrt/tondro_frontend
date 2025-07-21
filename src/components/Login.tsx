@@ -27,6 +27,7 @@ import {
 import { QRCodeCanvas as QRCode } from 'qrcode.react';
 import { apiAuthHelpers } from '../services/authApi';
 import { TestIds } from '../testIds';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -57,6 +58,7 @@ const Login: React.FC = () => {
   });
   const router = useRouter();
   const [forgotDialogOpen, setForgotDialogOpen] = useState<boolean>(false);
+  const { setAppAccess } = useAuth();
 
   // State for MFA flow
   const [loginStep, setLoginStep] = useState<LoginStep>('credentials');
@@ -79,7 +81,8 @@ const Login: React.FC = () => {
     localStorage.setItem('refresh_token', data.refresh_token);
     localStorage.setItem('token_type', data.token_type);
     localStorage.setItem('user', JSON.stringify(data.user));
-    localStorage.setItem('user_email', formData.username);
+
+    setAppAccess(data.user);
 
     (window as any).showSuccess?.(`Welcome, ${formData.username}!`);
 
@@ -111,7 +114,6 @@ const Login: React.FC = () => {
         return;
       }
       setCsrfToken(token);
-      document.cookie = `csrf_access_token=${token}; path=/`;
 
       const response = await apiAuthHelpers.login(
         {

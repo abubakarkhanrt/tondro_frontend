@@ -177,7 +177,7 @@ Environment variables are configured in `src/config/env.ts`:
 export const ENV_CONFIG = {
   API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081',
   AUTH_API_BASE_URL:
-    process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8001',
+    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001',
   API_TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000'),
   JWT_STORAGE_KEY: process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || 'jwt_token',
   USER_EMAIL_STORAGE_KEY:

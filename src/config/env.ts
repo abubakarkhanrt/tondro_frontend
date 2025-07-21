@@ -47,21 +47,8 @@ export const ENV_CONFIG = {
       process.env.REACT_APP_DEBUG ||
       'false') === 'true',
 
-  // Feature Flags
-  ENABLE_AUDIT_LOG:
-    (process.env.NEXT_PUBLIC_ENABLE_AUDIT_LOG ||
-      process.env.REACT_APP_ENABLE_AUDIT_LOG ||
-      'true') !== 'false',
-  ENABLE_DOMAIN_MANAGEMENT:
-    (process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT ||
-      process.env.REACT_APP_ENABLE_DOMAIN_MANAGEMENT ||
-      'true') !== 'false',
-  USE_STATIC_ROLES: process.env.NEXT_PUBLIC_USE_STATIC_ROLES === 'true',
-  ENABLE_DEBUG_LOGGING: process.env.NEXT_PUBLIC_ENABLE_DEBUG_LOGGING === 'true',
-
   // Authentication
   JWT_STORAGE_KEY: 'access_token',
-  //JWT_STORAGE_KEY: 'jwt_token',
   USER_EMAIL_STORAGE_KEY: 'user_email',
 
   // Default Values
@@ -87,8 +74,6 @@ export const validateEnvironment = (): void => {
       TRANSCRIPTS_BACKEND_URL: ENV_CONFIG.TRANSCRIPTS_BACKEND_URL,
       NODE_ENV: ENV_CONFIG.NODE_ENV,
       DEBUG: ENV_CONFIG.DEBUG,
-      ENABLE_AUDIT_LOG: ENV_CONFIG.ENABLE_AUDIT_LOG,
-      ENABLE_DOMAIN_MANAGEMENT: ENV_CONFIG.ENABLE_DOMAIN_MANAGEMENT,
     });
   }
 };
@@ -104,8 +89,6 @@ export const logEnvironment = (): void => {
       TRANSCRIPTS_BACKEND_URL: ENV_CONFIG.TRANSCRIPTS_BACKEND_URL,
       NODE_ENV: ENV_CONFIG.NODE_ENV,
       DEBUG: ENV_CONFIG.DEBUG,
-      ENABLE_AUDIT_LOG: ENV_CONFIG.ENABLE_AUDIT_LOG,
-      ENABLE_DOMAIN_MANAGEMENT: ENV_CONFIG.ENABLE_DOMAIN_MANAGEMENT,
     });
   }
 };

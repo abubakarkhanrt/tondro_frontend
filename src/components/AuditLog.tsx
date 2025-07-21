@@ -47,84 +47,49 @@ import {
 import { apiHelpers } from '../services/api';
 import { type AuditLog as AuditLogType } from '../types/index';
 import { TestIds } from '../testIds';
-
-// ────────────────────────────────────────
-// Type Definitions
-// ────────────────────────────────────────
-
-interface FiltersState {
-  entity_type: string;
-  action: string;
-}
-
-interface PaginationState {
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
+import { useEntityState, usePagination, useEntityData } from '../hooks';
 
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
 
 const AuditLog: React.FC = () => {
-  const [auditLogs, setAuditLogs] = useState<AuditLogType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FiltersState>({
-    entity_type: '',
-    action: '',
-  });
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 0,
-    pageSize: 50,
-    total: 0,
-  });
+  const {
+    entityState,
+    setEntityState,
+    pagination,
+    setPagination,
+    filters,
+    setFilters,
+    snackbar,
+    setSnackbar,
+    selectedEntity: selectedLog,
+    setSelectedEntity: setSelectedLog,
+  } = useEntityState<AuditLogType>(
+    {
+      entity_type: '',
+      action: '',
+    },
+    50
+  );
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [selectedLog, setSelectedLog] = useState<AuditLogType | null>(null);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const { fetchData: fetchAuditLogs } = useEntityData(
+    entityState,
+    setEntityState,
+    setPagination,
+    {
+      fetchFunction: async options =>
+        apiHelpers.getAuditLogs(options?.params, options?.signal),
+      filters,
+      pagination,
+    }
+  );
 
   useEffect(() => {
     fetchAuditLogs();
   }, [filters, pagination.page, pagination.pageSize]);
-
-  const fetchAuditLogs = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await apiHelpers.getAuditLogs({
-        page: pagination.page + 1,
-        page_size: pagination.pageSize,
-        ...filters,
-      });
-
-      setAuditLogs(response.data.items || []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.data.total || 0,
-      }));
-    } catch (error: any) {
-      console.error('Error fetching audit logs:', error);
-      setError('Failed to fetch audit logs');
-      if (error.response && error.response.status === 401) {
-        // Handle unauthorized access
-        setError('Unauthorized access');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchAuditLogDetails = async (
     id: string
@@ -156,19 +121,7 @@ const AuditLog: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 0 }));
   };
 
-  const handlePageChange = (_event: unknown, newPage: number): void => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setPagination(prev => ({
-      ...prev,
-      pageSize: parseInt(event.target.value, 10),
-      page: 0,
-    }));
-  };
+  const paginationHandlers = usePagination(pagination, setPagination);
 
   const toggleRowExpansion = (id: string): void => {
     const newExpanded = new Set(expandedRows);
@@ -363,17 +316,17 @@ const AuditLog: React.FC = () => {
           <Typography variant="h6">Audit Log ({pagination.total})</Typography>
         </Box>
 
-        {loading ? (
+        {entityState.loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress data-testid={TestIds.common.loadingSpinner} />
           </Box>
-        ) : error ? (
+        ) : entityState.error ? (
           <Alert
             severity="error"
             sx={{ mb: 2 }}
             data-testid={TestIds.common.errorAlert}
           >
-            {error}
+            {entityState.error}
           </Alert>
         ) : (
           <>
@@ -390,7 +343,7 @@ const AuditLog: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {auditLogs.map(log => (
+                  {entityState.data.map(log => (
                     <React.Fragment key={log.id}>
                       <TableRow>
                         <TableCell>
@@ -478,9 +431,9 @@ const AuditLog: React.FC = () => {
               component="div"
               count={pagination.total}
               page={pagination.page}
-              onPageChange={handlePageChange}
+              onPageChange={paginationHandlers.handlePageChange}
               rowsPerPage={pagination.pageSize}
-              onRowsPerPageChange={handlePageSizeChange}
+              onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
             />
@@ -496,13 +449,13 @@ const AuditLog: React.FC = () => {
         Audit Log
       </Typography>
 
-      {error && (
+      {entityState.error && (
         <Alert
           severity="error"
           sx={{ mb: 2 }}
           data-testid={TestIds.common.errorAlert}
         >
-          {error}
+          {entityState.error}
         </Alert>
       )}
 

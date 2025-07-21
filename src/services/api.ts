@@ -146,7 +146,7 @@ const API_ENDPOINTS = {
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
-    HEALTH: '/api/proxy/health',
+    HEALTH: '/health',
     ROOT: '/',
   },
 } as const;
@@ -216,15 +216,6 @@ const processQueue = (error: any, token: string | null = null) => {
 // Main CRM API response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('CRM API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   async error => {
@@ -271,10 +262,11 @@ api.interceptors.response.use(
           handleAppLogout();
         }
         const { data } = await apiAuthHelpers.refresh(refreshToken || '');
-        const { access_token } = data;
+        const { access_token, refresh_token } = data;
 
         // Update local storage and original request
         localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
         originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
 
@@ -295,20 +287,14 @@ api.interceptors.response.use(
   }
 );
 
-export const handleAppLogout = (): void => {
+export const handleAppLogout = (navigateToLogin: boolean = true): void => {
   // Clear all token formats for backward compatibility
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('token_type');
-  localStorage.removeItem('user');
-  localStorage.removeItem(ENV_CONFIG.JWT_STORAGE_KEY);
-  localStorage.removeItem(ENV_CONFIG.USER_EMAIL_STORAGE_KEY);
-
-  // Dispatch events to notify components
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('logout'));
+  localStorage.clear();
 
   // Redirect to login
-  window.location.href = '/login';
+  if (navigateToLogin) {
+    window.location.href = '/login';
+  }
 };
 
 // ────────────────────────────────────────
@@ -317,14 +303,6 @@ export const handleAppLogout = (): void => {
 
 // Utility function to validate and log API responses
 export const validateApiResponse = (response: any) => {
-  if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-    console.log('CRM API Response Validation:', {
-      hasData: !!response?.data,
-      dataType: typeof response?.data,
-      isArray: Array.isArray(response?.data),
-      keys: response?.data ? Object.keys(response?.data) : [],
-    });
-  }
   return response;
 };
 
@@ -506,7 +484,6 @@ export const apiHelpers = {
         'status' in error.response &&
         error.response.status === 500
       ) {
-        console.log('New organizations API failed, trying old structure...');
         try {
           // Try with old parameter names
           const oldParams = {
@@ -997,7 +974,6 @@ export const apiHelpers = {
 
   getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
     api.get(API_ENDPOINTS.STATUS.HEALTH, {
-      baseURL: '', // Override baseURL to hit the relative proxy endpoint
       signal: signal as GenericAbortSignal,
     }),
 
@@ -1012,28 +988,12 @@ export const apiHelpers = {
     }),
 
   // ────────────────────────────────────────
-  // User Roles (with environment-based static roles)
+  // User Roles
   // ────────────────────────────────────────
 
   getUserRoles: (
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ roles: string[] }>> => {
-    // Use environment configuration to decide whether to use static roles
-    if (ENV_CONFIG.USE_STATIC_ROLES) {
-      const staticRoles = ['super_admin', 'tenant_admin'];
-
-      const mockResponse: AxiosResponse<{ roles: string[] }> = {
-        data: { roles: staticRoles },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      };
-
-      return Promise.resolve(mockResponse);
-    }
-
-    // Otherwise, make the actual API call
     return api.get(API_ENDPOINTS.USERS.USER_ROLES, {
       signal: signal as GenericAbortSignal,
     });

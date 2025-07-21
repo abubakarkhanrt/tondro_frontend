@@ -1,59 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { AppBar, Toolbar, Typography, Button } from '@mui/material';
-import { apiAuthHelpers } from '../services/authApi';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Avatar,
+  Menu,
+  MenuItem,
+  Divider,
+  Box,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
+import {
+  Logout as LogoutIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+} from '@mui/icons-material';
 import { TestIds } from '../testIds';
-import { handleAppLogout } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
-interface MenuItem {
+interface MenuItemData {
   text: string;
   path: string;
 }
 
 const Navigation: React.FC = () => {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  const { user, logout } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
-  useEffect(() => {
-    const checkToken = () => {
-      const storedToken = localStorage.getItem('access_token');
-      setToken(storedToken);
-    };
-
-    // Check the token immediately on mount
-    checkToken();
-
-    // Set up listeners to re-check when storage or a logout event occurs.
-    // This replaces the need for `forceUpdate`.
-    window.addEventListener('storage', checkToken);
-    window.addEventListener('logout', checkToken);
-
-    // Cleanup function to remove listeners
-    return () => {
-      window.removeEventListener('storage', checkToken);
-      window.removeEventListener('logout', checkToken);
-    };
-  }, []); // Empty dependency array ensures this setup runs only once on mount
-
-  const handleLogout = async (): Promise<void> => {
-    try {
-      const accessToken = localStorage.getItem('access_token');
-      const tokenType = localStorage.getItem('token_type') || 'Bearer';
-      await apiAuthHelpers.logout(undefined, {
-        Authorization: `${tokenType} ${accessToken}`,
-      });
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // NOTE: Even if the server-side logout fails, we proceed with client-side cleanup
-      // to ensure the user is logged out of the application interface.
-    } finally {
-      handleAppLogout();
-
-      router.push('/login');
-    }
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const menuItems: MenuItem[] = [
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleClose();
+    logout();
+  };
+
+  const menuItems: MenuItemData[] = [
     { text: 'Dashboard', path: '/dashboard' },
     { text: 'Organizations', path: '/organizations' },
     { text: 'Users', path: '/users' },
@@ -67,17 +58,17 @@ const Navigation: React.FC = () => {
   return (
     <AppBar position="static">
       <Toolbar>
-        <Typography variant="h6" component="div" style={{ flexGrow: 1 }}>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           TondroAI CRM
         </Typography>
-        {token && (
+        {user && (
           <>
             {menuItems.map(item => (
               <Button
                 key={item.path}
                 color="inherit"
                 onClick={() => router.push(item.path)}
-                style={{ marginLeft: 8, marginRight: 8 }}
+                sx={{ mx: 1 }}
                 data-testid={
                   TestIds.navigation[
                     item.path.slice(1) as keyof typeof TestIds.navigation
@@ -88,12 +79,73 @@ const Navigation: React.FC = () => {
               </Button>
             ))}
             <Button
+              onClick={handleMenu}
               color="inherit"
-              onClick={handleLogout}
-              data-testid={TestIds.navigation.logout}
+              sx={{ textTransform: 'none', p: 0.5, ml: 1 }}
+              data-testid={TestIds.navigation.userMenu}
+              aria-controls={open ? 'account-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={open ? 'true' : undefined}
             >
-              Logout
+              <Avatar sx={{ bgcolor: 'secondary.main', width: 32, height: 32 }}>
+                {user.first_name
+                  ? user.first_name.charAt(0).toUpperCase()
+                  : user.email.charAt(0).toUpperCase()}
+              </Avatar>
+              <Box
+                sx={{
+                  ml: 1.5,
+                  display: { xs: 'none', sm: 'flex' },
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ lineHeight: 1.2, fontWeight: 'bold' }}
+                >
+                  {`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    lineHeight: 1.2,
+                    textTransform: 'capitalize',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                  }}
+                >
+                  {user.role.replace('_', ' ')}
+                </Typography>
+              </Box>
+              <KeyboardArrowDownIcon sx={{ ml: 0.5, color: 'white' }} />
             </Button>
+            <Menu
+              id="account-menu"
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Typography sx={{ fontWeight: 'bold' }}>
+                  {`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {user.email}
+                </Typography>
+              </Box>
+              <Divider sx={{ my: 0.5 }} />
+              <MenuItem
+                onClick={handleLogout}
+                data-testid={TestIds.navigation.logout}
+              >
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Logout</ListItemText>
+              </MenuItem>
+            </Menu>
           </>
         )}
       </Toolbar>
