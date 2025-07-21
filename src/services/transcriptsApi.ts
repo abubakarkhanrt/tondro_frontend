@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for Transcripts service
  * Author: Muhammad Abubakar Khan
  * Created: 17-07-2025
- * Last Updated: 18-07-2025
+ * Last Updated: 21-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -68,12 +68,12 @@ export type JobsApiResponse = Job[];
 // ────────────────────────────────────────
 
 const API_ENDPOINTS = {
-  // Transcript Analysis (direct backend calls)
+  // Transcript Analysis (using proxy)
   TRANSCRIPTS: {
-    // Change from proxy paths to direct backend paths
-    SUBMIT_JOB: '/jobs_diagnostics', // Remove /api/transcripts prefix
-    GET_JOB_STATUS: (jobId: number): string => `/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/jobs_diagnostics',
+    SUBMIT_JOB: '/api/transcripts/jobs_diagnostics',
+    GET_JOB_STATUS: (jobId: number): string =>
+      `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
+    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
   },
 } as const;
 
@@ -81,9 +81,9 @@ const API_ENDPOINTS = {
 // API Configuration
 // ────────────────────────────────────────
 
-// Transcripts API instance (direct backend calls)
+// Transcripts API instance (using proxy)
 const transcriptsApi: AxiosInstance = axios.create({
-  baseURL: ENV_CONFIG.TRANSCRIPTS_BACKEND_URL || '', // Use direct backend URL
+  baseURL: '', // Use relative URLs to go through Next.js proxy
   timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
   headers: {
     Accept: 'application/json',
@@ -132,16 +132,6 @@ transcriptsApi.interceptors.response.use(
     // Don't redirect on cancelled requests
     if (axios.isCancel(error)) {
       return Promise.reject(error);
-    }
-
-    // Handle authentication errors from direct backend
-    if (error.response?.status === 401) {
-      // Clear invalid tokens
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('token_type');
-
-      // Redirect to login or trigger re-authentication
-      window.location.href = '/login';
     }
 
     // Enhanced transcripts API error handling
@@ -227,12 +217,6 @@ export const transcriptsApiHelpers = {
     return transcriptsApi
       .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
       .catch(error => {
-        // Handle CORS errors specifically
-        if (error.code === 'ERR_NETWORK') {
-          throw new Error(
-            'Unable to connect to transcripts service. Please check CORS configuration.'
-          );
-        }
         if (error.transcriptsApiError) {
           console.error(
             'Transcripts API Job Submission Error:',

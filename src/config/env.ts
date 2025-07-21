@@ -4,7 +4,7 @@
  * Description: Environment configuration for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 18-07-2025
+ * Last Updated: 21-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -20,7 +20,7 @@ export const ENV_CONFIG = {
 
   // Transcripts API Configuration (direct backend calls)
   // Replace transcripts proxy URL with direct backend URL
-  TRANSCRIPTS_BACKEND_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_BACKEND_URL,
+  TRANSCRIPTS_BACKEND_URL: process.env.NEXT_PUBLIC_TRANSCRIPTS_API_BASE_URL,
   TRANSCRIPTS_API_TIMEOUT: parseInt(
     process.env.NEXT_PUBLIC_TRANSCRIPTS_API_TIMEOUT || '60000',
     10
