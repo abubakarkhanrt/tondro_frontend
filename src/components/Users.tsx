@@ -147,7 +147,23 @@ const Users: React.FC = () => {
     setSelectedEntity: setSelectedUser,
     editMode,
     setEditMode,
-  } = useEntityState<User>({}, 50);
+  } = useEntityState<
+    User,
+    {
+      organization_id: number | null;
+      role: string;
+      status: string;
+      search: string;
+    }
+  >(
+    {
+      organization_id: null,
+      role: '',
+      status: '',
+      search: '',
+    },
+    50
+  );
 
   const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
@@ -332,7 +348,7 @@ const Users: React.FC = () => {
 
   const handleClearFilters = () => {
     setFilters({
-      organization_id: null, // Changed from 0 to null
+      organization_id: null,
       role: '',
       status: '',
       search: '',

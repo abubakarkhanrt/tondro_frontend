@@ -16,6 +16,7 @@ import axios, {
   type GenericAbortSignal,
 } from 'axios';
 import { ENV_CONFIG } from '../config/env';
+import { addAuthRefreshInterceptor } from './apiErrorUtils';
 
 // ────────────────────────────────────────
 // Types and Interfaces
@@ -114,18 +115,12 @@ transcriptsApi.interceptors.request.use(
 // Response Interceptors
 // ────────────────────────────────────────
 
+// Apply the shared auth refresh interceptor
+addAuthRefreshInterceptor(transcriptsApi);
+
 // Transcripts API response interceptor (simpler, no auth redirects)
 transcriptsApi.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Add debugging information for successful responses in development
-    if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-      console.log('Transcripts API Response:', {
-        url: response.config.url,
-        method: response.config.method,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   error => {
@@ -173,14 +168,6 @@ export const getTranscriptsApiErrorInfo = (error: any) => {
 
 // Utility function to validate and log API responses
 export const validateApiResponse = (response: any) => {
-  if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-    console.log('Transcripts API Response Validation:', {
-      hasData: !!response?.data,
-      dataType: typeof response?.data,
-      isArray: Array.isArray(response?.data),
-      keys: response?.data ? Object.keys(response?.data) : [],
-    });
-  }
   return response;
 };
 

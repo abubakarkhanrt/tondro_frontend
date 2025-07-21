@@ -47,8 +47,7 @@ import {
   type UsageLimitsResponse,
   type ProductsResponse,
 } from '../types';
-import { apiAuthHelpers } from './authApi';
-import { transcriptsApiHelpers } from './transcriptsApi';
+import { addAuthRefreshInterceptor, handleAppLogout } from './apiErrorUtils';
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -198,104 +197,9 @@ api.interceptors.request.use(
 // Response Interceptors
 // ────────────────────────────────────────
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+addAuthRefreshInterceptor(api);
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  failedQueue = [];
-};
-
-// Main CRM API response interceptor
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  async error => {
-    const originalRequest = error.config;
-
-    // Don't redirect on cancelled requests
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-
-    // Add CRM API error context for debugging
-    if (ENV_CONFIG.IS_DEVELOPMENT) {
-      const errorInfo = {
-        message: 'CRM API Error',
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.response?.data,
-      };
-      console.error('CRM API Error:', errorInfo);
-    }
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(token => {
-            originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return axios(originalRequest);
-          })
-          .catch(err => {
-            return Promise.reject(err);
-          });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          handleAppLogout();
-        }
-        const { data } = await apiAuthHelpers.refresh(refreshToken || '');
-        const { access_token, refresh_token } = data;
-
-        // Update local storage and original request
-        localStorage.setItem('access_token', access_token);
-        localStorage.setItem('refresh_token', refresh_token);
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
-        originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
-
-        processQueue(null, access_token);
-        return axios(originalRequest);
-      } catch (refreshError: any) {
-        processQueue(refreshError, null);
-
-        handleAppLogout();
-
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export const handleAppLogout = (navigateToLogin: boolean = true): void => {
-  // Clear all token formats for backward compatibility
-  localStorage.clear();
-
-  // Redirect to login
-  if (navigateToLogin) {
-    window.location.href = '/login';
-  }
-};
+export { handleAppLogout };
 
 // ────────────────────────────────────────
 // API Helper Functions
@@ -998,22 +902,10 @@ export const apiHelpers = {
       signal: signal as GenericAbortSignal,
     });
   },
-
-  // ────────────────────────────────────────
-  // Transcripts API (for backward compatibility)
-  // ────────────────────────────────────────
-
-  // Transcripts methods
-  submitTranscriptJob: transcriptsApiHelpers.submitTranscriptJob,
-  getJobStatus: transcriptsApiHelpers.getJobStatus,
-  getJobsList: transcriptsApiHelpers.getJobsList,
 };
 
 // Also export for backward compatibility
 export default apiHelpers;
-
-// Export transcripts API helpers separately
-export { transcriptsApiHelpers };
 
 // ──────────────────────────────────────────────────
 // End of File: client/src/services/api.ts
