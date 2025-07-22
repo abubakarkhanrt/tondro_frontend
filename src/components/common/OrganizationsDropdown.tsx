@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { apiHelpers } from '../../services/api';
 import { type OrganizationV2 } from '../../types';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Component Props Interface
@@ -161,8 +162,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
 
       setOrganizations(uniqueOrgs);
     } catch (error) {
-      console.error('Error fetching organizations:', error);
-      setFetchError('Failed to load organizations');
+      setFetchError(getApiErrorMessage(error, 'Failed to load organizations'));
     } finally {
       setLoading(false);
     }

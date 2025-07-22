@@ -51,6 +51,7 @@ import {
 import { getStatusColor } from '../theme';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 interface DomainManagementProps {
   organizationId: string;
@@ -93,8 +94,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
         setDomains([]);
       }
     } catch (error: any) {
-      console.error('Error fetching domains:', error);
-      setError(error.response?.data?.message || 'Failed to fetch domains');
+      setError(getApiErrorMessage(error, 'Failed to fetch domains'));
       // Set empty array on error to prevent map errors
       setDomains([]);
     } finally {
@@ -117,8 +117,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       setCreateDialogOpen(false);
       fetchDomains();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'Failed to create domain';
+      const errorMessage = getApiErrorMessage(error, 'Failed to create domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
@@ -145,8 +144,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       setSelectedDomain(null);
       fetchDomains();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'Failed to update domain';
+      const errorMessage = getApiErrorMessage(error, 'Failed to update domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
@@ -168,8 +166,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       });
       fetchDomains();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'Failed to delete domain';
+      const errorMessage = getApiErrorMessage(error, 'Failed to delete domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;

@@ -30,6 +30,7 @@ import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { transcriptsApiHelpers } from '../services/transcriptsApi';
 import type { Job } from '../types';
 import { TestIds } from '../testIds';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Main Component
@@ -53,8 +54,7 @@ const Jobs: React.FC = () => {
       const response = await transcriptsApiHelpers.getJobsList();
       setJobs(response.data);
     } catch (err) {
-      setError('Failed to fetch jobs. Please try again later.');
-      console.error('Error fetching jobs:', err);
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

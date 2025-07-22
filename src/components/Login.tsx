@@ -28,6 +28,7 @@ import { QRCodeCanvas as QRCode } from 'qrcode.react';
 import { apiAuthHelpers } from '../services/authApi';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -156,14 +157,7 @@ const Login: React.FC = () => {
         setLoginStep('mfa_verify');
       }
     } catch (error: unknown) {
-      console.error('❌ Login error:', error);
-      const axiosError = error as {
-        response?: { data?: { message?: string } };
-      };
-      const errorMessage =
-        axiosError.response?.data?.message ||
-        'Login failed. Please check your credentials and try again.';
-      setError(errorMessage);
+      setError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -211,14 +205,7 @@ const Login: React.FC = () => {
 
       handleSuccessfulLogin(response.data);
     } catch (error: unknown) {
-      console.error('❌ MFA verification error:', error);
-      const axiosError = error as {
-        response?: { data?: { message?: string } };
-      };
-      const errorMessage =
-        axiosError.response?.data?.message ||
-        'MFA verification failed. Please check the code and try again.';
-      setError(errorMessage);
+      setError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }

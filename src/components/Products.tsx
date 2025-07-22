@@ -49,6 +49,7 @@ import { getButtonProps } from '../utils/buttonStyles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Main Component
@@ -128,10 +129,9 @@ const Products: React.FC = () => {
       setCreateDialogOpen(false);
       refetch();
     } catch (error) {
-      console.error('Error creating product:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to create product',
+        message: getApiErrorMessage(error),
         severity: 'error',
       });
     }
@@ -141,9 +141,6 @@ const Products: React.FC = () => {
     formData: UpdateProductRequest
   ): Promise<void> => {
     if (!selectedProduct) return;
-    // log formdata and selectedProduct
-    console.log('formData', formData);
-    console.log('selectedProduct', selectedProduct);
     try {
       await apiHelpers.updateProduct(selectedProduct.id as number, formData);
       setSnackbar({
@@ -154,10 +151,9 @@ const Products: React.FC = () => {
       setSelectedProduct(null);
       refetch();
     } catch (error) {
-      console.error('Error updating product:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to update product',
+        message: getApiErrorMessage(error),
         severity: 'error',
       });
     }

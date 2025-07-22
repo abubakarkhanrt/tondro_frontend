@@ -12,8 +12,10 @@ import axios, {
   type AxiosInstance,
   type AxiosResponse,
   type AxiosError,
+  type InternalAxiosRequestConfig,
 } from 'axios';
 import { apiAuthHelpers } from './authApi';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // State for Token Refresh
@@ -66,68 +68,73 @@ export const addApiResponseInterceptor = (axiosInstance: AxiosInstance) => {
     (response: AxiosResponse) => {
       return response;
     },
-    async (error: any) => {
-      const originalRequest = error.config as any; // Use 'any' to access custom _retry property
-
+    async (error: unknown) => {
       // Don't handle cancelled requests
       if (axios.isCancel(error)) {
         return Promise.reject(error);
       }
 
-      // Handle only 401 Unauthorized errors that are not retries
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        if (isRefreshing) {
-          return new Promise(function (resolve, reject) {
-            failedQueue.push({ resolve, reject });
-          })
-            .then(token => {
-              originalRequest.headers['Authorization'] = 'Bearer ' + token;
-              return axiosInstance(originalRequest);
+      // Handle only Axios errors
+      if (axios.isAxiosError(error)) {
+        console.error(`API URL: ${error.config?.url} Error: ${error}`);
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+          _retry?: boolean;
+        };
+
+        // Handle only 401 Unauthorized errors that are not retries
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (isRefreshing) {
+            return new Promise(function (resolve, reject) {
+              failedQueue.push({ resolve, reject });
             })
-            .catch(err => {
-              return Promise.reject(err);
-            });
-        }
-
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          const refreshToken = localStorage.getItem('refresh_token');
-          if (!refreshToken || refreshToken === 'undefined') {
-            handleAppLogout();
-            return Promise.reject(new Error('No refresh token, logging out.'));
+              .then(token => {
+                originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                return axiosInstance(originalRequest);
+              })
+              .catch(err => {
+                return Promise.reject(err);
+              });
           }
 
-          const { data } = await apiAuthHelpers.refresh(refreshToken);
-          const { access_token, refresh_token } = data;
+          originalRequest._retry = true;
+          isRefreshing = true;
 
-          // Update local storage and original request
-          localStorage.setItem('access_token', access_token);
-          localStorage.setItem('refresh_token', refresh_token);
-          axiosInstance.defaults.headers.common['Authorization'] =
-            'Bearer ' + access_token;
-          originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
+          try {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken || refreshToken === 'undefined') {
+              handleAppLogout();
+              return Promise.reject(
+                new Error('No refresh token, logging out.')
+              );
+            }
 
-          processQueue(null, access_token);
-          return axiosInstance(originalRequest);
-        } catch (refreshError: any) {
-          processQueue(refreshError as AxiosError, null);
-          handleAppLogout();
-          return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
+            const { data } = await apiAuthHelpers.refresh(refreshToken);
+            const { access_token, refresh_token } = data;
+
+            // Update local storage and original request
+            localStorage.setItem('access_token', access_token);
+            localStorage.setItem('refresh_token', refresh_token);
+            axiosInstance.defaults.headers.common['Authorization'] =
+              'Bearer ' + access_token;
+            originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
+
+            processQueue(null, access_token);
+            return axiosInstance(originalRequest);
+          } catch (refreshError: unknown) {
+            processQueue(refreshError as AxiosError, null);
+            handleAppLogout();
+            return Promise.reject(refreshError);
+          } finally {
+            isRefreshing = false;
+          }
+        } else if (error.response?.status === 409) {
+          return Promise.reject(
+            new Error('Conflict: ' + getApiErrorMessage(error))
+          );
         }
-      } else if (error.response?.status === 409) {
-        return Promise.reject(
-          new Error(
-            'Conflict: ' +
-              (error.response.data.detail || error.response.data.message)
-          )
-        );
-      }
 
-      return Promise.reject(error);
+        return Promise.reject(error);
+      }
     }
   );
 };
