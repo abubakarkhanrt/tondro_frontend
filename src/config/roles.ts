@@ -13,6 +13,7 @@
 // ────────────────────────────────────────
 
 export const PERMISSIONS = {
+  DASHBOARD_READ: 'dashboard:read',
   // From CSV
   ORGANIZATION_CREATE: 'organization:create',
   ORGANIZATION_READ: 'organization:read',
@@ -35,10 +36,7 @@ export const PERMISSIONS = {
   DOMAIN_UPDATE: 'domain:update',
   DOMAIN_DELETE: 'domain:delete',
   AUDIT_READ: 'audit:read',
-
-  // Added based on application features
   TRANSCRIPT_UPLOAD: 'transcript:upload',
-  TRANSCRIPT_READ: 'transcript:read',
   JOB_READ: 'job:read',
 } as const;
 
@@ -52,6 +50,7 @@ type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 const ROLES: Record<string, Permission[]> = {
   // Role ID 1 from CSV
   GLOBAL_ADMIN: [
+    PERMISSIONS.DASHBOARD_READ,
     PERMISSIONS.ORGANIZATION_CREATE,
     PERMISSIONS.ORGANIZATION_READ,
     PERMISSIONS.ORGANIZATION_UPDATE,
@@ -74,11 +73,11 @@ const ROLES: Record<string, Permission[]> = {
     PERMISSIONS.DOMAIN_DELETE,
     PERMISSIONS.AUDIT_READ,
     PERMISSIONS.TRANSCRIPT_UPLOAD,
-    PERMISSIONS.TRANSCRIPT_READ,
     PERMISSIONS.JOB_READ,
   ],
   // Role ID 2 from CSV
   TENANT_ADMIN: [
+    PERMISSIONS.DASHBOARD_READ,
     PERMISSIONS.ORGANIZATION_READ,
     PERMISSIONS.ORGANIZATION_UPDATE,
     PERMISSIONS.USER_CREATE,
@@ -95,8 +94,6 @@ const ROLES: Record<string, Permission[]> = {
     PERMISSIONS.DOMAIN_UPDATE,
     PERMISSIONS.DOMAIN_DELETE,
     PERMISSIONS.AUDIT_READ,
-    PERMISSIONS.TRANSCRIPT_UPLOAD,
-    PERMISSIONS.TRANSCRIPT_READ,
     PERMISSIONS.JOB_READ,
   ],
 };

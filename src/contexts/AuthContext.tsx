@@ -23,7 +23,7 @@ import { apiAuthHelpers } from '../services/authApi';
 import { handleAppLogout } from '@/services/api';
 
 // Infer the Permission type from the PERMISSIONS object
-type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 interface AuthContextType {
   user: User | null;

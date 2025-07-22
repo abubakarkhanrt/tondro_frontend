@@ -4,7 +4,7 @@
  * Description: Integration tests for dual API integration (CRM and Transcripts APIs)
  * Author: Muhammad Abubakar Khan
  * Created: 08-07-2025
- * Last Updated: 08-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  *
  * Note: This file contains integration tests for the dual API setup.
@@ -12,12 +12,12 @@
  * For now, this serves as documentation of the expected behavior.
  */
 
+import { apiHelpers, validateApiResponse } from './api';
 import {
-  apiHelpers,
   isTranscriptsApiError,
   getTranscriptsApiErrorInfo,
-  validateApiResponse,
-} from './api';
+  validateApiResponse as validateTranscriptsApiResponse,
+} from './transcriptsApi';
 import { ENV_CONFIG } from '../config/env';
 
 // ────────────────────────────────────────
@@ -101,10 +101,6 @@ export const runDualApiTests = async () => {
 
       if (typeof apiHelpers.getJobStatus !== 'function') {
         throw new Error('getJobStatus function not found');
-      }
-
-      if (typeof apiHelpers.getJobDetailedResults !== 'function') {
-        throw new Error('getJobDetailedResults function not found');
       }
 
       // Test 3: submitTranscriptJob accepts tenant_id parameter
@@ -220,7 +216,7 @@ export const runDualApiTests = async () => {
         status: 200,
       };
 
-      const validatedCrmResponse = validateApiResponse(crmResponse, 'crm');
+      const validatedCrmResponse = validateApiResponse(crmResponse);
       if (validatedCrmResponse !== crmResponse) {
         throw new Error(
           'validateApiResponse should return the original response'
@@ -233,10 +229,8 @@ export const runDualApiTests = async () => {
         status: 200,
       };
 
-      const validatedTranscriptsResponse = validateApiResponse(
-        transcriptsResponse,
-        'transcripts'
-      );
+      const validatedTranscriptsResponse =
+        validateTranscriptsApiResponse(transcriptsResponse);
       if (validatedTranscriptsResponse !== transcriptsResponse) {
         throw new Error(
           'validateApiResponse should return the original response'
@@ -313,9 +307,6 @@ export const runManualTests = () => {
     `   submitTranscriptJob: ${typeof apiHelpers.submitTranscriptJob}`
   );
   console.log(`   getJobStatus: ${typeof apiHelpers.getJobStatus}`);
-  console.log(
-    `   getJobDetailedResults: ${typeof apiHelpers.getJobDetailedResults}`
-  );
 
   // Test tenant_id parameter requirement
   console.log('\n3. Testing Tenant ID Parameter:');

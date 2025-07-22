@@ -4,23 +4,23 @@
  * Description: Transcripts management page for TondroAI CRM with asynchronous job-based processing
  * Author: Muhammad Abubakar Khan
  * Created: 25-06-2025
- * Last Updated: 14-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  *
  * This component handles transcript file uploads and analysis using an asynchronous job-based API.
  * Features:
  * - File upload with validation (PDF, max 10MB)
  * - Job submission and status polling
- * - Real-time progress tracking
  * - Detailed analysis results display
  * - Error handling with retry logic
- * - Support for both first-pass and final-pass analysis results
+ * - Support for both first-pass and final-pass analysis results (first-pass is the initial analysis, final-pass is the corrected analysis)
  *
  * API Flow:
  * 1. Submit file → Receive job_id
- * 2. Poll job status until completed/failed
- * 3. Fetch detailed results (optional)
+ * 2. Call Get Job Status until completed/failed
+ * 3. Fetch detailed results (first-pass and final-pass)
  * 4. Display analysis with confidence scores
+ * 5. Display analysis results (first-pass and final-pass)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -44,7 +44,7 @@ import {
 } from '@mui/material';
 import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
 import { TestIds } from '../testIds';
-import { apiHelpers } from '../services/api';
+import { transcriptsApiHelpers } from '../services/transcriptsApi';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -166,30 +166,6 @@ interface TranscriptAnalysisResponse {
   };
 }
 
-// Update the interface to match the actual API response
-/*
-interface JobDiagnosticsResponse {
-  id: number;
-  tenant_id: string;
-  created_timestamp: string;
-  processing_duration_seconds: number;
-  overall_status: string;
-  documents: {
-    id: string;
-    document_type: string;
-    status: 'processing' | 'completed' | 'failed';
-    completed_at?: string;
-    result?: {
-      pass_1_extraction: TranscriptAnalysisData;
-      pass_2_correction: TranscriptAnalysisData;
-    };
-    error?: {
-      code: string;
-      message: string;
-    };
-  }[];
-}
-*/
 // ────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────
@@ -267,7 +243,8 @@ const Transcripts: React.FC = () => {
       formData.append('document_type', 'transcript');
 
       // Step 1: Submit the job
-      const submitResponse = await apiHelpers.submitTranscriptJob(formData);
+      const submitResponse =
+        await transcriptsApiHelpers.submitTranscriptJob(formData);
       const newJobId = submitResponse.data.job_id;
       setJobId(newJobId);
 
@@ -275,7 +252,7 @@ const Transcripts: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Step 3: Fetch the job results
-      const statusResponse = await apiHelpers.getJobStatus(newJobId);
+      const statusResponse = await transcriptsApiHelpers.getJobStatus(newJobId);
       // Fix: The API returns a single job object, not an array
       const job = statusResponse.data; // Remove the [0] indexing
       const document = job?.documents?.[0];

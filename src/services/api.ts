@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 14-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -46,10 +46,8 @@ import {
   type UsageSummaryResponse,
   type UsageLimitsResponse,
   type ProductsResponse,
-  type JobDiagnosticsResponse,
-  type JobsApiResponse,
 } from '../types';
-import { apiAuthHelpers } from './authApi';
+import { addApiResponseInterceptor, handleAppLogout } from './apiErrorUtils';
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -150,14 +148,6 @@ const API_ENDPOINTS = {
     HEALTH: '/health',
     ROOT: '/',
   },
-
-  // Transcript Analysis (uses transcriptsApi instance)
-  TRANSCRIPTS: {
-    SUBMIT_JOB: '/api/transcripts/jobs',
-    GET_JOB_STATUS: (jobId: number): string =>
-      `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
-  },
 } as const;
 
 // ────────────────────────────────────────
@@ -171,12 +161,6 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Transcripts API instance (separate service)
-const transcriptsApi: AxiosInstance = axios.create({
-  baseURL: '', // Use relative URLs since we're now proxying through Next.js
-  timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
 });
 
 // ────────────────────────────────────────
@@ -209,195 +193,20 @@ api.interceptors.request.use(
   }
 );
 
-// Transcripts API interceptor
-transcriptsApi.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const accessToken = localStorage.getItem('access_token');
-    const tokenType = localStorage.getItem('token_type') || 'bearer';
-
-    const token =
-      accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
-
-    // Use a valid token; you might want to adjust the fallback behavior
-    const validToken =
-      token && token !== 'undefined' && token !== 'null'
-        ? token
-        : 'valid_test_token'; // Or handle error if no token
-
-    if (config.headers) {
-      config.headers.Authorization = `${tokenType} ${validToken}`;
-    }
-    return config;
-  },
-  error => {
-    return Promise.reject(error);
-  }
-);
-
 // ────────────────────────────────────────
 // Response Interceptors
 // ────────────────────────────────────────
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+addApiResponseInterceptor(api);
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  failedQueue = [];
-};
-
-// Main CRM API response interceptor
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  async error => {
-    const originalRequest = error.config;
-
-    // Don't redirect on cancelled requests
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-
-    // Add CRM API error context for debugging
-    if (ENV_CONFIG.IS_DEVELOPMENT) {
-      const errorInfo = {
-        message: 'CRM API Error',
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.response?.data,
-      };
-      console.error('CRM API Error:', errorInfo);
-    }
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(token => {
-            originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return axios(originalRequest);
-          })
-          .catch(err => {
-            return Promise.reject(err);
-          });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          handleAppLogout();
-        }
-        const { data } = await apiAuthHelpers.refresh(refreshToken || '');
-        const { access_token, refresh_token } = data;
-
-        // Update local storage and original request
-        localStorage.setItem('access_token', access_token);
-        localStorage.setItem('refresh_token', refresh_token);
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
-        originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
-
-        processQueue(null, access_token);
-        return axios(originalRequest);
-      } catch (refreshError: any) {
-        processQueue(refreshError, null);
-
-        handleAppLogout();
-
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export const handleAppLogout = (navigateToLogin: boolean = true): void => {
-  // Clear all token formats for backward compatibility
-  localStorage.clear();
-
-  // Redirect to login
-  if (navigateToLogin) {
-    window.location.href = '/login';
-  }
-};
-
-// Transcripts API response interceptor (simpler, no auth redirects)
-transcriptsApi.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  error => {
-    // Don't redirect on cancelled requests
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-
-    // Enhanced transcripts API error handling
-    const errorInfo = {
-      message: 'Transcripts API Error',
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      method: error.config?.method,
-      data: error.response?.data,
-    };
-
-    // Log transcripts API errors for debugging
-    if (ENV_CONFIG.IS_DEVELOPMENT) {
-      console.error('Transcripts API Error:', errorInfo);
-    }
-
-    // Add transcripts-specific error context
-    error.transcriptsApiError = true;
-    error.errorInfo = errorInfo;
-
-    return Promise.reject(error);
-  }
-);
+export { handleAppLogout };
 
 // ────────────────────────────────────────
 // API Helper Functions
 // ────────────────────────────────────────
 
-// Utility function to check if an error is from transcripts API
-export const isTranscriptsApiError = (error: any): boolean => {
-  return error && error.transcriptsApiError === true;
-};
-
-// Utility function to get transcripts API error info
-export const getTranscriptsApiErrorInfo = (error: any) => {
-  return error?.errorInfo || null;
-};
-
 // Utility function to validate and log API responses
-export const validateApiResponse = (
-  response: any,
-  apiType: 'crm' | 'transcripts' = 'crm'
-) => {
-  if (ENV_CONFIG.IS_DEVELOPMENT && ENV_CONFIG.ENABLE_DEBUG_LOGGING) {
-    console.log(`${apiType.toUpperCase()} API Response Validation:`, {
-      hasData: !!response?.data,
-      dataType: typeof response?.data,
-      isArray: Array.isArray(response?.data),
-      keys: response?.data ? Object.keys(response?.data) : [],
-    });
-  }
+export const validateApiResponse = (response: any) => {
   return response;
 };
 
@@ -1083,102 +892,15 @@ export const apiHelpers = {
     }),
 
   // ────────────────────────────────────────
-  // User Roles (with environment-based static roles)
+  // User Roles
   // ────────────────────────────────────────
 
   getUserRoles: (
     signal?: AbortSignal
   ): Promise<AxiosResponse<{ roles: string[] }>> => {
-    // Use environment configuration to decide whether to use static roles
-    if (ENV_CONFIG.USE_STATIC_ROLES) {
-      const staticRoles = ['global_admin', 'tenant_admin'];
-
-      const mockResponse: AxiosResponse<{ roles: string[] }> = {
-        data: { roles: staticRoles },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      };
-
-      return Promise.resolve(mockResponse);
-    }
-
-    // Otherwise, make the actual API call
     return api.get(API_ENDPOINTS.USERS.USER_ROLES, {
       signal: signal as GenericAbortSignal,
     });
-  },
-
-  // ────────────────────────────────────────
-  // Transcript Analysis (uses transcriptsApi instance)
-  // ────────────────────────────────────────
-
-  submitTranscriptJob: (
-    formData: FormData,
-    signal?: AbortSignal
-  ): Promise<
-    AxiosResponse<{
-      job_id: number;
-      document_id: string;
-      status: string;
-    }>
-  > => {
-    const config = {
-      signal: signal as GenericAbortSignal,
-    };
-
-    return transcriptsApi
-      .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
-      .catch(error => {
-        if (error.transcriptsApiError) {
-          console.error(
-            'Transcripts API Job Submission Error:',
-            error.errorInfo
-          );
-          if (error.response?.status === 413) {
-            throw new Error(
-              'File too large. Please select a smaller file (max 10MB).'
-            );
-          } else if (error.response?.status === 415) {
-            throw new Error(
-              'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
-            );
-          } else if (error.response?.status === 503) {
-            throw new Error(
-              'Transcripts service is temporarily unavailable. Please try again later.'
-            );
-          } else if (error.response?.status >= 500) {
-            throw new Error(
-              'Transcripts service error. Please try again later.'
-            );
-          } else if (error.response?.status >= 400) {
-            throw new Error(
-              'Invalid request. Please check your file and try again.'
-            );
-          } else if (!error.response) {
-            throw new Error(
-              'Unable to connect to transcripts service. Please check your connection.'
-            );
-          }
-        }
-        throw error;
-      });
-  },
-
-  getJobStatus: (
-    jobId: number,
-    signal?: AbortSignal
-  ): Promise<AxiosResponse<JobDiagnosticsResponse>> => {
-    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.GET_JOB_STATUS(jobId), {
-      signal: signal as GenericAbortSignal,
-    });
-  },
-
-  // --- Jobs List --- //
-  getJobsList: (): Promise<AxiosResponse<JobsApiResponse>> => {
-    // This now correctly uses the transcriptsApi instance
-    return transcriptsApi.get(API_ENDPOINTS.TRANSCRIPTS.LIST_JOBS);
   },
 };
 

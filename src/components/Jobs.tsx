@@ -4,7 +4,7 @@
  * Description: Displays a list of all processing jobs for the user.
  * Author: Muhammad Abubakar Khan
  * Created: 11-07-2024
- * Last Updated: 12-07-2025
+ * Last Updated: 18-07-2025
  * ──────────────────────────────────────────────────
  */
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,7 +27,7 @@ import {
   TablePagination,
 } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
-import { apiHelpers } from '../services/api';
+import { transcriptsApiHelpers } from '../services/transcriptsApi';
 import type { Job } from '../types';
 import { TestIds } from '../testIds';
 
@@ -50,7 +50,7 @@ const Jobs: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiHelpers.getJobsList();
+      const response = await transcriptsApiHelpers.getJobsList();
       setJobs(response.data);
     } catch (err) {
       setError('Failed to fetch jobs. Please try again later.');
