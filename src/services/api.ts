@@ -47,7 +47,7 @@ import {
   type UsageLimitsResponse,
   type ProductsResponse,
 } from '../types';
-import { addAuthRefreshInterceptor, handleAppLogout } from './apiErrorUtils';
+import { addApiResponseInterceptor, handleAppLogout } from './apiErrorUtils';
 
 // ────────────────────────────────────────
 // API Endpoint Constants
@@ -197,7 +197,7 @@ api.interceptors.request.use(
 // Response Interceptors
 // ────────────────────────────────────────
 
-addAuthRefreshInterceptor(api);
+addApiResponseInterceptor(api);
 
 export { handleAppLogout };
 

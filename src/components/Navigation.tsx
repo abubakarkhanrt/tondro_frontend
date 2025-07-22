@@ -18,16 +18,18 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
 import { TestIds } from '../testIds';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, type Permission } from '../contexts/AuthContext';
+import { PERMISSIONS } from '@/config/roles';
 
 interface MenuItemData {
   text: string;
   path: string;
+  permission: Permission;
 }
 
 const Navigation: React.FC = () => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -45,14 +47,34 @@ const Navigation: React.FC = () => {
   };
 
   const menuItems: MenuItemData[] = [
-    { text: 'Dashboard', path: '/dashboard' },
-    { text: 'Organizations', path: '/organizations' },
-    { text: 'Users', path: '/users' },
-    { text: 'Subscriptions', path: '/subscriptions' },
-    { text: 'Products', path: '/products' },
-    { text: 'Transcripts', path: '/transcripts' },
-    { text: 'Jobs', path: '/jobs' },
-    { text: 'Audit Log', path: '/audit-log' },
+    {
+      text: 'Dashboard',
+      path: '/dashboard',
+      permission: PERMISSIONS.DASHBOARD_READ,
+    },
+    {
+      text: 'Organizations',
+      path: '/organizations',
+      permission: PERMISSIONS.ORGANIZATION_READ,
+    },
+    { text: 'Users', path: '/users', permission: PERMISSIONS.USER_READ },
+    {
+      text: 'Subscriptions',
+      path: '/subscriptions',
+      permission: PERMISSIONS.SUBSCRIPTION_READ,
+    },
+    {
+      text: 'Products',
+      path: '/products',
+      permission: PERMISSIONS.PRODUCT_READ,
+    },
+    {
+      text: 'Transcripts',
+      path: '/transcripts',
+      permission: PERMISSIONS.TRANSCRIPT_UPLOAD,
+    },
+    { text: 'Jobs', path: '/jobs', permission: PERMISSIONS.JOB_READ },
+    // { text: 'Audit Log', path: '/audit-log' },
   ];
 
   return (
@@ -63,21 +85,24 @@ const Navigation: React.FC = () => {
         </Typography>
         {user && (
           <>
-            {menuItems.map(item => (
-              <Button
-                key={item.path}
-                color="inherit"
-                onClick={() => router.push(item.path)}
-                sx={{ mx: 1 }}
-                data-testid={
-                  TestIds.navigation[
-                    item.path.slice(1) as keyof typeof TestIds.navigation
-                  ]
-                }
-              >
-                {item.text}
-              </Button>
-            ))}
+            {menuItems.map(
+              item =>
+                hasPermission(item.permission) && (
+                  <Button
+                    key={item.path}
+                    color="inherit"
+                    onClick={() => router.push(item.path)}
+                    sx={{ mx: 1 }}
+                    data-testid={
+                      TestIds.navigation[
+                        item.path.slice(1) as keyof typeof TestIds.navigation
+                      ]
+                    }
+                  >
+                    {item.text}
+                  </Button>
+                )
+            )}
             <Button
               onClick={handleMenu}
               color="inherit"

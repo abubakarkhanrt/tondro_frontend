@@ -16,7 +16,7 @@ import axios, {
   type GenericAbortSignal,
 } from 'axios';
 import { ENV_CONFIG } from '../config/env';
-import { addAuthRefreshInterceptor } from './apiErrorUtils';
+import { addApiResponseInterceptor } from './apiErrorUtils';
 
 // ────────────────────────────────────────
 // Types and Interfaces
@@ -71,10 +71,9 @@ export type JobsApiResponse = Job[];
 const API_ENDPOINTS = {
   // Transcript Analysis (using proxy)
   TRANSCRIPTS: {
-    SUBMIT_JOB: '/api/transcripts/jobs_diagnostics',
-    GET_JOB_STATUS: (jobId: number): string =>
-      `/api/transcripts/jobs_diagnostics?ids=${jobId}`,
-    LIST_JOBS: '/api/transcripts/jobs_diagnostics',
+    SUBMIT_JOB: '/jobs_diagnostics',
+    GET_JOB_STATUS: (jobId: number): string => `/jobs_diagnostics?ids=${jobId}`,
+    LIST_JOBS: '/jobs_diagnostics',
   },
 } as const;
 
@@ -84,7 +83,7 @@ const API_ENDPOINTS = {
 
 // Transcripts API instance (using proxy)
 const transcriptsApi: AxiosInstance = axios.create({
-  baseURL: '', // Use relative URLs to go through Next.js proxy
+  baseURL: ENV_CONFIG.TRANSCRIPTS_API_BASE_URL || '',
   timeout: ENV_CONFIG.TRANSCRIPTS_API_TIMEOUT,
   headers: {
     Accept: 'application/json',
@@ -116,7 +115,7 @@ transcriptsApi.interceptors.request.use(
 // ────────────────────────────────────────
 
 // Apply the shared auth refresh interceptor
-addAuthRefreshInterceptor(transcriptsApi);
+addApiResponseInterceptor(transcriptsApi);
 
 // Transcripts API response interceptor (simpler, no auth redirects)
 transcriptsApi.interceptors.response.use(

@@ -58,10 +58,10 @@ export const handleAppLogout = (navigateToLogin: boolean = true): void => {
 };
 
 // ────────────────────────────────────────
-// Auth Refresh Interceptor
+// Auth Response Interceptor
 // ────────────────────────────────────────
 
-export const addAuthRefreshInterceptor = (axiosInstance: AxiosInstance) => {
+export const addApiResponseInterceptor = (axiosInstance: AxiosInstance) => {
   axiosInstance.interceptors.response.use(
     (response: AxiosResponse) => {
       return response;

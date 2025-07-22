@@ -8,18 +8,20 @@
  * ──────────────────────────────────────────────────
  */
 
+import { ENV_CONFIG } from '@/config/env';
+
 export const validateEnvironment = (): void => {
   const requiredVars = [
-    'NEXT_PUBLIC_API_BASE_URL',
-    'NEXT_PUBLIC_API_BASE_PATH',
+    'API_BASE_URL',
+    'AUTH_API_BASE_URL',
+    'TRANSCRIPTS_API_BASE_URL',
   ];
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  const missingVars = requiredVars.filter(varName => !ENV_CONFIG[varName]);
 
   if (missingVars.length > 0) {
     console.warn(
       `⚠️  Missing environment variables: ${missingVars.join(', ')}`
     );
-    console.warn('Using default values...');
   }
 };
