@@ -28,6 +28,7 @@ import { QRCodeCanvas as QRCode } from 'qrcode.react';
 import { apiAuthHelpers } from '../services/authApi';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -156,14 +157,7 @@ const Login: React.FC = () => {
         setLoginStep('mfa_verify');
       }
     } catch (error: unknown) {
-      console.error('❌ Login error:', error);
-      const axiosError = error as {
-        response?: { data?: { message?: string } };
-      };
-      const errorMessage =
-        axiosError.response?.data?.message ||
-        'Login failed. Please check your credentials and try again.';
-      setError(errorMessage);
+      setError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -173,7 +167,12 @@ const Login: React.FC = () => {
     e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
     e.preventDefault();
-    if (!totpCode.trim() || !userId) {
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const submittedTotpCode = (formData.get('totpCode') as string) || totpCode;
+
+    if (!submittedTotpCode.trim() || !userId) {
       setError('Please enter the verification code.');
       return;
     }
@@ -189,7 +188,7 @@ const Login: React.FC = () => {
       let response;
       const payload = {
         user_id: userId,
-        totp_code: totpCode,
+        totp_code: submittedTotpCode,
         device_id: 'webapp',
       };
       const headers = { 'X-CSRF-Token': csrfToken };
@@ -206,14 +205,7 @@ const Login: React.FC = () => {
 
       handleSuccessfulLogin(response.data);
     } catch (error: unknown) {
-      console.error('❌ MFA verification error:', error);
-      const axiosError = error as {
-        response?: { data?: { message?: string } };
-      };
-      const errorMessage =
-        axiosError.response?.data?.message ||
-        'MFA verification failed. Please check the code and try again.';
-      setError(errorMessage);
+      setError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -326,6 +318,7 @@ const Login: React.FC = () => {
         <TextField
           fullWidth
           label="Verification Code"
+          name="totpCode"
           value={totpCode}
           onChange={e => setTotpCode(e.target.value)}
           margin="normal"
@@ -366,6 +359,7 @@ const Login: React.FC = () => {
         <TextField
           fullWidth
           label="Verification Code"
+          name="totpCode"
           value={totpCode}
           onChange={e => setTotpCode(e.target.value)}
           margin="normal"

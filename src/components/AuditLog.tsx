@@ -48,6 +48,7 @@ import { apiHelpers } from '../services/api';
 import { type AuditLog as AuditLogType } from '../types/index';
 import { TestIds } from '../testIds';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Main Component
@@ -98,10 +99,9 @@ const AuditLog: React.FC = () => {
       const response = await apiHelpers.getAuditLog(id);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching audit log details:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to fetch audit log details',
+        message: getApiErrorMessage(error, 'Failed to fetch audit log details'),
         severity: 'error',
       });
       return null;
@@ -528,7 +528,6 @@ const ViewAuditLogDialog: React.FC<ViewAuditLogDialogProps> = ({
           setDetailedLog(freshLog);
         }
       } catch (error) {
-        console.error('Error loading audit log details:', error);
         // Keep the original log data if fetch fails
         if (isMounted) {
           setDetailedLog(log);

@@ -83,16 +83,7 @@ const Dashboard: React.FC = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token && token !== 'undefined' && token !== 'null') {
-      fetchSummaryData();
-    } else {
-      setSummaryState(prev => ({
-        ...prev,
-        error: 'No authentication token found. Please login again.',
-        loading: false,
-      }));
-    }
+    fetchSummaryData();
 
     return () => {
       // Cancel any ongoing requests when component unmounts

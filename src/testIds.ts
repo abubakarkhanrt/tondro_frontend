@@ -203,6 +203,8 @@ export const TestIds = {
       firstName: 'users-create-first-name',
       lastName: 'users-create-last-name',
       role: 'users-create-role',
+      password: 'users-create-password',
+      confirmPassword: 'users-create-confirm-password',
       submit: 'users-create-submit',
       cancel: 'users-create-cancel',
       error: 'users-create-error',

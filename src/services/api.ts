@@ -177,14 +177,17 @@ api.interceptors.request.use(
     const token =
       accessToken || localStorage.getItem(ENV_CONFIG.JWT_STORAGE_KEY);
 
-    // Only use valid tokens, fallback to test token if needed
-    const validToken =
-      token && token !== 'undefined' && token !== 'null'
-        ? token
-        : 'valid_test_token';
+    // If no valid token is found, log the user out and cancel the request.
+    if (!token || token === 'undefined' || token === 'null') {
+      handleAppLogout();
+      return Promise.reject(
+        new axios.Cancel('No valid token found. Logging out.')
+      );
+    }
 
+    // If a valid token is found, attach it to the request headers.
     if (config.headers) {
-      config.headers.Authorization = `${tokenType} ${validToken}`;
+      config.headers.Authorization = `${tokenType} ${token}`;
     }
     return config;
   },

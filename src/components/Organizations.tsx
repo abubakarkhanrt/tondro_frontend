@@ -69,6 +69,7 @@ import DomainManagement from './DomainManagement';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
@@ -344,8 +345,7 @@ const Organizations: React.FC = () => {
         console.error('Error updating organization:', error);
         setSnackbar({
           open: true,
-          message:
-            error.response?.data?.message || 'Failed to update organization',
+          message: getApiErrorMessage(error),
           severity: 'error',
         });
       }
@@ -1028,6 +1028,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                   index
                 )}
                 inputProps={{
+                  min: new Date().toISOString().split('T')[0],
                   'data-testid':
                     TestIds.organizations.subscriptionForm.startDate(index),
                   'aria-label': 'Subscription start date input',

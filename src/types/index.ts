@@ -1,10 +1,10 @@
 /**
  * ──────────────────────────────────────────────────
- * File: client/src/types/index.ts
- * Description: TypeScript type definitions for TondroAI CRM
+ * File: src/types/index.ts
+ * Description: Shared TypeScript types and interfaces for the application.
  * Author: Muhammad Abubakar Khan
- * Created: 18-06-2025
- * Last Updated: 18-07-2025
+ * Created: 18-07-2024
+ * Last Updated: 18-07-2024
  * ──────────────────────────────────────────────────
  */
 
@@ -203,6 +203,7 @@ export interface CreateUserRequest {
   role: 'global_admin' | 'tenant_admin';
   organization_id: number;
   domain_id?: number; // Made optional since we handle it separately
+  password?: string;
 }
 
 export interface UpdateUserRequest {

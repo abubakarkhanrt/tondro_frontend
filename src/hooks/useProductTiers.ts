@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiHelpers } from '../services/api';
 import type { ProductTier } from '../types';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Hook Interface
@@ -74,8 +75,7 @@ export const useProductTiers = (): UseProductTiersReturn => {
 
       setTiers(allTiers);
     } catch (err: any) {
-      console.error('Error fetching product tiers:', err);
-      setError(err.response?.data?.message || 'Failed to fetch product tiers');
+      setError(getApiErrorMessage(err, 'Failed to fetch product tiers'));
       setTiers([]);
     } finally {
       setLoading(false);
@@ -159,8 +159,7 @@ export const useProductTier = (
 
       setTier(response.data.tier);
     } catch (err: any) {
-      console.error('Error fetching product tier:', err);
-      setError(err.response?.data?.message || 'Failed to fetch product tier');
+      setError(getApiErrorMessage(err, 'Failed to fetch product tier'));
       setTier(null);
     } finally {
       setLoading(false);
@@ -216,8 +215,7 @@ export const useProductTiersByProduct = (
 
       setTiers(response.data.tiers || []);
     } catch (err: any) {
-      console.error('Error fetching product tiers:', err);
-      setError(err.response?.data?.message || 'Failed to fetch product tiers');
+      setError(getApiErrorMessage(err));
       setTiers([]);
     } finally {
       setLoading(false);

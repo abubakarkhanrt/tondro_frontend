@@ -60,6 +60,7 @@ import OrganizationsDropdown from './common/OrganizationsDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // Stubs for missing dialog components (replace with real implementations if available)
 const CreateSubscriptionDialog = ({
@@ -144,7 +145,7 @@ const CreateSubscriptionDialog = ({
       await onSubmit(formattedData);
       onClose();
     } catch (e: any) {
-      setError(e?.message || 'Failed to create subscription');
+      setError(getApiErrorMessage(e, 'Failed to create subscription'));
     } finally {
       setSubmitting(false);
     }
@@ -246,7 +247,7 @@ const CreateSubscriptionDialog = ({
 
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Start Date *"
+                label="Start Date"
                 type="date"
                 value={form.starts_at ? form.starts_at.slice(0, 10) : ''}
                 onChange={e => handleChange('starts_at', e.target.value)}
@@ -256,6 +257,7 @@ const CreateSubscriptionDialog = ({
                 required
                 data-testid={TestIds.subscriptions.createDialog.startDate}
                 inputProps={{
+                  min: new Date().toISOString().split('T')[0],
                   'data-testid': TestIds.subscriptions.createDialog.startDate,
                   'aria-label': 'Subscription start date input',
                 }}
@@ -337,7 +339,7 @@ const EditSubscriptionDialog = ({
       await onSubmit(form);
       onClose();
     } catch (e: any) {
-      setError(e?.message || 'Failed to update subscription');
+      setError(getApiErrorMessage(e, 'Failed to update subscription'));
     } finally {
       setSubmitting(false);
     }
@@ -583,13 +585,11 @@ const Subscriptions: React.FC = () => {
 
       setProducts(productsData);
     } catch (error) {
-      console.error('Error fetching products:', error);
-      const err = error as any;
-      if (err.response) {
-        console.error('Error response:', err.response.data);
-        console.error('Error status:', err.response.status);
-        console.error('Error headers:', err.response.headers);
-      }
+      setSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, 'Failed to fetch products'),
+        severity: 'error',
+      });
       // Don't show error for products as it's not critical
     }
   };
@@ -607,11 +607,9 @@ const Subscriptions: React.FC = () => {
       setCreateDialogOpen(false);
       refetchSubscriptions();
     } catch (error: any) {
-      console.error('Error creating subscription:', error);
       setSnackbar({
         open: true,
-        message:
-          error.response?.data?.message || 'Failed to create subscription',
+        message: getApiErrorMessage(error, 'Failed to create subscription'),
         severity: 'error',
       });
     }
@@ -701,11 +699,9 @@ const Subscriptions: React.FC = () => {
       setEditMode(false);
       refetchSubscriptions();
     } catch (error: any) {
-      console.error('Error updating subscription:', error);
       setSnackbar({
         open: true,
-        message:
-          error.response?.data?.message || 'Failed to update subscription',
+        message: getApiErrorMessage(error, 'Failed to update subscription'),
         severity: 'error',
       });
     }

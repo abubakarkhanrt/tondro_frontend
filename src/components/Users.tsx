@@ -43,6 +43,7 @@ import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
 import {
@@ -60,6 +61,7 @@ import { PERMISSIONS } from '../config/roles';
 import { debounce } from 'lodash';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
+import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -235,7 +237,11 @@ const Users: React.FC = () => {
       const orgs: OrganizationV2[] = (response.data as any).organizations || [];
       setOrganizations(orgs);
     } catch (error) {
-      console.error('Error fetching organizations:', error);
+      setSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, 'Failed to fetch organizations'),
+        severity: 'error',
+      });
     }
   };
 
@@ -259,7 +265,11 @@ const Users: React.FC = () => {
 
       setDomains(domainsByOrg);
     } catch (error) {
-      console.error('Error fetching domains:', error);
+      setSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, 'Failed to fetch domains'),
+        severity: 'error',
+      });
       // Don't set error state as domains are not critical for page functionality
     }
   };
@@ -275,6 +285,7 @@ const Users: React.FC = () => {
         first_name: formData.first_name,
         last_name: formData.last_name,
         role: formData.role,
+        password: formData.password,
       };
 
       const userResponse = await apiHelpers.createUser(userData as any);
@@ -294,19 +305,22 @@ const Users: React.FC = () => {
         }
       }
 
+      if (formData.password) {
+        navigator.clipboard.writeText(formData.password);
+      }
+
       setSnackbar({
         open: true,
-        message: 'User created and domain assigned successfully',
+        message: 'User created and password copied to clipboard!',
         severity: 'success',
       });
       setCreateDialogOpen(false);
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
     } catch (error: any) {
-      console.error('Error creating user:', error);
       setSnackbar({
         open: true,
-        message: error.message || 'Failed to create user',
+        message: getApiErrorMessage(error, 'Failed to create user'),
         severity: 'error',
       });
     }
@@ -324,15 +338,14 @@ const Users: React.FC = () => {
       await apiHelpers.deleteUser(id, reason);
       setSnackbar({
         open: true,
-        message: 'User deleted successfully',
+        message: 'User status updated successfully',
         severity: 'success',
       });
       fetchUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
+    } catch (error: any) {
       setSnackbar({
         open: true,
-        message: 'Failed to delete user',
+        message: getApiErrorMessage(error, 'Failed to update user status'),
         severity: 'error',
       });
     }
@@ -407,10 +420,9 @@ const Users: React.FC = () => {
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
     } catch (error: any) {
-      console.error('Error updating user:', error);
       setSnackbar({
         open: true,
-        message: error.message || 'Failed to update user',
+        message: getApiErrorMessage(error, 'Failed to update user'),
         severity: 'error',
       });
     }
@@ -901,7 +913,11 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     first_name: '',
     last_name: '',
     role: 'tenant_admin',
+    password: '',
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]); // Rename to match EditUserDialog
   const [domainsLoading] = useState<boolean>(false);
@@ -965,6 +981,21 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       }
     }
 
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else {
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(formData.password)) {
+        newErrors.password =
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.';
+      }
+    }
+
+    if (formData.password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -980,6 +1011,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         first_name: formData.first_name,
         last_name: formData.last_name,
         role: formData.role,
+        password: formData.password,
       };
 
       await onSubmit(apiData as unknown as CreateUserRequest);
@@ -990,7 +1022,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         first_name: '',
         last_name: '',
         role: 'tenant_admin',
+        password: '',
       });
+      setConfirmPassword('');
       setErrors({});
     } catch (error) {
       console.error('Error in create dialog:', error);
@@ -1007,7 +1041,9 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       first_name: '',
       last_name: '',
       role: 'tenant_admin',
+      password: '',
     });
+    setConfirmPassword('');
     setErrors({});
     setAvailableDomains([]); // Clear available domains on close
     onClose();
@@ -1025,6 +1061,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         Create New User
       </DialogTitle>
       <DialogContent>
+        <Alert severity="info" sx={{ mt: 2, mb: 1 }}>
+          The password can only be set once. Please save it in a secure
+          location.
+        </Alert>
         <Box sx={{ pt: 1 }}>
           <FormControl
             fullWidth
@@ -1178,7 +1218,67 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             }}
           />
 
-          <FormControl fullWidth margin="normal" required>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            value={formData.password}
+            onChange={e =>
+              setFormData({ ...formData, password: e.target.value })
+            }
+            required
+            error={!!errors.password}
+            helperText={errors.password}
+            data-testid={TestIds.users.createDialog.password}
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                </IconButton>
+              ),
+            }}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.password,
+              'aria-label': 'User password input',
+            }}
+          />
+
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Confirm Password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+            error={!!errors.confirmPassword}
+            helperText={errors.confirmPassword}
+            data-testid={TestIds.users.createDialog.confirmPassword}
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  edge="end"
+                >
+                  {showConfirmPassword ? (
+                    <VisibilityOffIcon />
+                  ) : (
+                    <VisibilityIcon />
+                  )}
+                </IconButton>
+              ),
+            }}
+            inputProps={{
+              'data-testid': TestIds.users.createDialog.confirmPassword,
+              'aria-label': 'User confirm password input',
+            }}
+          />
+
+          {/* <FormControl fullWidth margin="normal" required>
             <InputLabel>Role</InputLabel>
             <Select
               value={formData.role}
@@ -1204,7 +1304,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </FormControl> */}
         </Box>
       </DialogContent>
       <DialogActions>
@@ -1611,7 +1711,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               'aria-label': 'User last name input',
             }}
           />
-          <FormControl fullWidth margin="normal">
+          {/* <FormControl fullWidth margin="normal">
             <InputLabel>Role</InputLabel>
             <Select
               value={formData.role || ''}
@@ -1638,7 +1738,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </FormControl> */}
 
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
