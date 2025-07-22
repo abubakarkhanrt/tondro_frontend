@@ -1240,6 +1240,8 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                   {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                 </IconButton>
               ),
+            }}
+            inputProps={{
               'data-testid': TestIds.users.createDialog.password,
               'aria-label': 'User password input',
             }}
@@ -1269,6 +1271,8 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                   )}
                 </IconButton>
               ),
+            }}
+            inputProps={{
               'data-testid': TestIds.users.createDialog.confirmPassword,
               'aria-label': 'User confirm password input',
             }}
