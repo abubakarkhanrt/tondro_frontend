@@ -118,6 +118,13 @@ export const addApiResponseInterceptor = (axiosInstance: AxiosInstance) => {
         } finally {
           isRefreshing = false;
         }
+      } else if (error.response?.status === 409) {
+        return Promise.reject(
+          new Error(
+            'Conflict: ' +
+              (error.response.data.detail || error.response.data.message)
+          )
+        );
       }
 
       return Promise.reject(error);

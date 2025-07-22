@@ -324,15 +324,15 @@ const Users: React.FC = () => {
       await apiHelpers.deleteUser(id, reason);
       setSnackbar({
         open: true,
-        message: 'User deleted successfully',
+        message: 'User status updated successfully',
         severity: 'success',
       });
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
       setSnackbar({
         open: true,
-        message: 'Failed to delete user',
+        message: error.message || 'Failed to update user status',
         severity: 'error',
       });
     }
