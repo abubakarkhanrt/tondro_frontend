@@ -59,9 +59,6 @@ export const apiAuthHelpers = {
   getCsrfToken: (signal?: AbortSignal) =>
     authApi.get('auth/jwt/csrf-token', {
       signal: signal as GenericAbortSignal,
-      headers: {
-        Origin: ENV_CONFIG.ORIGIN,
-      },
     }),
 
   setupMfa: (
