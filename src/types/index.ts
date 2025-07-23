@@ -116,7 +116,7 @@ export interface CreateOrganizationRequest {
   name: string; // Changed from tenantName
   domain: string; // Changed from organizationDomain
   initialAdminEmail: string;
-  initialStatus?: 'active' | 'inactive' | 'pending';
+  initialStatus?: 'Active' | 'Inactive' | 'Pending';
   initial_admin_password?: string;
 }
 
