@@ -29,7 +29,7 @@ import type {
   Product,
   ProductsResponse,
 } from '@/types';
-import { handleAppLogout } from '@/services/apiErrorUtils';
+// import { handleAppLogout } from '@/services/apiErrorUtils';
 
 // ────────────────────────────────────────
 // Dashboard Types
@@ -110,7 +110,7 @@ const Dashboard: React.FC = () => {
       // Double-check token before making request
       const token = localStorage.getItem('access_token');
       if (!token || token === 'undefined' || token === 'null') {
-        handleAppLogout(true);
+        // handleAppLogout(true);
       }
 
       // Fetch summary data for each entity type using component-specific services

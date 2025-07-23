@@ -1,5 +1,5 @@
-// import { useEffect } from 'react';
-// import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
@@ -7,19 +7,19 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // const router = useRouter();
-  // const token =
-  //   typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const router = useRouter();
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
-  // useEffect(() => {
-  //   if (!token) {
-  //     router.push('/login');
-  //   }
-  // }, [token, router]);
+  useEffect(() => {
+    if (!token) {
+      router.push('/login');
+    }
+  }, [token, router]);
 
-  // if (!token) {
-  //   return null;
-  // }
+  if (!token) {
+    return null;
+  }
 
   // TODO: Implement protected route middleware
 
