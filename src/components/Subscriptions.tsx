@@ -256,6 +256,7 @@ const CreateSubscriptionDialog = ({
                 InputLabelProps={{ shrink: true }}
                 required
                 data-testid={TestIds.subscriptions.createDialog.startDate}
+                onKeyDown={e => e.preventDefault()}
                 inputProps={{
                   min: new Date().toISOString().split('T')[0],
                   'data-testid': TestIds.subscriptions.createDialog.startDate,

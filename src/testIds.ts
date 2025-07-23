@@ -131,6 +131,8 @@ export const TestIds = {
       tenantName: 'organizations-create-tenant-name',
       domain: 'organizations-create-domain',
       adminEmail: 'organizations-create-admin-email',
+      password: 'organizations-create-password',
+      confirmPassword: 'organizations-create-confirm-password',
       status: 'organizations-create-status',
       submit: 'organizations-create-submit',
       cancel: 'organizations-create-cancel',

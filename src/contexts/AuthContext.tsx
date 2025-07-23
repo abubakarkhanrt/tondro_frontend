@@ -45,12 +45,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
-  const handleLogout = useCallback(async () => {
+  const logoutApi = useCallback(async () => {
     const accessToken = localStorage.getItem('access_token');
     const tokenType = localStorage.getItem('token_type') || 'Bearer';
     await apiAuthHelpers.logout(undefined, {
       Authorization: `${tokenType} ${accessToken}`,
     });
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    logoutApi();
     handleAppLogout(false);
     setUser(null);
     setPermissions([]);

@@ -18,7 +18,6 @@ import { ENV_CONFIG } from '../config/env';
 import {
   type Organization,
   type OrganizationsResponse,
-  type CreateOrganizationRequest,
   type UpdateOrganizationRequest,
   type OrganizationMetrics,
   type User,
@@ -46,6 +45,7 @@ import {
   type UsageSummaryResponse,
   type UsageLimitsResponse,
   type ProductsResponse,
+  type CreateOrganizationApiRequest,
 } from '../types';
 import { addApiResponseInterceptor, handleAppLogout } from './apiErrorUtils';
 
@@ -466,23 +466,10 @@ export const apiHelpers = {
   },
 
   createOrganization: (
-    data: CreateOrganizationRequest & { created_by?: number },
+    data: CreateOrganizationApiRequest,
     signal?: AbortSignal
   ): Promise<AxiosResponse<CreateOrganizationResponse>> => {
-    // Transform camelCase field names to snake_case for the API
-    const transformedData: any = {
-      name: data.name,
-      domain: data.domain,
-      initial_admin_email: data.initialAdminEmail,
-      initial_status: data.initialStatus,
-    };
-
-    // Add created_by if provided
-    if (data.created_by !== undefined) {
-      transformedData.created_by = data.created_by;
-    }
-
-    return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, transformedData, {
+    return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, data, {
       signal: signal as GenericAbortSignal,
     });
   },
