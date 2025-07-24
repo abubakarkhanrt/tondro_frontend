@@ -83,6 +83,8 @@ const API_ENDPOINTS = {
       ),
     DOMAINS: (id: string): string =>
       buildCrmEndpoint(`/organizations/${id}/domains`),
+    GET_API_KEY: (id: string): string =>
+      buildCrmEndpoint(`/tenant/${id}/api-key`),
   },
 
   // Domains
@@ -161,6 +163,7 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Crucial for sending cookies automatically
 });
 
 // ────────────────────────────────────────
@@ -269,6 +272,7 @@ export const apiHelpers = {
               subscription_count: org.subscription_count,
               user_count: org.user_count,
               created_at: org.created_at,
+              user_id: org.user_id,
             })),
           };
           return { ...response, data: transformedData };
@@ -376,6 +380,7 @@ export const apiHelpers = {
             subscription_count: org.subscription_count,
             user_count: org.user_count,
             created_at: org.created_at,
+            user_id: org.user_id,
           })),
         };
         return { ...response, data: transformedData };
@@ -418,7 +423,8 @@ export const apiHelpers = {
                 'name' in org &&
                 'domain' in org &&
                 'status' in org &&
-                'created_at' in org
+                'created_at' in org &&
+                'user_id' in org
               ) {
                 return {
                   organizationId: String(org.id),
@@ -437,6 +443,7 @@ export const apiHelpers = {
                   totalJobs: 0, // Default value
                   usageAgainstLimit: '0%', // Default value
                   createdAt: String(org.created_at),
+                  user_id: org.user_id,
                 };
               }
               return {
@@ -450,6 +457,7 @@ export const apiHelpers = {
                 totalJobs: 0,
                 usageAgainstLimit: '0%',
                 createdAt: new Date().toISOString(),
+                user_id: 0,
               };
             }),
           };
@@ -538,6 +546,14 @@ export const apiHelpers = {
     signal?: AbortSignal
   ): Promise<AxiosResponse<PaginatedResponse<Subscription>>> =>
     api.get(API_ENDPOINTS.ORGANIZATIONS.SUBSCRIPTIONS(id, activeOnly), {
+      signal: signal as GenericAbortSignal,
+    }),
+
+  getOrganizationApiKey: (
+    id: string,
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{ api_key: string }>> =>
+    api.get(API_ENDPOINTS.ORGANIZATIONS.GET_API_KEY(id), {
       signal: signal as GenericAbortSignal,
     }),
 

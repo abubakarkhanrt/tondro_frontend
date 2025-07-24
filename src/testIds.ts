@@ -180,6 +180,8 @@ export const TestIds = {
       container: 'organizations-view-dialog',
       title: 'organizations-view-dialog-title',
       closeButton: 'organizations-view-close-button',
+      apiKeyButton: 'organizations-view-api-key-btn',
+      apiKeyDisplay: 'organizations-view-api-key-display',
     },
   },
 

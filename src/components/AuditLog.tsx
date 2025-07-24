@@ -36,19 +36,22 @@ import {
   IconButton,
   Chip,
   TablePagination,
-  Snackbar,
+  TextField,
+  InputAdornment,
   Collapse,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Search,
 } from '@mui/icons-material';
 import { apiHelpers } from '../services/api';
 import { type AuditLog as AuditLogType } from '../types/index';
 import { TestIds } from '../testIds';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 // ────────────────────────────────────────
 // Main Component
@@ -62,8 +65,6 @@ const AuditLog: React.FC = () => {
     setPagination,
     filters,
     setFilters,
-    snackbar,
-    setSnackbar,
     selectedEntity: selectedLog,
     setSelectedEntity: setSelectedLog,
   } = useEntityState<AuditLogType>(
@@ -75,6 +76,8 @@ const AuditLog: React.FC = () => {
   );
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const { showAlert } = useAlert();
 
   const { fetchData: fetchAuditLogs } = useEntityData(
     entityState,
@@ -99,11 +102,10 @@ const AuditLog: React.FC = () => {
       const response = await apiHelpers.getAuditLog(id);
       return response.data;
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to fetch audit log details'),
-        severity: 'error',
-      });
+      showAlert(
+        getApiErrorMessage(error, 'Failed to fetch audit log details'),
+        'error'
+      );
       return null;
     }
   };
@@ -314,6 +316,20 @@ const AuditLog: React.FC = () => {
           }}
         >
           <Typography variant="h6">Audit Log ({pagination.total})</Typography>
+          <TextField
+            label="Search"
+            variant="outlined"
+            size="small"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+          />
         </Box>
 
         {entityState.loading ? (
@@ -467,25 +483,6 @@ const AuditLog: React.FC = () => {
         onClose={() => setSelectedLog(null)}
         onFetchDetails={fetchAuditLogDetails}
       />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          data-testid={
-            snackbar.severity === 'success'
-              ? TestIds.common.successAlert
-              : TestIds.common.errorAlert
-          }
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -10,14 +10,9 @@
 
 import React from 'react';
 import { Transcripts } from '../src/components/Transcripts';
-import ProtectedRoute from '../src/components/ProtectedRoute';
 
 const TranscriptsPage: React.FC = () => {
-  return (
-    <ProtectedRoute>
-      <Transcripts />
-    </ProtectedRoute>
-  );
+  return <Transcripts />;
 };
 
-export default TranscriptsPage; 
+export default TranscriptsPage;

@@ -28,7 +28,6 @@ import {
   DialogActions,
   TextField,
   Alert,
-  Snackbar,
   Chip,
   Tooltip,
   Switch,
@@ -52,6 +51,7 @@ import { getStatusColor } from '../theme';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface DomainManagementProps {
   organizationId: string;
@@ -67,11 +67,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error' | 'warning' | 'info',
-  });
+  const { showAlert } = useAlert();
 
   const fetchDomains = useCallback(async () => {
     setLoading(true);
@@ -109,11 +105,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
   const handleCreateDomain = async (formData: CreateDomainRequest) => {
     try {
       await apiHelpers.createDomain(formData);
-      setSnackbar({
-        open: true,
-        message: 'Domain created successfully',
-        severity: 'success',
-      });
+      showAlert('Domain created successfully!');
       setCreateDialogOpen(false);
       fetchDomains();
     } catch (error: any) {
@@ -121,11 +113,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
-      setSnackbar({
-        open: true,
-        message: userFriendlyMessage,
-        severity: 'error',
-      });
+      showAlert(userFriendlyMessage, 'error');
     }
   };
 
@@ -135,11 +123,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
   ) => {
     try {
       await apiHelpers.updateDomain(domainId, formData);
-      setSnackbar({
-        open: true,
-        message: 'Domain updated successfully',
-        severity: 'success',
-      });
+      showAlert('Domain updated successfully!');
       setEditDialogOpen(false);
       setSelectedDomain(null);
       fetchDomains();
@@ -148,33 +132,21 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
-      setSnackbar({
-        open: true,
-        message: userFriendlyMessage,
-        severity: 'error',
-      });
+      showAlert(userFriendlyMessage, 'error');
     }
   };
 
   const handleDeleteDomain = async (domainId: string) => {
     try {
       await apiHelpers.deleteDomain(domainId);
-      setSnackbar({
-        open: true,
-        message: 'Domain deleted successfully',
-        severity: 'success',
-      });
+      showAlert('Domain deleted successfully!');
       fetchDomains();
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error, 'Failed to delete domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
-      setSnackbar({
-        open: true,
-        message: userFriendlyMessage,
-        severity: 'error',
-      });
+      showAlert(userFriendlyMessage, 'error');
     }
   };
 
@@ -320,7 +292,6 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
         onSubmit={handleCreateDomain}
         organizationId={organizationId}
         validateDomainName={validateDomainName}
-        setSnackbar={setSnackbar}
       />
 
       {/* Edit Domain Dialog */}
@@ -339,21 +310,6 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
         domain={selectedDomain}
         validateDomainName={validateDomainName}
       />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
@@ -365,11 +321,6 @@ interface CreateDomainDialogProps {
   onSubmit: (data: CreateDomainRequest) => Promise<void>;
   organizationId: string;
   validateDomainName: (name: string) => boolean;
-  setSnackbar: (snackbar: {
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'warning' | 'info';
-  }) => void;
 }
 
 const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
@@ -378,9 +329,9 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   onSubmit,
   organizationId,
   validateDomainName,
-  setSnackbar,
 }) => {
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [formData, setFormData] = useState<CreateDomainRequest>({
     organization_id: organizationId,
@@ -416,11 +367,7 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
     if (!validateForm()) return;
 
     if (!user?.id) {
-      setSnackbar({
-        open: true,
-        message: 'User ID not found. Please log in again.',
-        severity: 'error',
-      });
+      showAlert('User ID not found. Please log in again.', 'error');
       return;
     }
 
@@ -431,7 +378,6 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
         ...formData,
         user_id: user.id, // Get fresh user ID
       };
-      console.log('Sending payload:', payload);
       await onSubmit(payload);
       setFormData({
         organization_id: organizationId,

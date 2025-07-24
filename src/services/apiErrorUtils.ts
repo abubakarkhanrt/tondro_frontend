@@ -49,7 +49,7 @@ const processQueue = (
 // Logout Handler
 // ────────────────────────────────────────
 
-export const handleAppLogout = (navigateToLogin: boolean = true): void => {
+export const handleAppLogout = (navigateToLogin: boolean): void => {
   // Clear all token formats for backward compatibility
   localStorage.clear();
 
@@ -102,7 +102,7 @@ export const addApiResponseInterceptor = (axiosInstance: AxiosInstance) => {
           try {
             const refreshToken = localStorage.getItem('refresh_token');
             if (!refreshToken || refreshToken === 'undefined') {
-              handleAppLogout();
+              handleAppLogout(true);
               return Promise.reject(
                 new Error('No refresh token, logging out.')
               );
@@ -122,7 +122,7 @@ export const addApiResponseInterceptor = (axiosInstance: AxiosInstance) => {
             return axiosInstance(originalRequest);
           } catch (refreshError: unknown) {
             processQueue(refreshError as AxiosError, null);
-            handleAppLogout();
+            handleAppLogout(true);
             return Promise.reject(refreshError);
           } finally {
             isRefreshing = false;
