@@ -1,5 +1,5 @@
 /**
- * ──────────────────────────────────────────────────
+ * ────────────────────────────────────────────────────
  * File: client/src/components/Organizations.tsx
  * Description: Organizations management component for TondroAI CRM
  * Author: Muhammad Abubakar Khan
@@ -36,7 +36,6 @@ import {
   DialogContent,
   DialogActions,
   Grid,
-  Snackbar,
   IconButton,
   Tooltip,
   Divider,
@@ -49,6 +48,7 @@ import {
   Add as AddIcon,
   Remove as RemoveIcon,
   VisibilityOff as VisibilityOffIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import { debounce } from 'lodash';
 import { apiHelpers } from '../services/api';
@@ -72,6 +72,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
@@ -102,8 +103,6 @@ const Organizations: React.FC = () => {
     setPagination,
     filters,
     setFilters,
-    snackbar,
-    setSnackbar,
     createDialogOpen,
     setCreateDialogOpen,
     selectedEntity: selectedOrg,
@@ -143,6 +142,8 @@ const Organizations: React.FC = () => {
       filters,
       pagination,
     });
+
+  const { showAlert } = useAlert();
 
   // ────────────────────────────────────────
   // API Functions
@@ -300,26 +301,21 @@ const Organizations: React.FC = () => {
           message += '!';
         }
 
-        setSnackbar({
-          open: true,
-          message: message,
-          severity: 'success',
-        });
+        showAlert(message, 'success');
         setCreateDialogOpen(false);
         refetchOrganizations();
         fetchAllSubscriptions(); // Refresh subscriptions to show newly created ones
       } catch (error: any) {
-        setSnackbar({
-          open: true,
-          message: getApiErrorMessage(error, 'Failed to create organization'),
-          severity: 'error',
-        });
+        showAlert(
+          getApiErrorMessage(error, 'Failed to create organization'),
+          'error'
+        );
       }
     },
     [
       refetchOrganizations,
       fetchAllSubscriptions,
-      setSnackbar,
+      showAlert,
       setCreateDialogOpen,
     ]
   );
@@ -346,29 +342,18 @@ const Organizations: React.FC = () => {
         }
 
         await apiHelpers.updateOrganization(selectedOrg.id, apiFormData as any);
-        setSnackbar({
-          open: true,
-          message: 'Organization updated successfully',
-          severity: 'success',
-        });
+        showAlert('Organization updated successfully', 'success');
         setSelectedOrg(null);
         setEditMode(false);
         refetchOrganizations();
       } catch (error: any) {
-        setSnackbar({
-          open: true,
-          message: getApiErrorMessage(error, 'Failed to update organization'),
-          severity: 'error',
-        });
+        showAlert(
+          getApiErrorMessage(error, 'Failed to update organization'),
+          'error'
+        );
       }
     },
-    [
-      selectedOrg,
-      refetchOrganizations,
-      setSnackbar,
-      setSelectedOrg,
-      setEditMode,
-    ]
+    [selectedOrg, refetchOrganizations, showAlert, setSelectedOrg, setEditMode]
   );
 
   // ────────────────────────────────────────
@@ -809,24 +794,6 @@ const Organizations: React.FC = () => {
           onSubmit={handleUpdateOrganization}
         />
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-      >
-        <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          data-testid={
-            snackbar.severity === 'success'
-              ? TestIds.common.successAlert
-              : TestIds.common.errorAlert
-          }
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
@@ -903,6 +870,11 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     }
     return ['tier_1', 'tier_2', 'tier_3'];
   };
+  // Prevent duplicate product selections
+  const selectedProductIds = useMemo(
+    () => subscriptions.map(s => s.product_id.toString()),
+    [subscriptions]
+  );
 
   return (
     <Box data-testid={TestIds.organizations.subscriptionForm.container}>
@@ -984,6 +956,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                     <MenuItem
                       key={product.id}
                       value={product.id}
+                      disabled={
+                        selectedProductIds.includes(product.id.toString()) &&
+                        subscription.product_id !== product.id
+                      }
                       data-testid={TestIds.organizations.subscriptionForm.productSelectOption(
                         index,
                         product.id
@@ -1133,8 +1109,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   };
 
   const validateDomainName = (name: string): boolean => {
-    const domainRegex =
-      /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const domainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return domainRegex.test(name);
   };
 
@@ -1188,6 +1163,16 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     }
 
     setErrors(newErrors);
+    // scroll to the first error
+    const firstError = Object.keys(newErrors)[0];
+    if (firstError) {
+      const errorElement = document.querySelector(
+        `[data-testid="${firstError}"]`
+      );
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -1197,6 +1182,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     setLoading(true);
     try {
       await onSubmit(formData);
+      handleClose();
     } catch (error: any) {
       // Handle specific domain-related errors
       const errorMessage = getApiErrorMessage(
@@ -1218,7 +1204,6 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       }
     } finally {
       setLoading(false);
-      handleClose();
     }
   };
 
@@ -1467,6 +1452,53 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
   allSubscriptions,
   products,
 }) => {
+  // ────────────────────────────────────────
+  // API Key State & Handler
+  // ────────────────────────────────────────
+  const { showAlert } = useAlert();
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+
+  /**
+   * Handles fetching the API key for the organization.
+   */
+  const handleViewApiKey = async () => {
+    setApiKeyError(null);
+    if (!organization.user_id) {
+      setApiKeyError('API key is not available for this organization');
+      return;
+    }
+    setApiKeyLoading(true);
+    try {
+      const response = await apiHelpers.getOrganizationApiKey(
+        organization.user_id.toString()
+      );
+      if (response.data.api_key) {
+        setApiKey(response.data.api_key);
+      } else {
+        setApiKeyError('Failed to fetch API key.');
+      }
+    } catch (err) {
+      setApiKeyError('Failed to fetch API key.');
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleCopyApiKey = useCallback(() => {
+    if (apiKey) {
+      navigator.clipboard
+        .writeText(apiKey)
+        .then(() => {
+          showAlert('API Key copied to clipboard!', 'success');
+        })
+        .catch(err => {
+          showAlert(`Failed to copy API Key: ${err}`, 'error');
+        });
+    }
+  }, [apiKey, showAlert]);
+
   const [activeTab, setActiveTab] = useState<number>(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -1539,6 +1571,57 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
               }}
               size="small"
             />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            {!apiKey && (
+              <Button
+                variant="outlined"
+                size="small"
+                sx={{ mb: 1 }}
+                onClick={handleViewApiKey}
+                data-testid={TestIds.organizations.viewDialog.apiKeyButton}
+                disabled={apiKeyLoading}
+              >
+                {apiKeyLoading ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  'View API Key'
+                )}
+              </Button>
+            )}
+            {apiKey && (
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 1.5,
+                  mt: 1,
+                  backgroundColor: 'grey.100',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                }}
+                data-testid={TestIds.organizations.viewDialog.apiKeyDisplay}
+              >
+                <Typography
+                  variant="body2"
+                  component="code"
+                  sx={{
+                    wordBreak: 'break-all',
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {apiKey}
+                </Typography>
+                <Tooltip title="Copy API Key">
+                  <IconButton onClick={handleCopyApiKey} size="small">
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
+            )}
+            {apiKeyError && <Alert severity="error">{apiKeyError}</Alert>}
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography

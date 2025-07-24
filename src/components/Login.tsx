@@ -29,6 +29,7 @@ import { apiAuthHelpers } from '../services/authApi';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -67,6 +68,7 @@ const Login: React.FC = () => {
   const [totpCode, setTotpCode] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const { showAlert } = useAlert();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -85,7 +87,7 @@ const Login: React.FC = () => {
 
     setAppAccess(data.user);
 
-    (window as any).showSuccess?.(`Welcome, ${formData.username}!`);
+    showAlert(`Welcome, ${formData.username}!`, 'success');
 
     // Trigger a storage event to notify other components like Navigation
     window.dispatchEvent(new Event('storage'));

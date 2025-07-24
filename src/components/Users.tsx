@@ -37,7 +37,6 @@ import {
   IconButton,
   Chip,
   TablePagination,
-  Snackbar,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -62,6 +61,7 @@ import { debounce } from 'lodash';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 // ────────────────────────────────────────
 // Helper Functions
@@ -141,8 +141,6 @@ const Users: React.FC = () => {
     setPagination,
     filters,
     setFilters,
-    snackbar,
-    setSnackbar,
     createDialogOpen,
     setCreateDialogOpen,
     selectedEntity: selectedUser,
@@ -170,6 +168,7 @@ const Users: React.FC = () => {
   const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const initialLoadRef = useRef<boolean>(false);
+  const { showAlert } = useAlert();
 
   const { refetch } = useEntityData(
     entityState,
@@ -237,11 +236,10 @@ const Users: React.FC = () => {
       const orgs: OrganizationV2[] = (response.data as any).organizations || [];
       setOrganizations(orgs);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to fetch organizations'),
-        severity: 'error',
-      });
+      showAlert(
+        getApiErrorMessage(error, 'Failed to fetch organizations'),
+        'error'
+      );
     }
   };
 
@@ -265,11 +263,7 @@ const Users: React.FC = () => {
 
       setDomains(domainsByOrg);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to fetch domains'),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error, 'Failed to fetch domains'), 'error');
       // Don't set error state as domains are not critical for page functionality
     }
   };
@@ -309,20 +303,12 @@ const Users: React.FC = () => {
         navigator.clipboard.writeText(formData.password);
       }
 
-      setSnackbar({
-        open: true,
-        message: 'User created and password copied to clipboard!',
-        severity: 'success',
-      });
+      showAlert('User created and password copied to clipboard!');
       setCreateDialogOpen(false);
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to create user'),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error, 'Failed to create user'), 'error');
     }
   };
 
@@ -336,18 +322,13 @@ const Users: React.FC = () => {
 
     try {
       await apiHelpers.deleteUser(id, reason);
-      setSnackbar({
-        open: true,
-        message: 'User status updated successfully',
-        severity: 'success',
-      });
+      showAlert('User status updated successfully');
       fetchUsers();
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to update user status'),
-        severity: 'error',
-      });
+      showAlert(
+        getApiErrorMessage(error, 'Failed to update user status'),
+        'error'
+      );
     }
   };
 
@@ -410,21 +391,13 @@ const Users: React.FC = () => {
       // We need to access the selectedDomainId from the EditUserDialog component
       // For now, we'll handle this in the EditUserDialog's handleSubmit
 
-      setSnackbar({
-        open: true,
-        message: 'User updated successfully',
-        severity: 'success',
-      });
+      showAlert('User updated successfully');
       setSelectedUser(null);
       setEditMode(false);
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to update user'),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error, 'Failed to update user'), 'error');
     }
   };
 
@@ -509,25 +482,6 @@ const Users: React.FC = () => {
           )}
         </>
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          data-testid={
-            snackbar.severity === 'success'
-              ? TestIds.common.successAlert
-              : TestIds.common.errorAlert
-          }
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

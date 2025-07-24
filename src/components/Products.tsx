@@ -31,7 +31,6 @@ import {
   Alert,
   CircularProgress,
   TablePagination,
-  Snackbar,
   IconButton,
 } from '@mui/material';
 import {
@@ -50,6 +49,7 @@ import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 // ────────────────────────────────────────
 // Main Component
@@ -57,14 +57,13 @@ import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 const Products: React.FC = () => {
   const { hasPermission } = useAuth();
+  const { showAlert } = useAlert();
   // Use shared state management hook
   const {
     entityState,
     setEntityState,
     pagination,
     setPagination,
-    snackbar,
-    setSnackbar,
     createDialogOpen,
     setCreateDialogOpen,
     selectedEntity: selectedProduct,
@@ -121,19 +120,11 @@ const Products: React.FC = () => {
   ): Promise<void> => {
     try {
       await apiHelpers.createProduct(formData);
-      setSnackbar({
-        open: true,
-        message: 'Product created successfully',
-        severity: 'success',
-      });
+      showAlert('Product created successfully', 'success');
       setCreateDialogOpen(false);
       refetch();
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error), 'error');
     }
   };
 
@@ -143,19 +134,11 @@ const Products: React.FC = () => {
     if (!selectedProduct) return;
     try {
       await apiHelpers.updateProduct(selectedProduct.id as number, formData);
-      setSnackbar({
-        open: true,
-        message: 'Product updated successfully',
-        severity: 'success',
-      });
+      showAlert('Product updated successfully', 'success');
       setSelectedProduct(null);
       refetch();
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error), 'error');
     }
   };
 
@@ -329,25 +312,6 @@ const Products: React.FC = () => {
           )}
         </>
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          data-testid={
-            snackbar.severity === 'success'
-              ? TestIds.common.successAlert
-              : TestIds.common.errorAlert
-          }
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

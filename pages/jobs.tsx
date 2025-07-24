@@ -1,12 +1,7 @@
 import { Jobs } from '../src/components/Jobs';
-import ProtectedRoute from '../src/components/ProtectedRoute';
 
 const JobsPage = () => {
-  return (
-    <ProtectedRoute>
-      <Jobs />
-    </ProtectedRoute>
-  );
+  return <Jobs />;
 };
 
 export default JobsPage;

@@ -86,6 +86,7 @@ export interface Organization {
   subscription_count: number;
   user_count: number;
   created_at: string;
+  user_id: number;
 }
 
 export interface OrganizationsResponse {

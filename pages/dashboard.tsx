@@ -1,10 +1,6 @@
-import ProtectedRoute from '../src/components/ProtectedRoute';
 import Dashboard from '../src/components/Dashboard';
 
 export default function DashboardPage() {
-  return (
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  );
+  // No wrapper needed! The auth protection is now handled globally in _app.tsx.
+  return <Dashboard />;
 }

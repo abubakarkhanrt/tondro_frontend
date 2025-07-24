@@ -27,7 +27,6 @@ import {
   Alert,
   CircularProgress,
   TablePagination,
-  Snackbar,
   Select,
   MenuItem,
   FormControl,
@@ -61,6 +60,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/roles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
+import { useAlert } from '@/contexts/AlertContext';
 
 // Stubs for missing dialog components (replace with real implementations if available)
 const CreateSubscriptionDialog = ({
@@ -457,8 +457,6 @@ const Subscriptions: React.FC = () => {
     setPagination,
     filters,
     setFilters,
-    snackbar,
-    setSnackbar,
     createDialogOpen,
     setCreateDialogOpen,
     selectedEntity: selectedSubscription,
@@ -519,6 +517,8 @@ const Subscriptions: React.FC = () => {
       pagination,
     });
 
+  const { showAlert } = useAlert();
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -537,6 +537,15 @@ const Subscriptions: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [filters, pagination.page, pagination.pageSize]);
+
+  useEffect(() => {
+    if (entityState.error) {
+      showAlert(
+        getApiErrorMessage(entityState.error, 'Failed to fetch subscriptions.'),
+        'error'
+      );
+    }
+  }, [entityState.error, showAlert]);
 
   const fetchOrganizations = async (): Promise<void> => {
     try {
@@ -586,11 +595,7 @@ const Subscriptions: React.FC = () => {
 
       setProducts(productsData);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to fetch products'),
-        severity: 'error',
-      });
+      showAlert(getApiErrorMessage(error, 'Failed to fetch products'), 'error');
       // Don't show error for products as it's not critical
     }
   };
@@ -600,19 +605,14 @@ const Subscriptions: React.FC = () => {
   ): Promise<void> => {
     try {
       await apiHelpers.createSubscription(formData);
-      setSnackbar({
-        open: true,
-        message: 'Subscription created successfully',
-        severity: 'success',
-      });
+      showAlert('Subscription created successfully!');
       setCreateDialogOpen(false);
       refetchSubscriptions();
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to create subscription'),
-        severity: 'error',
-      });
+      showAlert(
+        getApiErrorMessage(error, 'Failed to create subscription'),
+        'error'
+      );
     }
   };
 
@@ -691,20 +691,15 @@ const Subscriptions: React.FC = () => {
 
     try {
       await apiHelpers.updateSubscription(selectedSubscription.id, formData);
-      setSnackbar({
-        open: true,
-        message: 'Subscription updated successfully',
-        severity: 'success',
-      });
+      showAlert('Subscription updated successfully!');
       setSelectedSubscription(null);
       setEditMode(false);
       refetchSubscriptions();
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to update subscription'),
-        severity: 'error',
-      });
+      showAlert(
+        getApiErrorMessage(error, 'Failed to update subscription'),
+        'error'
+      );
     }
   };
 
@@ -1231,25 +1226,6 @@ const Subscriptions: React.FC = () => {
           )}
         </>
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          data-testid={
-            snackbar.severity === 'success'
-              ? TestIds.common.successAlert
-              : TestIds.common.errorAlert
-          }
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
