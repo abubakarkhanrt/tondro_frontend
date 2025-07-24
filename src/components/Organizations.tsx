@@ -8,7 +8,7 @@
  * ──────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -48,6 +48,7 @@ import {
   Edit as EditIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { debounce } from 'lodash';
 import { apiHelpers } from '../services/api';
@@ -60,6 +61,7 @@ import {
   type ProductSubscriptionRequest,
   type Subscription,
   type CreateSubscriptionRequest,
+  type CreateOrganizationApiRequest,
 } from '../types';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
@@ -81,7 +83,7 @@ type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 const mapStatusToApi = (displayStatus: string): string => {
   const statusMap: Record<string, string> = {
     Active: 'active',
-    Pending: 'pending', // Changed from 'Trial' to 'Pending'
+    Pending: 'pending',
     Inactive: 'inactive',
   };
   return statusMap[displayStatus] || displayStatus;
@@ -121,8 +123,10 @@ const Organizations: React.FC = () => {
       fetchFunction: async options => {
         const params = {
           page: pagination.page + 1, // Convert to 1-based for API
-          limit: pagination.pageSize,
-          ...(filters.status && { status: mapStatusToApi(filters.status) }), // Map status to API format
+          page_size: pagination.pageSize,
+          ...(filters.status && {
+            status_filter: mapStatusToApi(filters.status),
+          }), // Map status to API format
           ...(filters.search && { search: filters.search }),
         };
         const response = await apiHelpers.getOrganizations(
@@ -215,13 +219,11 @@ const Organizations: React.FC = () => {
   );
 
   const handleCreateOrganization = useCallback(
-    async (formData: {
-      name: string;
-      domain: string; // Changed from organizationDomain
-      initialAdminEmail: string;
-      initialStatus?: 'Active' | 'Inactive' | 'Pending';
-      initialSubscriptions: ProductSubscriptionRequest[];
-    }): Promise<void> => {
+    async (
+      formData: CreateOrganizationRequest & {
+        initialSubscriptions: ProductSubscriptionRequest[];
+      }
+    ): Promise<void> => {
       try {
         if (!user?.id) {
           throw new Error(
@@ -240,11 +242,15 @@ const Organizations: React.FC = () => {
         }
 
         // Create the organization first (without subscriptions)
-        const organizationRequestData = {
+        const organizationRequestData: CreateOrganizationApiRequest = {
           name: formData.name,
           domain: formData.domain, // Changed from organizationDomain
-          initialAdminEmail: formData.initialAdminEmail,
-          initialStatus: formData.initialStatus || 'Active',
+          initial_admin_email: formData.initialAdminEmail,
+          status: formData.initialStatus?.toLowerCase() as
+            | 'active'
+            | 'inactive'
+            | 'pending',
+          initial_admin_password: formData.initial_admin_password || '',
           ...(createdByValue !== undefined && { created_by: createdByValue }),
         };
 
@@ -285,20 +291,27 @@ const Organizations: React.FC = () => {
           }
         }
 
+        let message = 'Organization created';
+
+        if (formData.initial_admin_password && navigator.clipboard) {
+          navigator.clipboard.writeText(formData.initial_admin_password);
+          message += ' and password copied to clipboard!';
+        } else {
+          message += '!';
+        }
+
         setSnackbar({
           open: true,
-          message: 'Organization and subscriptions created successfully',
+          message: message,
           severity: 'success',
         });
         setCreateDialogOpen(false);
         refetchOrganizations();
         fetchAllSubscriptions(); // Refresh subscriptions to show newly created ones
       } catch (error: any) {
-        console.error('Error creating organization:', error);
         setSnackbar({
           open: true,
-          message:
-            error.response?.data?.message || 'Failed to create organization',
+          message: getApiErrorMessage(error, 'Failed to create organization'),
           severity: 'error',
         });
       }
@@ -342,10 +355,9 @@ const Organizations: React.FC = () => {
         setEditMode(false);
         refetchOrganizations();
       } catch (error: any) {
-        console.error('Error updating organization:', error);
         setSnackbar({
           open: true,
-          message: getApiErrorMessage(error),
+          message: getApiErrorMessage(error, 'Failed to update organization'),
           severity: 'error',
         });
       }
@@ -365,18 +377,18 @@ const Organizations: React.FC = () => {
 
   const paginationHandlers = usePagination(pagination, setPagination);
 
-  const handleFilterChange = useCallback(
-    (newFilters: { status: string; search: string }): void => {
-      setFilters(newFilters);
-      setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
-    },
-    [setFilters, setPagination]
-  );
+  const handleFilterChange = (newFilters: {
+    status: string;
+    search: string;
+  }): void => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setPagination(prev => ({ ...prev, page: 0 })); // Reset to first page
+  };
 
-  const handleClearFilters = useCallback(() => {
+  const handleClearFilters = () => {
     setFilters({ status: '', search: '' });
     setPagination(prev => ({ ...prev, page: 0 }));
-  }, []);
+  };
 
   // ────────────────────────────────────────
   // Effects
@@ -385,11 +397,12 @@ const Organizations: React.FC = () => {
   useEffect(() => {
     fetchOrganizations();
     fetchAllSubscriptions(); // Fetch all subscriptions once
+    fetchProducts();
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    refetchOrganizations();
+  }, [filters, pagination.page, pagination.pageSize]);
 
   // ────────────────────────────────────────
   // Filter Section Component
@@ -407,38 +420,43 @@ const Organizations: React.FC = () => {
     onClearFilters,
   }) => {
     const [localSearch, setLocalSearch] = useState<string>(filters.search);
-    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Sync local state with parent filters
     useEffect(() => {
       setLocalSearch(filters.search);
     }, [filters.search]);
 
-    // Stable debounced search handler using useRef
-    const debouncedSearchRef = useRef(
-      debounce((searchValue: string) => {
-        onFiltersChange({ ...filters, search: searchValue });
-      }, 500)
+    // Create a stable, debounced version of the onFiltersChange callback
+    const debouncedOnFiltersChange = useMemo(
+      () => debounce(onFiltersChange, 500),
+      [onFiltersChange]
     );
 
-    // Update the debounced function when filters or onFiltersChange changes
+    // Cancel any pending debounced calls when the component unmounts
     useEffect(() => {
-      debouncedSearchRef.current = debounce((searchValue: string) => {
-        onFiltersChange({ ...filters, search: searchValue });
-      }, 500);
-    }, [filters, onFiltersChange]);
+      return () => {
+        debouncedOnFiltersChange.cancel();
+      };
+    }, [debouncedOnFiltersChange]);
 
-    // Handle search input change
-    const handleSearchChange = useCallback((value: string) => {
+    // Handle search input changes
+    const handleSearchChange = (value: string) => {
       setLocalSearch(value);
-      debouncedSearchRef.current(value);
-    }, []);
+      debouncedOnFiltersChange({ ...filters, search: value });
+    };
 
-    // Handle clear filters
-    const handleClearFilters = useCallback(() => {
-      setLocalSearch('');
+    // Handle status changes immediately
+    const handleStatusChange = (status: string) => {
+      // Cancel any pending search updates to prevent using a stale status
+      debouncedOnFiltersChange.cancel();
+      onFiltersChange({ ...filters, status });
+    };
+
+    // Handle clearing filters
+    const handleClear = () => {
+      debouncedOnFiltersChange.cancel();
       onClearFilters();
-    }, [onClearFilters]);
+    };
 
     return (
       <Card sx={{ mb: 3 }} data-testid={TestIds.filterForm.container}>
@@ -455,7 +473,7 @@ const Organizations: React.FC = () => {
             <Button
               variant="outlined"
               color="secondary"
-              onClick={handleClearFilters}
+              onClick={handleClear}
               data-testid={TestIds.filterForm.clearButton}
             >
               Clear
@@ -469,7 +487,6 @@ const Organizations: React.FC = () => {
                 value={localSearch}
                 onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Search organizations..."
-                inputRef={searchInputRef}
                 data-testid={TestIds.filterForm.search}
                 inputProps={{
                   'data-testid': TestIds.filterForm.search,
@@ -482,9 +499,7 @@ const Organizations: React.FC = () => {
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={filters.status}
-                  onChange={e =>
-                    onFiltersChange({ ...filters, status: e.target.value })
-                  }
+                  onChange={e => handleStatusChange(e.target.value as string)}
                   label="Status"
                   data-testid={TestIds.filterForm.statusTrigger}
                   inputProps={{
@@ -1027,6 +1042,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                 data-testid={TestIds.organizations.subscriptionForm.startDate(
                   index
                 )}
+                onKeyDown={e => e.preventDefault()}
                 inputProps={{
                   min: new Date().toISOString().split('T')[0],
                   'data-testid':
@@ -1069,7 +1085,11 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
 interface CreateOrganizationDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateOrganizationRequest) => Promise<void>;
+  onSubmit: (
+    data: CreateOrganizationRequest & {
+      initialSubscriptions: ProductSubscriptionRequest[];
+    }
+  ) => Promise<void>;
   products: Product[];
 }
 
@@ -1079,19 +1099,21 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   onSubmit,
   products,
 }) => {
-  const [formData, setFormData] = useState<{
-    name: string;
-    domain: string; // Changed from organizationDomain
-    initialAdminEmail: string;
-    initialSubscriptions: ProductSubscriptionRequest[];
-    initialStatus: 'Active' | 'Inactive' | 'Pending';
-  }>({
+  const [formData, setFormData] = useState<
+    CreateOrganizationRequest & {
+      initialSubscriptions: ProductSubscriptionRequest[];
+    }
+  >({
     name: '',
     domain: '', // Changed from organizationDomain
     initialAdminEmail: '',
     initialSubscriptions: [],
     initialStatus: 'Active',
+    initial_admin_password: '',
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1137,6 +1159,21 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       newErrors.initialAdminEmail = 'Please enter a valid email address';
     }
 
+    if (!formData.initial_admin_password) {
+      newErrors.password = 'Password is required';
+    } else {
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(formData.initial_admin_password)) {
+        newErrors.password =
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.';
+      }
+    }
+
+    if (formData.initial_admin_password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
     if (formData.initialSubscriptions.length === 0) {
       newErrors.subscriptions = 'Please add at least one subscription';
     } else {
@@ -1160,19 +1197,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     setLoading(true);
     try {
       await onSubmit(formData);
-      setFormData({
-        name: '',
-        domain: '', // Changed from organizationDomain
-        initialAdminEmail: '',
-        initialSubscriptions: [],
-        initialStatus: 'Active',
-      });
-      setErrors({});
     } catch (error: any) {
-      console.error('Error in create dialog:', error);
       // Handle specific domain-related errors
-      const errorMessage =
-        error.response?.data?.message || 'Failed to create organization';
+      const errorMessage = getApiErrorMessage(
+        error,
+        'Failed to create organization'
+      );
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
         errorMessage;
@@ -1188,6 +1218,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       }
     } finally {
       setLoading(false);
+      handleClose();
     }
   };
 
@@ -1198,7 +1229,9 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       initialAdminEmail: '',
       initialSubscriptions: [],
       initialStatus: 'Active',
+      initial_admin_password: '',
     });
+    setConfirmPassword('');
     setErrors({});
     onClose();
   };
@@ -1215,6 +1248,10 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
         Create New Organization
       </DialogTitle>
       <DialogContent>
+        <Alert severity="info" sx={{ mt: 2, mb: 1 }}>
+          The initial admin password can only be set once. Please save it in a
+          secure location.
+        </Alert>
         <Box sx={{ pt: 1 }}>
           {errors.general && (
             <Alert
@@ -1259,28 +1296,12 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               'aria-label': 'Organization domain input',
             }}
           />
-          <TextField
-            label="Initial Admin Email"
-            type="email"
-            value={formData.initialAdminEmail}
-            onChange={e => handleChange('initialAdminEmail', e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            error={!!errors.initialAdminEmail}
-            helperText={errors.initialAdminEmail}
-            data-testid={TestIds.organizations.createDialog.adminEmail}
-            inputProps={{
-              'data-testid': TestIds.organizations.createDialog.adminEmail,
-              'aria-label': 'Admin email input',
-            }}
-          />
           <FormControl fullWidth margin="normal">
-            <InputLabel>Initial Status</InputLabel>
+            <InputLabel>Organization Status</InputLabel>
             <Select
               value={formData.initialStatus || 'Active'}
               onChange={e => handleChange('initialStatus', e.target.value)}
-              label="Initial Status"
+              label="Organization Status"
               data-testid={TestIds.organizations.createDialog.status}
               inputProps={{
                 'data-testid': TestIds.organizations.createDialog.status,
@@ -1313,6 +1334,85 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
               </MenuItem>
             </Select>
           </FormControl>
+
+          <Divider sx={{ my: 3 }} />
+
+          <TextField
+            label="Initial Admin Email"
+            type="email"
+            value={formData.initialAdminEmail}
+            onChange={e => handleChange('initialAdminEmail', e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+            error={!!errors.initialAdminEmail}
+            helperText={errors.initialAdminEmail}
+            data-testid={TestIds.organizations.createDialog.adminEmail}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.adminEmail,
+              'aria-label': 'Admin email input',
+            }}
+          />
+
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Initial Admin Password"
+            type={showPassword ? 'text' : 'password'}
+            value={formData.initial_admin_password}
+            onChange={e =>
+              handleChange('initial_admin_password', e.target.value)
+            }
+            required
+            error={!!errors.password}
+            helperText={errors.password}
+            data-testid={TestIds.organizations.createDialog.password}
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                </IconButton>
+              ),
+            }}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.password,
+              'aria-label': 'Initial admin password input',
+            }}
+          />
+
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Confirm Password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+            error={!!errors.confirmPassword}
+            helperText={errors.confirmPassword}
+            data-testid={TestIds.organizations.createDialog.confirmPassword}
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  edge="end"
+                >
+                  {showConfirmPassword ? (
+                    <VisibilityOffIcon />
+                  ) : (
+                    <VisibilityIcon />
+                  )}
+                </IconButton>
+              ),
+            }}
+            inputProps={{
+              'data-testid': TestIds.organizations.createDialog.confirmPassword,
+              'aria-label': 'Confirm password input',
+            }}
+          />
 
           <Divider sx={{ my: 3 }} />
 

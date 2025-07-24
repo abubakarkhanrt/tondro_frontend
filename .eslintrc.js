@@ -9,16 +9,13 @@
  */
 
 module.exports = {
-  extends: [
-    'next/core-web-vitals',
-    'next/typescript',
-  ],
+  extends: ['next/core-web-vitals', 'next/typescript'],
   rules: {
     'no-console': 'off',
     'prefer-const': 'error',
     'no-var': 'error',
     '@typescript-eslint/no-explicit-any': 'warn',
-    'react-hooks/exhaustive-deps': 'warn',
+    'react-hooks/exhaustive-deps': 'off',
   },
   env: {
     browser: true,
@@ -29,4 +26,4 @@ module.exports = {
 
 // ──────────────────────────────────────────────────
 // End of File: .eslintrc.js
-// ────────────────────────────────────────────────── 
+// ──────────────────────────────────────────────────

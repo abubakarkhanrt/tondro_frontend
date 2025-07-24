@@ -117,6 +117,16 @@ export interface CreateOrganizationRequest {
   domain: string; // Changed from organizationDomain
   initialAdminEmail: string;
   initialStatus?: 'Active' | 'Inactive' | 'Pending';
+  initial_admin_password?: string;
+}
+
+export interface CreateOrganizationApiRequest {
+  name: string; // Changed from tenantName
+  domain: string; // Changed from organizationDomain
+  initial_admin_email: string;
+  status?: 'active' | 'inactive' | 'pending';
+  initial_admin_password?: string;
+  created_by?: number;
 }
 
 export interface CreateOrganizationResponse {
