@@ -115,7 +115,7 @@ const Navigation: React.FC = () => {
               <Avatar sx={{ bgcolor: 'secondary.main', width: 32, height: 32 }}>
                 {user.first_name
                   ? user.first_name.charAt(0).toUpperCase()
-                  : user.email.charAt(0).toUpperCase()}
+                  : user.email?.charAt(0).toUpperCase() || ''}
               </Avatar>
               <Box
                 sx={{
@@ -139,7 +139,7 @@ const Navigation: React.FC = () => {
                     color: 'rgba(255, 255, 255, 0.8)',
                   }}
                 >
-                  {user.role.replace('_', ' ')}
+                  {user.role?.replace('_', ' ') || ''}
                 </Typography>
               </Box>
               <KeyboardArrowDownIcon sx={{ ml: 0.5, color: 'white' }} />

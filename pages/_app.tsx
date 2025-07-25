@@ -18,14 +18,6 @@ import { AuthProvider } from '../src/contexts/AuthContext';
 import { AuthGuard } from '../src/components/AuthGuard';
 import { AlertProvider } from '../src/contexts/AlertContext';
 
-// Extend Window interface to include our custom properties
-declare global {
-  interface Window {
-    showError: (message: string) => void;
-    showSuccess: (message: string) => void;
-  }
-}
-
 // Validate environment on app startup
 if (typeof window !== 'undefined') {
   validateEnvironment();
