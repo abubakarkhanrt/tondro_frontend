@@ -4,7 +4,7 @@
  * Description: Axios configuration and API helper functions for TondroAI CRM
  * Author: Muhammad Abubakar Khan
  * Created: 18-06-2025
- * Last Updated: 18-07-2025
+ * Last Updated: 29-07-2025
  * ──────────────────────────────────────────────────
  */
 
@@ -35,7 +35,6 @@ import {
   type CreateDomainRequest,
   type UpdateDomainRequest,
   type DomainResponse,
-  type OrganizationDomainsArrayResponse,
   type PaginatedSubscriptionsResponse,
   type SubscriptionStatusRequest,
   type UsageEventRequest,
@@ -240,14 +239,7 @@ export const apiHelpers = {
               organizationId: String(org.id),
               tenantName: org.name,
               organizationDomain: org.domain || '',
-              status:
-                org.status === 'active'
-                  ? 'Active'
-                  : org.status === 'inactive'
-                    ? 'Inactive'
-                    : org.status === 'pending'
-                      ? 'Pending'
-                      : 'Inactive',
+              status: org.status,
               subscriptionTier: 'Tier 1', // Default value
               contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
               totalUsers: org.user_count || 0,
@@ -348,14 +340,7 @@ export const apiHelpers = {
             organizationId: String(org.id),
             tenantName: org.name,
             organizationDomain: org.domain || '',
-            status:
-              org.status === 'active'
-                ? 'Active'
-                : org.status === 'inactive'
-                  ? 'Inactive'
-                  : org.status === 'pending'
-                    ? 'Pending'
-                    : 'Inactive',
+            status: org.status,
             subscriptionTier: 'Tier 1', // Default value
             contractAnniversaryDate: new Date().toISOString().split('T')[0], // Default value
             totalUsers: org.user_count || 0,
@@ -610,7 +595,7 @@ export const apiHelpers = {
   getOrganizationDomains: (
     organizationId: string,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<OrganizationDomainsArrayResponse>> =>
+  ): Promise<AxiosResponse<DomainResponse>> =>
     api.get(API_ENDPOINTS.DOMAINS.BASE, {
       params: { organization_id: organizationId },
       signal: signal as GenericAbortSignal,
@@ -623,7 +608,7 @@ export const apiHelpers = {
   getUserDomains: (
     organizationId: number,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<OrganizationDomainsArrayResponse>> =>
+  ): Promise<AxiosResponse<DomainResponse>> =>
     api.get(API_ENDPOINTS.USERS.DOMAINS(organizationId), {
       signal: signal as GenericAbortSignal,
     }),

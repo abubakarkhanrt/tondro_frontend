@@ -4,12 +4,12 @@
  * Description: Shared pagination hook for entity components
  * Author: Muhammad Abubakar Khan
  * Created: 07-07-2025
- * Last Updated: 07-07-2025
+ * Last Updated: 29-07-2025
  * ──────────────────────────────────────────────────
  */
 
 import { useCallback } from 'react';
-import type { PaginationState } from './useEntityState';
+import type { PaginationState } from '../types';
 
 // ────────────────────────────────────────
 // Hook Interface
