@@ -40,3 +40,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#selenium
+/selenium
+
+#python virtual environment and its subdirectories  
+/venv
+/venv/*
+/venv/bin
+/venv/bin/*
+/venv/bin/python*
