@@ -46,7 +46,9 @@ import {
   type CreateDomainRequest,
   type UpdateDomainRequest,
   ERROR_MESSAGES,
+  type DomainResponse,
 } from '../types';
+import { DomainStatus } from '@/enums/domain';
 import { getStatusColor } from '../theme';
 import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,12 +77,8 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
     try {
       const response = await apiHelpers.getOrganizationDomains(organizationId);
       // Handle the new paginated API response structure
-      const responseData = response.data as any;
-      if (
-        responseData &&
-        responseData.items &&
-        Array.isArray(responseData.items)
-      ) {
+      const responseData = response.data as unknown as DomainResponse;
+      if (Array.isArray(responseData.items)) {
         // Extract domains from the paginated response
         const domainsArray = responseData.items;
         setDomains(domainsArray);
@@ -89,7 +87,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
         console.warn('Unexpected domains response format:', responseData);
         setDomains([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError(getApiErrorMessage(error, 'Failed to fetch domains'));
       // Set empty array on error to prevent map errors
       setDomains([]);
@@ -108,7 +106,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       showAlert('Domain created successfully!');
       setCreateDialogOpen(false);
       fetchDomains();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = getApiErrorMessage(error, 'Failed to create domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
@@ -127,7 +125,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       setEditDialogOpen(false);
       setSelectedDomain(null);
       fetchDomains();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = getApiErrorMessage(error, 'Failed to update domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
@@ -141,7 +139,7 @@ const DomainManagement: React.FC<DomainManagementProps> = ({
       await apiHelpers.deleteDomain(domainId);
       showAlert('Domain deleted successfully!');
       fetchDomains();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = getApiErrorMessage(error, 'Failed to delete domain');
       const userFriendlyMessage =
         ERROR_MESSAGES[errorMessage as keyof typeof ERROR_MESSAGES] ||
@@ -343,7 +341,10 @@ const CreateDomainDialog: React.FC<CreateDomainDialogProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (field: keyof CreateDomainRequest, value: any) => {
+  const handleChange = <K extends keyof CreateDomainRequest>(
+    field: K,
+    value: CreateDomainRequest[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -475,7 +476,7 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
   const [formData, setFormData] = useState<UpdateDomainRequest>({
     domain_name: '',
     is_primary: false,
-    status: 'active',
+    status: DomainStatus.Active,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -491,7 +492,10 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
     }
   }, [domain]);
 
-  const handleChange = (field: keyof UpdateDomainRequest, value: any) => {
+  const handleChange = <K extends keyof UpdateDomainRequest>(
+    field: K,
+    value: UpdateDomainRequest[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -573,12 +577,20 @@ const EditDomainDialog: React.FC<EditDomainDialogProps> = ({
               fullWidth
               label="Status"
               value={formData.status}
-              onChange={e => handleChange('status', e.target.value)}
+              onChange={e =>
+                handleChange('status', e.target.value as DomainStatus)
+              }
               disabled={loading}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
+              {Object.values(DomainStatus).map(status => (
+                <option
+                  key={status}
+                  value={status}
+                  className="text-transform-capitalize"
+                >
+                  {status}
+                </option>
+              ))}
             </TextField>
           </Grid>
         </Grid>

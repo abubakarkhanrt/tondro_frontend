@@ -17,9 +17,13 @@ import {
   CircularProgress,
   Box,
   Typography,
+  type SelectChangeEvent,
+  type Theme,
+  type SxProps,
 } from '@mui/material';
 import { apiHelpers } from '../../services/api';
-import { type OrganizationV2 } from '../../types';
+import type { Organization, OrganizationsResponse } from '../../types';
+import { OrganizationStatus } from '@/enums/organization';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
@@ -64,7 +68,7 @@ interface OrganizationsDropdownProps {
   convertToNumeric?: boolean;
 
   /** Custom organizations data (if not fetching from API) */
-  organizations?: OrganizationV2[];
+  organizations?: Organization[];
 
   /** Whether to fetch organizations from API */
   fetchFromApi?: boolean;
@@ -73,7 +77,7 @@ interface OrganizationsDropdownProps {
   className?: string;
 
   /** Additional styles */
-  sx?: any;
+  sx?: SxProps<Theme>;
 
   /** Margin for the FormControl (normal, dense, none) */
   margin?: 'normal' | 'dense' | 'none';
@@ -106,7 +110,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // State Management
   // ────────────────────────────────────────
 
-  const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string>('');
 
@@ -124,29 +128,25 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       const response = await apiHelpers.getOrganizations();
 
       // Handle the transformed response format from getOrganizations
-      let orgs: OrganizationV2[] = [];
+      let orgs: Organization[] = [];
+      const responseData = response.data as OrganizationsResponse;
 
-      if (response.data && response.data.organizations) {
+      if (responseData && responseData.organizations) {
         // Handle the transformed response format (OrganizationsResponse)
-        orgs = response.data.organizations.map((org: any) => ({
+        orgs = responseData.organizations.map((org: Organization) => ({
           id: org.id,
           name: org.name,
           domain: org.domain || null,
-          status: (org.status || 'inactive').toLowerCase() as
-            | 'active'
-            | 'inactive'
-            | 'pending',
+          status: (
+            org.status || 'inactive'
+          ).toLowerCase() as OrganizationStatus,
           subscription_count: org.subscription_count || 0,
-          user_count: org.user_count || org.totalUsers || 0,
-          created_at:
-            org.created_at || org.createdAt || new Date().toISOString(),
+          user_count: org.user_count || 0,
+          created_at: org.created_at || new Date().toISOString(),
+          user_id: org.user_id || 0,
         }));
-      } else if (response.data && (response.data as any).items) {
-        // Handle the paginated response format (OrganizationsV2Response)
-        orgs = (response.data as any).items;
-      } else if (Array.isArray(response.data)) {
-        // Direct array format
-        orgs = response.data;
+      } else if (response.data && Array.isArray(response.data.organizations)) {
+        orgs = response.data.organizations;
       } else {
         console.warn(
           'Unexpected organizations response format:',
@@ -161,7 +161,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       });
 
       setOrganizations(uniqueOrgs);
-    } catch (error) {
+    } catch (error: unknown) {
       setFetchError(getApiErrorMessage(error, 'Failed to load organizations'));
     } finally {
       setLoading(false);
@@ -187,7 +187,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // Event Handlers
   // ────────────────────────────────────────
 
-  const handleChange = (event: any) => {
+  const handleChange = (event: SelectChangeEvent<string | number>) => {
     const selectedValue = event.target.value;
     onChange(selectedValue);
   };
@@ -196,7 +196,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
   // Value Conversion
   // ────────────────────────────────────────
 
-  const getDisplayValue = (org: OrganizationV2): string | number => {
+  const getDisplayValue = (org: Organization): string | number => {
     if (convertToNumeric) {
       // Return numeric ID for subscriptions
       return org.id;
@@ -244,7 +244,7 @@ const OrganizationsDropdown: React.FC<OrganizationsDropdownProps> = ({
       disabled={disabled || isLoading}
       error={hasError}
       className={className || ''}
-      sx={sx}
+      sx={sx as SxProps<Theme>}
       margin={margin}
     >
       <InputLabel>{label}</InputLabel>

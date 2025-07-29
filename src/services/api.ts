@@ -29,10 +29,8 @@ import {
   type Product,
   type CreateProductRequest,
   type UpdateProductRequest,
-  type AuditLog,
   type ApiParams,
   type PaginatedResponse,
-  type CreateOrganizationResponse,
   type Domain,
   type CreateDomainRequest,
   type UpdateDomainRequest,
@@ -46,6 +44,8 @@ import {
   type UsageLimitsResponse,
   type ProductsResponse,
   type CreateOrganizationApiRequest,
+  type ProductTier,
+  type ProductTiersResponse,
 } from '../types';
 import { addApiResponseInterceptor, handleAppLogout } from './apiErrorUtils';
 
@@ -138,12 +138,6 @@ const API_ENDPOINTS = {
       buildCrmEndpoint(`/product-tiers/${productId}/${tierName}`),
   },
 
-  // Audit Logs
-  AUDIT_LOGS: {
-    BASE: buildCrmEndpoint('/audit-logs'),
-    BY_ID: buildCrmEndpointWithId('/audit-logs'),
-  },
-
   // Status & Health
   STATUS: {
     CRM_STATUS: buildCrmEndpoint('/status'),
@@ -213,11 +207,6 @@ export { handleAppLogout };
 // API Helper Functions
 // ────────────────────────────────────────
 
-// Utility function to validate and log API responses
-export const validateApiResponse = (response: any) => {
-  return response;
-};
-
 export const apiHelpers = {
   // Create a new AbortController for each request
   createAbortController: (): AbortController => new AbortController(),
@@ -247,7 +236,7 @@ export const apiHelpers = {
             total: data.total || 0,
             page: data.page || 1,
             limit: data.page_size || 10,
-            organizations: data.items.map((org: any) => ({
+            organizations: data.items.map((org: Organization) => ({
               organizationId: String(org.id),
               tenantName: org.name,
               organizationDomain: org.domain || '',
@@ -355,7 +344,7 @@ export const apiHelpers = {
           total: data.total || 0,
           page: data.page || 1,
           limit: data.page_size || 10,
-          organizations: data.items.map((org: any) => ({
+          organizations: data.items.map((org: Organization) => ({
             organizationId: String(org.id),
             tenantName: org.name,
             organizationDomain: org.domain || '',
@@ -424,7 +413,13 @@ export const apiHelpers = {
                 'domain' in org &&
                 'status' in org &&
                 'created_at' in org &&
-                'user_id' in org
+                'user_id' in org &&
+                typeof org.id === 'number' &&
+                typeof org.name === 'string' &&
+                typeof org.domain === 'string' &&
+                typeof org.status === 'string' &&
+                typeof org.created_at === 'string' &&
+                typeof org.user_id === 'number'
               ) {
                 return {
                   organizationId: String(org.id),
@@ -478,7 +473,7 @@ export const apiHelpers = {
   createOrganization: (
     data: CreateOrganizationApiRequest,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<CreateOrganizationResponse>> => {
+  ): Promise<AxiosResponse<Organization>> => {
     return api.post(API_ENDPOINTS.ORGANIZATIONS.BASE, data, {
       signal: signal as GenericAbortSignal,
     });
@@ -830,9 +825,7 @@ export const apiHelpers = {
 
   getProductTiers: (
     signal?: AbortSignal
-  ): Promise<
-    AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
-  > =>
+  ): Promise<AxiosResponse<ProductTiersResponse>> =>
     api.get(API_ENDPOINTS.PRODUCT_TIERS.BASE, {
       signal: signal as GenericAbortSignal,
     }),
@@ -840,9 +833,7 @@ export const apiHelpers = {
   getProductTiersByProduct: (
     productId: string,
     signal?: AbortSignal
-  ): Promise<
-    AxiosResponse<{ tiers: any[]; total: number; page: number; limit: number }>
-  > =>
+  ): Promise<AxiosResponse<ProductTiersResponse>> =>
     api.get(API_ENDPOINTS.PRODUCT_TIERS.BY_PRODUCT(productId), {
       signal: signal as GenericAbortSignal,
     }),
@@ -851,7 +842,7 @@ export const apiHelpers = {
     productId: string,
     tierName: string,
     signal?: AbortSignal
-  ): Promise<AxiosResponse<{ tier: any }>> =>
+  ): Promise<AxiosResponse<{ tier: ProductTier }>> =>
     api.get(
       API_ENDPOINTS.PRODUCT_TIERS.BY_PRODUCT_AND_TIER(productId, tierName),
       {
@@ -860,41 +851,24 @@ export const apiHelpers = {
     ),
 
   // ────────────────────────────────────────
-  // Audit Log
-  // ────────────────────────────────────────
-
-  getAuditLogs: (
-    params: ApiParams = {},
-    signal?: AbortSignal
-  ): Promise<AxiosResponse<PaginatedResponse<AuditLog>>> =>
-    api.get(API_ENDPOINTS.AUDIT_LOGS.BASE, {
-      params,
-      signal: signal as GenericAbortSignal,
-    }),
-
-  getAuditLog: (
-    id: string,
-    signal?: AbortSignal
-  ): Promise<AxiosResponse<AuditLog>> =>
-    api.get(API_ENDPOINTS.AUDIT_LOGS.BY_ID(id), {
-      signal: signal as GenericAbortSignal,
-    }),
-
-  // ────────────────────────────────────────
   // Health checks
   // ────────────────────────────────────────
 
-  getHealth: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
+  getHealth: (
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{ status: string }>> =>
     api.get(API_ENDPOINTS.STATUS.HEALTH, {
       signal: signal as GenericAbortSignal,
     }),
 
-  getStatus: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
+  getStatus: (
+    signal?: AbortSignal
+  ): Promise<AxiosResponse<{ status: string }>> =>
     api.get(API_ENDPOINTS.STATUS.CRM_STATUS, {
       signal: signal as GenericAbortSignal,
     }),
 
-  getRoot: (signal?: AbortSignal): Promise<AxiosResponse<any>> =>
+  getRoot: (signal?: AbortSignal): Promise<AxiosResponse<{ status: string }>> =>
     axios.get(API_ENDPOINTS.STATUS.ROOT, {
       signal: signal as GenericAbortSignal,
     }),

@@ -72,7 +72,6 @@ export const TestIds = {
     dateFrom: 'filter-form-date-from',
     dateTo: 'filter-form-date-to',
     page: 'filter-form-page',
-    pageSize: 'filter-form-page-size',
     roleOption: (role: string) => `filter-form-role-option-${role}`,
     statusTrigger: 'filter-status-select-trigger',
     statusOptionAll: 'filter-status-option-all',

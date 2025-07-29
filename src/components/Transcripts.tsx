@@ -45,13 +45,14 @@ import {
 import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
 import { TestIds } from '../testIds';
 import { transcriptsApiHelpers } from '../services/transcriptsApi';
+import { JobStatus, TranscriptApiErrorCode } from '@/enums/transcript';
 
 // ────────────────────────────────────────
 // Type Definitions
 // ────────────────────────────────────────
 
 interface TranscriptAnalysisData {
-  [key: string]: any; // Allow any dynamic structure
+  [key: string]: unknown; // Allow any dynamic structure
   // Keep the original structure as optional for backward compatibility
   documentInfo?: {
     documentInfo_issuing_university_name: string | null;
@@ -162,7 +163,7 @@ interface TranscriptAnalysisResponse {
   error?: {
     code: string;
     message: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   };
 }
 
@@ -173,9 +174,7 @@ interface TranscriptAnalysisResponse {
 const Transcripts: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<number | null>(null);
-  const [jobStatus, setJobStatus] = useState<
-    'idle' | 'processing' | 'completed' | 'failed'
-  >('idle');
+  const [jobStatus, setJobStatus] = useState<JobStatus>(JobStatus.Idle);
   // Remove polling-related refs and state
   const [response, setResponse] = useState<TranscriptAnalysisResponse | null>(
     null
@@ -234,7 +233,7 @@ const Transcripts: React.FC = () => {
     setLoading(true);
     setError('');
     setResponse(null);
-    setJobStatus('processing');
+    setJobStatus(JobStatus.Processing);
 
     try {
       // Create FormData for file upload
@@ -264,7 +263,7 @@ const Transcripts: React.FC = () => {
       const { status, result, error: docError } = document;
 
       if (status === 'completed' && result) {
-        setJobStatus('completed');
+        setJobStatus(JobStatus.Completed);
 
         const transformedResponse: TranscriptAnalysisResponse = {
           success: true,
@@ -295,42 +294,55 @@ const Transcripts: React.FC = () => {
         };
         setResponse(transformedResponse);
       } else if (status === 'failed') {
-        setJobStatus('failed');
+        setJobStatus(JobStatus.Failed);
         const errorMessage = getErrorMessage(docError?.code, docError?.message);
         setError(errorMessage);
       } else {
         // If still processing, show a message that it may take time
-        setJobStatus('processing');
+        setJobStatus(JobStatus.Processing);
         setError(
           'Processing is taking longer than expected. Please check back later or try again.'
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error processing transcript:', err);
 
+      const errorAsAxios = err as {
+        response?: {
+          data?: { error?: { code: string; message: string } };
+          status?: number;
+        };
+        code?: string;
+        message?: string;
+      };
+
       // Handle specific API errors
-      if (err?.response?.data?.error?.code) {
+      if (errorAsAxios?.response?.data?.error?.code) {
         const errorMessage = getErrorMessage(
-          err.response.data.error.code,
-          err.response.data.error.message
+          errorAsAxios.response.data.error.code,
+          errorAsAxios.response.data.error.message
         );
         setError(errorMessage);
-      } else if (err?.response?.status === 413) {
+      } else if (errorAsAxios?.response?.status === 413) {
         setError('File too large. Please use a smaller file (max 10MB).');
-      } else if (err?.response?.status === 415) {
+      } else if (errorAsAxios?.response?.status === 415) {
         setError(
           'Unsupported file type. Please use PDF, JPG, JPEG, or PNG files.'
         );
-      } else if (err?.response?.status >= 500) {
+      } else if (
+        typeof errorAsAxios?.response?.status === 'number' &&
+        errorAsAxios.response.status >= 500
+      ) {
         setError('Server error. Please try again later or contact support.');
-      } else if (err?.code === 'NETWORK_ERROR') {
+      } else if (errorAsAxios?.code === 'NETWORK_ERROR') {
         setError('Network error. Please check your connection and try again.');
       } else {
         setError(
-          err?.message || 'Failed to process transcript. Please try again.'
+          errorAsAxios?.message ||
+            'Failed to process transcript. Please try again.'
         );
       }
-      setJobStatus('failed');
+      setJobStatus(JobStatus.Failed);
     } finally {
       setLoading(false);
     }
@@ -342,7 +354,7 @@ const Transcripts: React.FC = () => {
   const handleClear = () => {
     setSelectedFile(null);
     setJobId(null);
-    setJobStatus('idle');
+    setJobStatus(JobStatus.Idle);
     setResponse(null);
     setError('');
     setLoading(false);
@@ -372,19 +384,19 @@ const Transcripts: React.FC = () => {
     }
 
     switch (errorCode) {
-      case 'FILE_TOO_LARGE':
+      case TranscriptApiErrorCode.FileTooLarge:
         return 'The uploaded file is too large. Please use a smaller file (max 10MB).';
-      case 'INVALID_FILE_TYPE':
+      case TranscriptApiErrorCode.InvalidFileType:
         return 'The uploaded file type is not supported. Please use PDF, JPG, JPEG, or PNG files.';
-      case 'PROCESSING_TIMEOUT':
+      case TranscriptApiErrorCode.ProcessingTimeout:
         return 'Processing timed out. Please try again with a smaller file or contact support.';
-      case 'SERVER_ERROR':
+      case TranscriptApiErrorCode.ServerError:
         return 'Server error occurred. Please try again later or contact support.';
-      case 'INSUFFICIENT_QUOTA':
+      case TranscriptApiErrorCode.InsufficientQuota:
         return 'Processing quota exceeded. Please try again later or upgrade your plan.';
-      case 'FILE_CORRUPTED':
+      case TranscriptApiErrorCode.FileCorrupted:
         return 'The uploaded file appears to be corrupted. Please try a different file.';
-      case 'UNSUPPORTED_LANGUAGE':
+      case TranscriptApiErrorCode.UnsupportedLanguage:
         return 'The document language is not supported. Please use English documents.';
       default:
         return (
@@ -417,15 +429,15 @@ const Transcripts: React.FC = () => {
    * @returns Progress indicator component
    */
   const renderProgressIndicator = () => {
-    if (jobStatus === 'idle') return null;
+    if (jobStatus === JobStatus.Idle) return null;
 
     const getStatusMessage = () => {
       switch (jobStatus) {
-        case 'processing':
+        case JobStatus.Processing:
           return 'Processing transcript... This may take a few minutes.';
-        case 'completed':
+        case JobStatus.Completed:
           return 'Analysis completed successfully!';
-        case 'failed':
+        case JobStatus.Failed:
           return 'Processing failed. Please try again.';
         default:
           return '';
@@ -439,7 +451,7 @@ const Transcripts: React.FC = () => {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Processing Status
             </Typography>
-            {jobStatus === 'processing' && (
+            {jobStatus === JobStatus.Processing && (
               <CircularProgress size={20} sx={{ ml: 1 }} />
             )}
           </Box>
@@ -457,14 +469,14 @@ const Transcripts: React.FC = () => {
           )}
 
           {/* Retry button for failed jobs */}
-          {jobStatus === 'failed' && (
+          {jobStatus === JobStatus.Failed && (
             <Box sx={{ mt: 2 }}>
               <Button
                 variant="outlined"
                 size="small"
                 onClick={() => {
                   setError('');
-                  setJobStatus('processing');
+                  setJobStatus(JobStatus.Processing);
                   if (selectedFile) {
                     handleSubmit();
                   }
@@ -484,7 +496,11 @@ const Transcripts: React.FC = () => {
   // Dynamic Data Rendering Functions
   // ────────────────────────────────────────
 
-  const renderDynamicTable = (data: any, title: string, testId: string) => {
+  const renderDynamicTable = (
+    data: Record<string, unknown> | null,
+    title: string,
+    testId: string
+  ) => {
     if (!data || typeof data !== 'object') return null;
 
     const entries = Object.entries(data).filter(([key, value]) => {
@@ -533,7 +549,7 @@ const Transcripts: React.FC = () => {
       .trim();
   };
 
-  const renderValue = (value: any): React.ReactNode => {
+  const renderValue = (value: unknown): React.ReactNode => {
     if (value === null || value === undefined) {
       return 'N/A';
     }
@@ -557,7 +573,7 @@ const Transcripts: React.FC = () => {
       if (typeof value[0] === 'object' && value[0] !== null) {
         return (
           <Box>
-            {value.map((item, index) => (
+            {value.map((item: Record<string, unknown>, index) => (
               <Box
                 key={index}
                 sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}
@@ -574,13 +590,13 @@ const Transcripts: React.FC = () => {
     }
 
     if (typeof value === 'object') {
-      return renderObjectValue(value);
+      return renderObjectValue(value as Record<string, unknown>);
     }
 
     return String(value);
   };
 
-  const renderObjectValue = (obj: any): React.ReactNode => {
+  const renderObjectValue = (obj: Record<string, unknown>): React.ReactNode => {
     const entries = Object.entries(obj).filter(([key, value]) => {
       if (key.startsWith('_')) return false;
       if (value === null || value === undefined) return false;
@@ -604,7 +620,7 @@ const Transcripts: React.FC = () => {
   };
 
   const renderDynamicAnalysis = (
-    analysisData: any,
+    analysisData: Record<string, unknown> | null,
     passType: 'first' | 'final'
   ) => {
     if (!analysisData || typeof analysisData !== 'object') return null;
@@ -638,7 +654,7 @@ const Transcripts: React.FC = () => {
           {sections.map(([sectionKey, sectionData]) => (
             <Box key={sectionKey}>
               {renderDynamicTable(
-                sectionData,
+                sectionData as Record<string, unknown>,
                 formatFieldName(sectionKey),
                 TestIds.transcripts.analysisResults.dynamicTable(
                   passType,
@@ -841,7 +857,7 @@ const Transcripts: React.FC = () => {
                 variant="contained"
                 onClick={handleSubmit}
                 disabled={
-                  !selectedFile || loading || jobStatus === 'processing'
+                  !selectedFile || loading || jobStatus === JobStatus.Processing
                 }
                 data-testid={TestIds.transcripts.submitButton}
               >

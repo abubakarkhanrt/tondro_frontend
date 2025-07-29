@@ -25,11 +25,7 @@ export { useEntityData } from './useEntityData';
 // Feature-Specific Hooks
 // ────────────────────────────────────────
 
-export {
-  useProductTiers,
-  useProductTier,
-  useProductTiersByProduct,
-} from './useProductTiers';
+export { useProductTiers, useProductTier } from './useProductTiers';
 
 // ────────────────────────────────────────
 // End of File: src/hooks/index.ts

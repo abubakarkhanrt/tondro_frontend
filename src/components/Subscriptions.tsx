@@ -50,10 +50,11 @@ import {
   type CreateSubscriptionRequest,
   type UpdateSubscriptionRequest,
 } from '../types';
+import { SubscriptionStatus } from '@/enums/subscription';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
-import { formatTierName, getTierColor } from '../utils/tierFormatter';
+import { getTierColor } from '../utils/tierFormatter';
 import { useProductTiers } from '../hooks/useProductTiers';
 import OrganizationsDropdown from './common/OrganizationsDropdown';
 import { useAuth } from '../contexts/AuthContext';
@@ -107,7 +108,10 @@ const CreateSubscriptionDialog = ({
 
   const tierOptions = getTierOptions(form.product_id);
 
-  const handleChange = (field: keyof CreateSubscriptionRequest, value: any) => {
+  const handleChange = <K extends keyof CreateSubscriptionRequest>(
+    field: K,
+    value: CreateSubscriptionRequest[K]
+  ) => {
     setForm(prev => ({ ...prev, [field]: value }));
     // Clear tier when product changes
     if (field === 'product_id') {
@@ -144,7 +148,7 @@ const CreateSubscriptionDialog = ({
 
       await onSubmit(formattedData);
       onClose();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(getApiErrorMessage(e, 'Failed to create subscription'));
     } finally {
       setSubmitting(false);
@@ -191,7 +195,7 @@ const CreateSubscriptionDialog = ({
                 showAllOption={false}
                 convertToNumeric={true}
                 margin="normal"
-                organizations={organizations as any}
+                organizations={organizations}
                 fetchFromApi={false}
               />
             </Grid>
@@ -238,7 +242,7 @@ const CreateSubscriptionDialog = ({
                         tier
                       )}
                     >
-                      {formatTierName(tier)}
+                      {tier}
                     </MenuItem>
                   ))}
                 </Select>
@@ -297,17 +301,6 @@ const CreateSubscriptionDialog = ({
   );
 };
 
-// Add helper functions to handle both field formats
-const getTierName = (subscription: Subscription): string => {
-  return subscription.tier || '';
-};
-
-const getMaxLimit = (subscription: Subscription): number | null => {
-  return subscription.max_limit !== undefined
-    ? subscription.max_limit
-    : subscription.usage_limit || null;
-};
-
 // Update the EditSubscriptionDialog to use the helper function
 const EditSubscriptionDialog = ({
   subscription,
@@ -322,14 +315,17 @@ const EditSubscriptionDialog = ({
 }) => {
   const [form, setForm] = useState<UpdateSubscriptionRequest>({
     status: subscription.status,
-    tier: getTierName(subscription),
+    tier: subscription.tier || '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tierOptions = getTierOptions(subscription.product_id);
 
-  const handleChange = (field: keyof UpdateSubscriptionRequest, value: any) => {
+  const handleChange = <K extends keyof UpdateSubscriptionRequest>(
+    field: K,
+    value: UpdateSubscriptionRequest[K]
+  ) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -339,7 +335,7 @@ const EditSubscriptionDialog = ({
     try {
       await onSubmit(form);
       onClose();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(getApiErrorMessage(e, 'Failed to update subscription'));
     } finally {
       setSubmitting(false);
@@ -377,7 +373,7 @@ const EditSubscriptionDialog = ({
                         tier
                       )}
                     >
-                      {formatTierName(tier)}
+                      {tier}
                     </MenuItem>
                   ))}
                 </Select>
@@ -388,22 +384,24 @@ const EditSubscriptionDialog = ({
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={form.status || ''}
-                  onChange={e => handleChange('status', e.target.value)}
+                  onChange={e =>
+                    handleChange('status', e.target.value as SubscriptionStatus)
+                  }
                   label="Status"
                   data-testid={TestIds.subscriptions.editDialog.status}
                 >
                   <MenuItem
-                    value="active"
+                    value={SubscriptionStatus.Active}
                     data-testid={TestIds.subscriptions.editDialog.statusOption(
-                      'active'
+                      SubscriptionStatus.Active
                     )}
                   >
                     Active
                   </MenuItem>
                   <MenuItem
-                    value="inactive"
+                    value={SubscriptionStatus.Inactive}
                     data-testid={TestIds.subscriptions.editDialog.statusOption(
-                      'inactive'
+                      SubscriptionStatus.Inactive
                     )}
                   >
                     Inactive
@@ -477,7 +475,8 @@ const Subscriptions: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
   // Product tiers hook for dynamic tier data
-  const { tiers: productTiers } = useProductTiers();
+  const { refetch: refetchProductTiers, getTiersByProductId } =
+    useProductTiers();
 
   const { fetchData: fetchSubscriptions, refetch: refetchSubscriptions } =
     useEntityData(entityState, setEntityState, setPagination, {
@@ -536,7 +535,7 @@ const Subscriptions: React.FC = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [filters, pagination.page, pagination.pageSize]);
+  }, [filters, pagination.page, pagination.page_size]);
 
   useEffect(() => {
     if (entityState.error) {
@@ -552,27 +551,16 @@ const Subscriptions: React.FC = () => {
       const response = await apiHelpers.getOrganizations();
       const organizationsData = response.data.organizations || [];
       setOrganizations(organizationsData);
-    } catch (error) {
-      console.error('Error fetching organizations:', error);
-      const err = error as any;
-      if (err.response) {
-        console.error('Error response:', err.response.data);
-        console.error('Error status:', err.response.status);
-        console.error('Error headers:', err.response.headers);
-      }
-      // Don't show error for organizations as it's not critical
+    } catch (error: unknown) {
+      showAlert(
+        getApiErrorMessage(error, 'Failed to fetch organizations'),
+        'error'
+      );
     }
   };
 
   const fetchProducts = async (): Promise<void> => {
     try {
-      // Double-check token before making request
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        console.error('No token available for products request');
-        return;
-      }
-
       const response = await apiHelpers.getProducts();
 
       // Handle both response formats
@@ -594,7 +582,8 @@ const Subscriptions: React.FC = () => {
       }
 
       setProducts(productsData);
-    } catch (error) {
+      refetchProductTiers(productsData);
+    } catch (error: unknown) {
       showAlert(getApiErrorMessage(error, 'Failed to fetch products'), 'error');
       // Don't show error for products as it's not critical
     }
@@ -608,43 +597,12 @@ const Subscriptions: React.FC = () => {
       showAlert('Subscription created successfully!');
       setCreateDialogOpen(false);
       refetchSubscriptions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showAlert(
         getApiErrorMessage(error, 'Failed to create subscription'),
         'error'
       );
     }
-  };
-
-  const getTierOptions = (productId: string): string[] => {
-    if (!productId) return [];
-
-    // Get tiers for the specific product from API data
-    const productTiersForProduct = productTiers.filter(
-      tier => tier.product_id === productId
-    );
-
-    if (productTiersForProduct.length > 0) {
-      // Return tier names from API data
-      return productTiersForProduct.map(tier => tier.tier_name);
-    }
-
-    // Fallback to hardcoded values if no API data available
-    const product = products.find(p => p.id === productId);
-    if (!product) return [];
-
-    // Use name field instead of display_name
-    const productName = (product.name || '').toLowerCase();
-    if (productName.includes('transcript')) {
-      return ['Trans 200', 'Trans 500', 'Trans 1000'];
-    } else if (productName.includes('admission')) {
-      return ['Admis 200', 'Admis 500', 'Admis 1000'];
-    } else if (productName.includes('transcript')) {
-      return ['transcripts_500', 'transcripts_1000', 'transcripts_2000'];
-    } else if (productName.includes('admission')) {
-      return ['admissions_200', 'admissions_500', 'admissions_1000'];
-    }
-    return ['tier_1', 'tier_2', 'tier_3'];
   };
 
   const handleFilterChange = (field: string, value: string): void => {
@@ -695,7 +653,7 @@ const Subscriptions: React.FC = () => {
       setSelectedSubscription(null);
       setEditMode(false);
       refetchSubscriptions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showAlert(
         getApiErrorMessage(error, 'Failed to update subscription'),
         'error'
@@ -740,7 +698,7 @@ const Subscriptions: React.FC = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} sm={3}>
             <OrganizationsDropdown
-              value={filters.organization_id}
+              value={filters.organization_id || ''}
               onChange={value =>
                 handleFilterChange('organization_id', String(value))
               }
@@ -749,7 +707,7 @@ const Subscriptions: React.FC = () => {
               showAllOption={true}
               allOptionText="All Organizations"
               convertToNumeric={true}
-              organizations={organizations as any}
+              organizations={organizations}
               fetchFromApi={false}
               margin="none"
             />
@@ -758,7 +716,7 @@ const Subscriptions: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Product</InputLabel>
               <Select
-                value={filters.product_id}
+                value={filters.product_id || ''}
                 onChange={e => handleFilterChange('product_id', e.target.value)}
                 label="Product"
                 data-testid={TestIds.filterForm.product}
@@ -785,7 +743,7 @@ const Subscriptions: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
-                value={filters.status}
+                value={filters.status || ''}
                 onChange={e => handleFilterChange('status', e.target.value)}
                 label="Status"
                 data-testid={TestIds.filterForm.status}
@@ -797,14 +755,18 @@ const Subscriptions: React.FC = () => {
                   All
                 </MenuItem>
                 <MenuItem
-                  value="active"
-                  data-testid={TestIds.filterForm.statusOption('active')}
+                  value={SubscriptionStatus.Active}
+                  data-testid={TestIds.filterForm.statusOption(
+                    SubscriptionStatus.Active
+                  )}
                 >
                   Active
                 </MenuItem>
                 <MenuItem
-                  value="inactive"
-                  data-testid={TestIds.filterForm.statusOption('inactive')}
+                  value={SubscriptionStatus.Inactive}
+                  data-testid={TestIds.filterForm.statusOption(
+                    SubscriptionStatus.Inactive
+                  )}
                 >
                   Inactive
                 </MenuItem>
@@ -815,7 +777,7 @@ const Subscriptions: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Tier</InputLabel>
               <Select
-                value={filters.tier}
+                value={filters.tier || ''}
                 onChange={e => handleFilterChange('tier', e.target.value)}
                 label="Tier"
                 disabled={!filters.product_id}
@@ -828,13 +790,13 @@ const Subscriptions: React.FC = () => {
                   All
                 </MenuItem>
                 {filters.product_id &&
-                  getTierOptions(filters.product_id).map(tier => (
+                  getTiersByProductId(filters.product_id).map(tier => (
                     <MenuItem
                       key={tier}
                       value={tier}
                       data-testid={TestIds.filterForm.tierOption(tier)}
                     >
-                      {formatTierName(tier)}
+                      {tier}
                     </MenuItem>
                   ))}
               </Select>
@@ -924,14 +886,14 @@ const Subscriptions: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={formatTierName(getTierName(subscription))}
-                          color={getTierColor(getTierName(subscription))}
+                          label={subscription.tier || ''}
+                          color={getTierColor(subscription.tier || '')}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
-                        {getMaxLimit(subscription)
-                          ? `${subscription.current_usage}/${getMaxLimit(subscription)}`
+                        {subscription.usage_limit
+                          ? `${subscription.current_usage}/${subscription.usage_limit}`
                           : `${subscription.current_usage}`}
                       </TableCell>
                       <TableCell>
@@ -982,7 +944,7 @@ const Subscriptions: React.FC = () => {
               count={pagination.total}
               page={pagination.page}
               onPageChange={paginationHandlers.handlePageChange}
-              rowsPerPage={pagination.pageSize}
+              rowsPerPage={pagination.page_size}
               onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
@@ -1026,11 +988,8 @@ const Subscriptions: React.FC = () => {
     };
 
     // Use helper functions for tier and limit
-    const tierName = getTierName(subscription);
-    const maxLimit = getMaxLimit(subscription);
-
-    const usageDisplay = maxLimit
-      ? `${subscription.current_usage}/${maxLimit}`
+    const usageDisplay = subscription.usage_limit
+      ? `${subscription.current_usage}/${subscription.usage_limit}`
       : `${subscription.current_usage}`;
 
     return (
@@ -1079,8 +1038,8 @@ const Subscriptions: React.FC = () => {
                   Tier
                 </Typography>
                 <Chip
-                  label={formatTierName(tierName)}
-                  color={getTierColor(tierName)}
+                  label={subscription.tier || ''}
+                  color={getTierColor(subscription.tier || '')}
                   size="small"
                   sx={{ mb: 2 }}
                 />
@@ -1197,7 +1156,7 @@ const Subscriptions: React.FC = () => {
         onSubmit={handleCreateSubscription}
         organizations={organizations}
         products={products}
-        getTierOptions={getTierOptions}
+        getTierOptions={getTiersByProductId}
       />
 
       {selectedSubscription && (
@@ -1221,7 +1180,7 @@ const Subscriptions: React.FC = () => {
                 setEditMode(false);
               }}
               onSubmit={handleUpdateSubscription}
-              getTierOptions={getTierOptions}
+              getTierOptions={getTiersByProductId}
             />
           )}
         </>

@@ -22,7 +22,7 @@ interface UsePaginationReturn {
   ) => void;
   resetToFirstPage: () => void;
   goToPage: (page: number) => void;
-  setPageSize: (pageSize: number) => void;
+  setPageSize: (page_size: number) => void;
   getTotalPages: () => number;
   hasNextPage: () => boolean;
   hasPreviousPage: () => boolean;
@@ -58,7 +58,7 @@ export function usePagination(
       const newPageSize = parseInt(event.target.value, 10);
       setPagination(prev => ({
         ...prev,
-        pageSize: newPageSize,
+        page_size: newPageSize,
         page: 0, // Reset to first page when page size changes
       }));
     },
@@ -81,10 +81,10 @@ export function usePagination(
   );
 
   const setPageSize = useCallback(
-    (pageSize: number): void => {
+    (page_size: number): void => {
       setPagination(prev => ({
         ...prev,
-        pageSize,
+        page_size,
         page: 0, // Reset to first page when page size changes
       }));
     },
@@ -92,8 +92,8 @@ export function usePagination(
   );
 
   const getTotalPages = useCallback((): number => {
-    return Math.ceil(pagination.total / pagination.pageSize);
-  }, [pagination.total, pagination.pageSize]);
+    return Math.ceil(pagination.total / pagination.page_size);
+  }, [pagination.total, pagination.page_size]);
 
   const hasNextPage = useCallback((): boolean => {
     return pagination.page < getTotalPages() - 1;

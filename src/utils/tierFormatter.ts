@@ -39,32 +39,3 @@ export function getTierColor(tierName: string): TierColorType {
   // Default fallback
   return TIER_COLORS.ADMISSIONS;
 }
-
-/**
- * Formats a tier name from backend format to user-friendly display format
- * Removes redundant product names since they're displayed separately
- *
- * @param tierName - The tier name from backend (e.g., "admissions_200")
- * @returns Formatted tier name for display (e.g., "Admis 200")
- *
- */
-export function formatTierName(tierName: string): string {
-  if (!tierName) return '';
-
-  // Handle common tier patterns - remove redundant product names
-  const tierMappings: Record<string, string> = {
-    admissions_200: 'Admis 200',
-    admissions_500: 'Admis 500',
-    admissions_1000: 'Admis 1000',
-    transcripts_500: 'Trans 500',
-    transcripts_1000: 'Trans 1000',
-    transcripts_2000: 'Trans 2000',
-  };
-
-  // Check if we have a direct mapping
-  const mappedTier = tierMappings[tierName.toLowerCase()];
-  if (mappedTier) {
-    return mappedTier;
-  }
-  return tierName;
-}

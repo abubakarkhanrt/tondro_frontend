@@ -8,6 +8,13 @@
  * ──────────────────────────────────────────────────
  */
 
+import { UserRole, UserStatus } from '@/enums/user';
+import { OrganizationStatus } from '@/enums/organization';
+import { DomainStatus } from '@/enums/domain';
+import { SubscriptionStatus } from '@/enums/subscription';
+import { JobStatus } from '@/enums/transcript';
+import type { Color } from '@/enums/color';
+
 // ────────────────────────────────────────
 // API Response Types
 // ────────────────────────────────────────
@@ -38,7 +45,7 @@ export interface Domain {
   name?: string; // For backward compatibility
   parent_domain_id?: string | number | null;
   is_primary: boolean | number;
-  status: 'active' | 'inactive' | 'pending';
+  status: DomainStatus;
   ssl_certificate?: string | null;
   dns_settings?: Record<string, unknown>;
   created_at: string;
@@ -57,32 +64,17 @@ export interface CreateDomainRequest {
 export interface UpdateDomainRequest {
   domain_name?: string;
   is_primary?: boolean | number;
-  status?: 'active' | 'inactive' | 'pending';
+  status?: DomainStatus;
   user_id?: number | undefined; // Add user_id for consistency with CreateDomainRequest
 }
 
-export interface DomainResponse {
-  total: number;
-  page: number;
-  limit: number;
-  domains: Domain[];
-}
-
-export interface OrganizationDomainsResponse {
-  organization_id: string;
-  total_domains: number;
-  domains: Domain[];
-}
-
-// New interface for the updated API response format
-export interface OrganizationDomainsArrayResponse extends Array<Domain> {}
+export interface DomainResponse extends PaginatedResponse<Domain> {}
 
 export interface Organization {
-  // New format fields (required)
-  id: number; // Changed from optional to required
-  name: string; // Changed from optional to required
-  domain: string | null; // Changed from optional to required
-  status: 'active' | 'inactive' | 'pending'; // Changed from optional to required
+  id: number;
+  name: string;
+  domain: string | null;
+  status: OrganizationStatus;
   subscription_count: number;
   user_count: number;
   created_at: string;
@@ -94,14 +86,6 @@ export interface OrganizationsResponse {
   page: number;
   limit: number;
   organizations: Organization[];
-}
-
-// New interface for initial subscription in organization creation
-export interface InitialSubscription {
-  product_id: string;
-  tier: string;
-  max_limit?: number;
-  auto_renewal?: boolean;
 }
 
 // New interface for product subscription request during organization creation
@@ -117,7 +101,7 @@ export interface CreateOrganizationRequest {
   name: string; // Changed from tenantName
   domain: string; // Changed from organizationDomain
   initialAdminEmail: string;
-  initialStatus?: 'Active' | 'Inactive' | 'Pending';
+  initialStatus: OrganizationStatus;
   initial_admin_password?: string;
 }
 
@@ -125,27 +109,15 @@ export interface CreateOrganizationApiRequest {
   name: string; // Changed from tenantName
   domain: string; // Changed from organizationDomain
   initial_admin_email: string;
-  status?: 'active' | 'inactive' | 'pending';
-  initial_admin_password?: string;
+  status: OrganizationStatus;
+  initial_admin_password: string;
   created_by?: number;
-}
-
-export interface CreateOrganizationResponse {
-  id: number;
-  name: string;
-  domain: string;
-  status: string;
-  settings: Record<string, unknown>;
-  subscription_count: number;
-  user_count: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface UpdateOrganizationRequest {
   name?: string;
   domain?: string;
-  status?: 'Active' | 'Pending' | 'Inactive';
+  status?: OrganizationStatus;
   contractAnniversaryDate?: string;
 }
 
@@ -157,27 +129,6 @@ export interface OrganizationMetrics {
   subscriptions_count?: number;
   subscription_count?: number;
   error?: string;
-}
-
-// New interface for the updated organization format
-export interface OrganizationV2 {
-  id: number;
-  name: string;
-  domain: string | null;
-  status: 'active' | 'inactive' | 'pending';
-  subscription_count: number;
-  user_count: number;
-  created_at: string;
-}
-
-export interface OrganizationsV2Response {
-  items: OrganizationV2[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-  has_next: boolean;
-  has_previous: boolean;
 }
 
 // ────────────────────────────────────────
@@ -197,8 +148,8 @@ export interface User {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  role: 'global_admin' | 'tenant_admin';
-  status: 'active' | 'inactive' | 'pending' | 'invited';
+  role: UserRole;
+  status: UserStatus;
   organization_id: number;
   domain_id?: number;
   created_at: string;
@@ -211,7 +162,7 @@ export interface CreateUserRequest {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'global_admin' | 'tenant_admin';
+  role: UserRole;
   organization_id: number;
   domain_id?: number; // Made optional since we handle it separately
   password?: string;
@@ -221,8 +172,8 @@ export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  role?: 'global_admin' | 'tenant_admin';
-  status?: 'active' | 'inactive' | 'pending' | 'invited';
+  role?: UserRole;
+  status?: UserStatus;
   organization_id?: number;
 }
 
@@ -234,19 +185,9 @@ export interface Subscription {
   id: string;
   organization_id: number;
   product_id: string;
-  status:
-    | 'active'
-    | 'inactive'
-    | 'trial'
-    | 'expired'
-    | 'cancelled'
-    | 'suspended';
-  // Support both old and new field names for backward compatibility
-  tier_name?: string;
+  status: SubscriptionStatus;
   tier?: string;
   current_usage: number;
-  // Support both old and new field names for backward compatibility
-  max_limit?: number;
   usage_limit?: number;
   auto_renewal: boolean;
   starts_at: string;
@@ -267,26 +208,14 @@ export interface CreateSubscriptionRequest {
 }
 
 export interface UpdateSubscriptionRequest {
-  status?:
-    | 'active'
-    | 'inactive'
-    | 'trial'
-    | 'expired'
-    | 'cancelled'
-    | 'suspended';
+  status?: SubscriptionStatus;
   tier?: string;
   auto_renewal?: boolean;
   ends_at?: string | null;
 }
 
 export interface SubscriptionStatusRequest {
-  status:
-    | 'active'
-    | 'inactive'
-    | 'trial'
-    | 'expired'
-    | 'cancelled'
-    | 'suspended';
+  status: SubscriptionStatus;
   reason?: string;
 }
 
@@ -334,16 +263,12 @@ export interface PaginatedSubscriptionsResponse {
 export interface Product {
   id: string | number;
   name: string;
-  display_name?: string; // Optional for backward compatibility
-  product_type?: string; // Optional for backward compatibility
+  display_name?: string;
+  product_type?: string;
   description: string | null;
-  is_active?: boolean; // Optional for backward compatibility
-  features?: any[]; // Optional for backward compatibility
-  settings?: Record<string, any>; // Optional for backward compatibility
-  // Keep existing fields for backward compatibility
-  price?: number;
-  currency?: string;
-  status?: 'Active' | 'Inactive';
+  is_active?: boolean;
+  features?: Record<string, unknown>[];
+  settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -351,16 +276,11 @@ export interface Product {
 export interface CreateProductRequest {
   name: string;
   description: string;
-  price?: number;
-  currency?: string;
 }
 
 export interface UpdateProductRequest {
-  name?: string;
-  description?: string;
-  price?: number;
-  currency?: string;
-  status?: 'Active' | 'Inactive';
+  name: string;
+  description: string;
 }
 
 // ────────────────────────────────────────
@@ -374,7 +294,6 @@ export interface ProductTier {
   display_name: string;
   max_limit: number;
   price: number;
-  currency: string;
   status: 'Active' | 'Inactive';
   created_at: string;
   updated_at: string;
@@ -384,7 +303,7 @@ export interface ProductTiersResponse {
   total: number;
   page: number;
   limit: number;
-  tiers: ProductTier[];
+  product_tiers: ProductTier[];
 }
 
 export interface ProductTierResponse {
@@ -413,31 +332,6 @@ export interface CreateUsageEventRequest {
 }
 
 // ────────────────────────────────────────
-// Audit Log Types
-// ────────────────────────────────────────
-
-export interface AuditLog {
-  id: string | number;
-  entity_type: string;
-  entity_id: string;
-  action: string;
-  performed_by: string;
-  details: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface AuditLogEntry {
-  id: string;
-  entity_type: string;
-  entity_id: string;
-  action: string;
-  performed_by: string;
-  changes?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  created_at: string;
-}
-
-// ────────────────────────────────────────
 // Filter and Pagination Types
 // ────────────────────────────────────────
 
@@ -445,7 +339,7 @@ export interface FilterParams {
   status?: string;
   domain?: string;
   search?: string;
-  organization_id?: string;
+  organization_id?: string | number;
   user_id?: string;
   product_id?: string;
   event_type?: string;
@@ -453,6 +347,7 @@ export interface FilterParams {
   resource_type?: string;
   start_date?: string;
   end_date?: string;
+  tier?: string;
 }
 
 export interface PaginationParams {
@@ -490,11 +385,7 @@ export interface TableProps<T> {
   data: T[];
   loading: boolean;
   error: string;
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-  };
+  pagination: PaginationState;
   onPageChange: (event: React.ChangeEvent<unknown>, newPage: number) => void;
   onPageSizeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDelete: (id: string) => void;
@@ -545,20 +436,18 @@ export interface ErrorResponse {
   status?: number;
 }
 
-export type StatusType =
-  | 'Active'
-  | 'Inactive'
-  | 'Pending'
-  | 'Cancelled'
-  | 'Expired';
-
-export type RoleType = 'admin' | 'user' | 'viewer';
 export type SeverityType = 'success' | 'error' | 'warning' | 'info';
 
 export interface SnackbarState {
   open: boolean;
   message: string;
   severity: SeverityType;
+}
+
+export interface PaginationState {
+  page: number;
+  page_size: number;
+  total: number;
 }
 
 // ────────────────────────────────────────
@@ -614,7 +503,7 @@ export interface SummaryCardProps {
   title: string;
   data: SummaryData[keyof SummaryData];
   loading: boolean;
-  color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error';
+  color: Color;
   path: string;
   icon: string;
 }
@@ -645,10 +534,10 @@ export interface JobSubmissionResponse {
 
 export interface JobStatusResponse {
   job_id: string;
-  status: 'processing' | 'completed' | 'failed';
+  status: JobStatus;
   result?: {
-    pass_1_extraction: any;
-    pass_2_correction: any;
+    pass_1_extraction: Record<string, unknown>;
+    pass_2_correction: Record<string, unknown>;
   };
   error?: {
     code: string;
@@ -677,8 +566,8 @@ export interface JobDiagnosticsResponse {
     document_type: string;
     status: 'processing' | 'completed' | 'failed';
     result?: {
-      pass_1_extraction: any;
-      pass_2_correction: any;
+      pass_1_extraction: Record<string, unknown>;
+      pass_2_correction: Record<string, unknown>;
     };
     error?: {
       code: string;
@@ -693,8 +582,7 @@ export interface JobDiagnosticsResponse {
 export interface JobDocument {
   id: string;
   document_type: string;
-  original_filename: string;
-  status: 'completed' | 'processing' | 'failed';
+  status: JobStatus;
 }
 
 export interface Job {
@@ -703,8 +591,8 @@ export interface Job {
   filename: string;
   upload_timestamp: string;
   file_path: string | null;
-  extracted_data: any | null;
-  processing_metadata: any | null;
+  extracted_data: Record<string, unknown> | null;
+  processing_metadata: Record<string, unknown> | null;
   processing_duration_seconds: number;
 }
 

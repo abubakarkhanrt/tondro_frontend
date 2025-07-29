@@ -250,7 +250,7 @@ const Products: React.FC = () => {
               count={pagination.total}
               page={pagination.page}
               onPageChange={paginationHandlers.handlePageChange}
-              rowsPerPage={pagination.pageSize}
+              rowsPerPage={pagination.page_size}
               onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
@@ -474,7 +474,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
                   {product.description || 'No description provided'}
                 </Typography>
               </Grid>
-              {product.price !== undefined && (
+              {/* {product.price !== undefined && (
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Price
@@ -483,7 +483,7 @@ const ViewProductDialog: React.FC<ViewProductDialogProps> = ({
                     {product.price} {product.currency || 'USD'}
                   </Typography>
                 </Grid>
-              )}
+              )} */}
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Created

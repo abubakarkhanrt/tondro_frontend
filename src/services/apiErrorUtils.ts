@@ -24,7 +24,7 @@ import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 let isRefreshing = false;
 let failedQueue: {
   resolve: (value: string) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: AxiosError | Error | null) => void;
 }[] = [];
 
 // ────────────────────────────────────────

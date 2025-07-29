@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { apiHelpers } from '../services/api';
 import type { BaseEntityState, PaginationState } from './useEntityState';
+import type { ApiParams, FilterParams } from '../types';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -19,10 +20,10 @@ import type { BaseEntityState, PaginationState } from './useEntityState';
 
 interface FetchOptions {
   signal?: AbortSignal;
-  params?: Record<string, any>;
+  params?: ApiParams;
 }
 
-interface UseEntityDataOptions<T, F = Record<string, any>> {
+interface UseEntityDataOptions<T, F = FilterParams> {
   fetchFunction: (
     options?: FetchOptions
   ) => Promise<{ data: T[] | { items: T[]; total: number } }>;
@@ -44,7 +45,7 @@ interface UseEntityDataReturn {
 // Hook Implementation
 // ────────────────────────────────────────
 
-export function useEntityData<T, F = Record<string, any>>(
+export function useEntityData<T, F = FilterParams>(
   entityState: BaseEntityState<T>,
   setEntityState: React.Dispatch<React.SetStateAction<BaseEntityState<T>>>,
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>,
@@ -89,7 +90,7 @@ export function useEntityData<T, F = Record<string, any>>(
       // Prepare API parameters
       const apiParams = {
         page: pagination.page + 1, // Convert to 1-based for API
-        page_size: pagination.pageSize,
+        page_size: pagination.page_size,
         ...filters,
       };
 
@@ -152,9 +153,12 @@ export function useEntityData<T, F = Record<string, any>>(
       }
 
       isInitializedRef.current = true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Don't show error for cancelled requests
-      if (axios.isCancel(error) || error.name === 'AbortError') {
+      if (
+        axios.isCancel(error) ||
+        (error instanceof Error && error.name === 'AbortError')
+      ) {
         return;
       }
 
@@ -162,12 +166,16 @@ export function useEntityData<T, F = Record<string, any>>(
 
       let errorMessage = 'Failed to load data. Please try again.';
 
-      if (error.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please login again.';
-      } else if (error.response?.status === 403) {
-        errorMessage =
-          'Access denied. You do not have permission to view this data.';
-      } else if (error.message) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          errorMessage = 'Authentication failed. Please login again.';
+        } else if (error.response?.status === 403) {
+          errorMessage =
+            'Access denied. You do not have permission to view this data.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } else if (error instanceof Error) {
         errorMessage = error.message;
       }
 
@@ -190,7 +198,7 @@ export function useEntityData<T, F = Record<string, any>>(
     fetchFunction,
     filters,
     pagination.page,
-    pagination.pageSize,
+    pagination.page_size,
     onSuccess,
     onError,
   ]);

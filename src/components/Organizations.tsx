@@ -63,9 +63,10 @@ import {
   type CreateSubscriptionRequest,
   type CreateOrganizationApiRequest,
 } from '../types';
+import { OrganizationStatus } from '@/enums/organization';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
-import { formatTierName, getTierColor } from '../utils/tierFormatter';
+import { getTierColor } from '../utils/tierFormatter';
 import { getButtonProps } from '../utils/buttonStyles';
 import DomainManagement from './DomainManagement';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,22 +74,13 @@ import { PERMISSIONS } from '../config/roles';
 import { useEntityState, usePagination, useEntityData } from '../hooks';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 import { useAlert } from '@/contexts/AlertContext';
+import { useProductTiers } from '@/hooks/useProductTiers';
 
 type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 // ────────────────────────────────────────
 // Utility Functions
 // ────────────────────────────────────────
-
-// Map frontend display values to backend API values
-const mapStatusToApi = (displayStatus: string): string => {
-  const statusMap: Record<string, string> = {
-    Active: 'active',
-    Pending: 'pending',
-    Inactive: 'inactive',
-  };
-  return statusMap[displayStatus] || displayStatus;
-};
 
 // ────────────────────────────────────────
 // Main Organizations Component
@@ -109,22 +101,24 @@ const Organizations: React.FC = () => {
     setSelectedEntity: setSelectedOrg,
     editMode,
     setEditMode,
-  } = useEntityState<Organization, { status: string; search: string }>(
-    { status: '', search: '' },
-    10
-  );
+  } = useEntityState<
+    Organization,
+    { status: OrganizationStatus | ''; search: string }
+  >({ status: '', search: '' }, 10);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
+  const { refetch: refetchProductTiers, getTiersByProductId } =
+    useProductTiers();
 
   const { fetchData: fetchOrganizations, refetch: refetchOrganizations } =
     useEntityData(entityState, setEntityState, setPagination, {
       fetchFunction: async options => {
         const params = {
           page: pagination.page + 1, // Convert to 1-based for API
-          page_size: pagination.pageSize,
+          page_size: pagination.page_size,
           ...(filters.status && {
-            status_filter: mapStatusToApi(filters.status),
+            status_filter: filters.status.toLocaleLowerCase(),
           }), // Map status to API format
           ...(filters.search && { search: filters.search }),
         };
@@ -172,6 +166,7 @@ const Organizations: React.FC = () => {
       }
 
       setProducts(productsData);
+      refetchProductTiers(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -247,10 +242,7 @@ const Organizations: React.FC = () => {
           name: formData.name,
           domain: formData.domain, // Changed from organizationDomain
           initial_admin_email: formData.initialAdminEmail,
-          status: formData.initialStatus?.toLowerCase() as
-            | 'active'
-            | 'inactive'
-            | 'pending',
+          status: formData.initialStatus,
           initial_admin_password: formData.initial_admin_password || '',
           ...(createdByValue !== undefined && { created_by: createdByValue }),
         };
@@ -285,7 +277,7 @@ const Organizations: React.FC = () => {
               };
 
               await apiHelpers.createSubscription(subscriptionRequestData);
-            } catch (subscriptionError: any) {
+            } catch (subscriptionError: unknown) {
               console.error('Error creating subscription:', subscriptionError);
               // Continue with other subscriptions even if one fails
             }
@@ -305,7 +297,7 @@ const Organizations: React.FC = () => {
         setCreateDialogOpen(false);
         refetchOrganizations();
         fetchAllSubscriptions(); // Refresh subscriptions to show newly created ones
-      } catch (error: any) {
+      } catch (error: unknown) {
         showAlert(
           getApiErrorMessage(error, 'Failed to create organization'),
           'error'
@@ -317,6 +309,7 @@ const Organizations: React.FC = () => {
       fetchAllSubscriptions,
       showAlert,
       setCreateDialogOpen,
+      user,
     ]
   );
 
@@ -328,25 +321,23 @@ const Organizations: React.FC = () => {
         // Map frontend field names to backend API field names
         const apiFormData = {
           name: formData.name,
-          domain: formData.domain, // Changed from organizationDomain
-          status: formData.status
-            ? (mapStatusToApi(formData.status) as
-                | 'active'
-                | 'inactive'
-                | 'pending')
-            : 'active',
+          domain: formData.domain,
+          status: formData.status,
         };
 
         if (!selectedOrg.id) {
           throw new Error('Organization ID is required for update');
         }
 
-        await apiHelpers.updateOrganization(selectedOrg.id, apiFormData as any);
+        await apiHelpers.updateOrganization(
+          selectedOrg.id,
+          apiFormData as UpdateOrganizationRequest
+        );
         showAlert('Organization updated successfully', 'success');
         setSelectedOrg(null);
         setEditMode(false);
         refetchOrganizations();
-      } catch (error: any) {
+      } catch (error: unknown) {
         showAlert(
           getApiErrorMessage(error, 'Failed to update organization'),
           'error'
@@ -363,7 +354,7 @@ const Organizations: React.FC = () => {
   const paginationHandlers = usePagination(pagination, setPagination);
 
   const handleFilterChange = (newFilters: {
-    status: string;
+    status: OrganizationStatus | '';
     search: string;
   }): void => {
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -387,15 +378,18 @@ const Organizations: React.FC = () => {
 
   useEffect(() => {
     refetchOrganizations();
-  }, [filters, pagination.page, pagination.pageSize]);
+  }, [filters, pagination.page, pagination.page_size]);
 
   // ────────────────────────────────────────
   // Filter Section Component
   // ────────────────────────────────────────
 
   interface FilterSectionProps {
-    filters: { status: string; search: string };
-    onFiltersChange: (filters: { status: string; search: string }) => void;
+    filters: { status: OrganizationStatus | ''; search: string };
+    onFiltersChange: (filters: {
+      status: OrganizationStatus | '';
+      search: string;
+    }) => void;
     onClearFilters: () => void;
   }
 
@@ -434,7 +428,7 @@ const Organizations: React.FC = () => {
     const handleStatusChange = (status: string) => {
       // Cancel any pending search updates to prevent using a stale status
       debouncedOnFiltersChange.cancel();
-      onFiltersChange({ ...filters, status });
+      onFiltersChange({ ...filters, status: status as OrganizationStatus });
     };
 
     // Handle clearing filters
@@ -497,24 +491,16 @@ const Organizations: React.FC = () => {
                   >
                     All
                   </MenuItem>
-                  <MenuItem
-                    value="Active"
-                    data-testid={TestIds.filterForm.statusOption('Active')}
-                  >
-                    Active
-                  </MenuItem>
-                  <MenuItem
-                    value="Pending"
-                    data-testid={TestIds.filterForm.statusOption('Pending')}
-                  >
-                    Pending
-                  </MenuItem>
-                  <MenuItem
-                    value="Inactive"
-                    data-testid={TestIds.filterForm.statusOption('Inactive')}
-                  >
-                    Inactive
-                  </MenuItem>
+                  {Object.values(OrganizationStatus).map(status => (
+                    <MenuItem
+                      key={status}
+                      value={status}
+                      data-testid={TestIds.filterForm.statusOption(status)}
+                      className="text-transform-capitalize"
+                    >
+                      {status}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -656,13 +642,9 @@ const Organizations: React.FC = () => {
                                           Tier:
                                         </Typography>
                                         <Chip
-                                          label={formatTierName(
-                                            sub.tier || sub.tier_name || ''
-                                          )}
+                                          label={sub.tier || ''}
                                           size="small"
-                                          color={getTierColor(
-                                            sub.tier || sub.tier_name || ''
-                                          )}
+                                          color={getTierColor(sub.tier || '')}
                                         />
                                       </Grid>
                                       <Grid item xs={4}>
@@ -678,9 +660,7 @@ const Organizations: React.FC = () => {
                                           component="div"
                                         >
                                           {sub.current_usage || 0} /{' '}
-                                          {sub.max_limit ||
-                                            sub.usage_limit ||
-                                            'Unlimited'}
+                                          {sub.usage_limit || 'Unlimited'}
                                         </Typography>
                                       </Grid>
                                     </Grid>
@@ -742,7 +722,7 @@ const Organizations: React.FC = () => {
               count={pagination.total}
               page={pagination.page}
               onPageChange={paginationHandlers.handlePageChange}
-              rowsPerPage={pagination.pageSize}
+              rowsPerPage={pagination.page_size}
               onRowsPerPageChange={paginationHandlers.handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
@@ -770,8 +750,9 @@ const Organizations: React.FC = () => {
       <CreateOrganizationDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateOrganization as any}
+        onSubmit={handleCreateOrganization}
         products={products}
+        getTiersByProductId={getTiersByProductId}
       />
 
       {selectedOrg && !editMode && (
@@ -806,12 +787,14 @@ interface SubscriptionFormProps {
   subscriptions: ProductSubscriptionRequest[];
   onSubscriptionsChange: (subscriptions: ProductSubscriptionRequest[]) => void;
   products: Product[];
+  getTiersByProductId: (productId: string) => string[];
 }
 
 const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
   subscriptions,
   onSubscriptionsChange,
   products,
+  getTiersByProductId,
 }) => {
   const addSubscription = () => {
     const today = new Date().toISOString().split('T')[0]; // Default to today in YYYY-MM-DD format
@@ -834,10 +817,10 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     onSubscriptionsChange(newSubscriptions);
   };
 
-  const updateSubscription = (
+  const updateSubscription = <K extends keyof ProductSubscriptionRequest>(
     index: number,
-    field: keyof ProductSubscriptionRequest,
-    value: any
+    field: K,
+    value: ProductSubscriptionRequest[K]
   ) => {
     const newSubscriptions = [...subscriptions];
     newSubscriptions[index] = {
@@ -847,7 +830,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
 
     // If start date is changed, automatically calculate end date (start date + 1 year)
     if (field === 'starts_at' && value) {
-      const startDate = new Date(value);
+      const startDate = new Date(value as string);
       const endDate = new Date(startDate);
       endDate.setFullYear(endDate.getFullYear() + 1);
       newSubscriptions[index].ends_at =
@@ -857,19 +840,6 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
     onSubscriptionsChange(newSubscriptions);
   };
 
-  const getTierOptions = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return [];
-
-    // Generate tier options based on product name
-    const productName = product.name.toLowerCase();
-    if (productName.includes('transcript')) {
-      return ['Trans 200', 'Trans 500', 'Trans 1000'];
-    } else if (productName.includes('admission')) {
-      return ['Admis 200', 'Admis 500', 'Admis 1000'];
-    }
-    return ['tier_1', 'tier_2', 'tier_3'];
-  };
   // Prevent duplicate product selections
   const selectedProductIds = useMemo(
     () => subscriptions.map(s => s.product_id.toString()),
@@ -989,7 +959,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                     'aria-label': 'Tier selection',
                   }}
                 >
-                  {getTierOptions(subscription.product_id).map(tier => (
+                  {getTiersByProductId(subscription.product_id).map(tier => (
                     <MenuItem
                       key={tier}
                       value={tier}
@@ -998,7 +968,7 @@ const SubscriptionForm: React.FC<SubscriptionFormProps> = ({
                         tier
                       )} // ✅ Unique per option
                     >
-                      {formatTierName(tier)}
+                      {tier}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1067,6 +1037,7 @@ interface CreateOrganizationDialogProps {
     }
   ) => Promise<void>;
   products: Product[];
+  getTiersByProductId: (productId: string) => string[];
 }
 
 const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
@@ -1074,6 +1045,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   onClose,
   onSubmit,
   products,
+  getTiersByProductId,
 }) => {
   const [formData, setFormData] = useState<
     CreateOrganizationRequest & {
@@ -1084,7 +1056,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     domain: '', // Changed from organizationDomain
     initialAdminEmail: '',
     initialSubscriptions: [],
-    initialStatus: 'Active',
+    initialStatus: OrganizationStatus.Active,
     initial_admin_password: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -1093,7 +1065,16 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field: keyof typeof formData, value: any) => {
+  const handleChange = <
+    K extends keyof (CreateOrganizationRequest & {
+      initialSubscriptions: ProductSubscriptionRequest[];
+    }),
+  >(
+    field: K,
+    value: (CreateOrganizationRequest & {
+      initialSubscriptions: ProductSubscriptionRequest[];
+    })[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
@@ -1183,7 +1164,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     try {
       await onSubmit(formData);
       handleClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle specific domain-related errors
       const errorMessage = getApiErrorMessage(
         error,
@@ -1213,7 +1194,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       domain: '', // Changed from organizationDomain
       initialAdminEmail: '',
       initialSubscriptions: [],
-      initialStatus: 'Active',
+      initialStatus: OrganizationStatus.Active,
       initial_admin_password: '',
     });
     setConfirmPassword('');
@@ -1284,8 +1265,13 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
           <FormControl fullWidth margin="normal">
             <InputLabel>Organization Status</InputLabel>
             <Select
-              value={formData.initialStatus || 'Active'}
-              onChange={e => handleChange('initialStatus', e.target.value)}
+              value={formData.initialStatus || OrganizationStatus.Active}
+              onChange={e =>
+                handleChange(
+                  'initialStatus',
+                  e.target.value as OrganizationStatus
+                )
+              }
               label="Organization Status"
               data-testid={TestIds.organizations.createDialog.status}
               inputProps={{
@@ -1293,30 +1279,18 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
                 'aria-label': 'Initial status selection',
               }}
             >
-              <MenuItem
-                value="Active"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Active'
-                )}
-              >
-                Active
-              </MenuItem>
-              <MenuItem
-                value="Pending"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Pending'
-                )}
-              >
-                Pending
-              </MenuItem>
-              <MenuItem
-                value="Inactive"
-                data-testid={TestIds.organizations.createDialog.statusOption(
-                  'Inactive'
-                )}
-              >
-                Inactive
-              </MenuItem>
+              {Object.values(OrganizationStatus).map(status => (
+                <MenuItem
+                  key={status}
+                  value={status}
+                  data-testid={TestIds.organizations.createDialog.statusOption(
+                    status
+                  )}
+                  className="text-transform-capitalize"
+                >
+                  {status}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -1405,6 +1379,7 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
             subscriptions={formData.initialSubscriptions}
             onSubscriptionsChange={handleSubscriptionsChange}
             products={products}
+            getTiersByProductId={getTiersByProductId}
           />
 
           {errors.subscriptions && (
@@ -1479,7 +1454,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
       } else {
         setApiKeyError('Failed to fetch API key.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setApiKeyError('Failed to fetch API key.');
     } finally {
       setApiKeyLoading(false);
@@ -1677,13 +1652,9 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                             Tier:
                           </Typography>
                           <Chip
-                            label={formatTierName(
-                              sub.tier || sub.tier_name || ''
-                            )}
+                            label={sub.tier || ''}
                             size="small"
-                            color={getTierColor(
-                              sub.tier || sub.tier_name || ''
-                            )}
+                            color={getTierColor(sub.tier || '')}
                           />
                         </Grid>
                         <Grid item xs={6}>
@@ -1716,7 +1687,7 @@ const ViewOrganizationDialog: React.FC<ViewOrganizationDialogProps> = ({
                           </Typography>
                           <Typography variant="body1" component="div">
                             {sub.current_usage || 0} /{' '}
-                            {sub.max_limit || sub.usage_limit || 'Unlimited'}
+                            {sub.usage_limit || 'Unlimited'}
                           </Typography>
                         </Grid>
                         <Grid item xs={6}>
@@ -1847,23 +1818,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
-  // Map backend status to frontend display format
-  const mapStatusFromApi = (apiStatus: string): string => {
-    const statusMap: Record<string, string> = {
-      active: 'Active',
-      pending: 'Pending',
-      inactive: 'Inactive',
-    };
-    return statusMap[apiStatus] || apiStatus;
-  };
-
   const [formData, setFormData] = useState<UpdateOrganizationRequest>({
     name: organization.name || '',
     domain: organization.domain || '',
-    status: mapStatusFromApi(organization.status) as
-      | 'Active'
-      | 'Inactive'
-      | 'Pending',
+    status: organization.status,
   });
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -1931,7 +1889,10 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
             <Select
               value={formData.status || ''}
               onChange={e =>
-                setFormData({ ...formData, status: e.target.value as any })
+                setFormData({
+                  ...formData,
+                  status: e.target.value as OrganizationStatus,
+                })
               }
               label="Status"
               data-testid={TestIds.organizations.editDialog.status}
@@ -1940,30 +1901,18 @@ const EditOrganizationDialog: React.FC<EditOrganizationDialogProps> = ({
                 'aria-label': 'Status selection',
               }}
             >
-              <MenuItem
-                value="Active"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Active'
-                )}
-              >
-                Active
-              </MenuItem>
-              <MenuItem
-                value="Pending"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Pending'
-                )}
-              >
-                Pending
-              </MenuItem>
-              <MenuItem
-                value="Inactive"
-                data-testid={TestIds.organizations.editDialog.statusOption(
-                  'Inactive'
-                )}
-              >
-                Inactive
-              </MenuItem>
+              {Object.values(OrganizationStatus).map(status => (
+                <MenuItem
+                  key={status}
+                  value={status}
+                  data-testid={TestIds.organizations.editDialog.statusOption(
+                    status
+                  )}
+                  className="text-transform-capitalize"
+                >
+                  {status}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>

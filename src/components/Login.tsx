@@ -30,6 +30,7 @@ import { TestIds } from '../testIds';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 import { useAlert } from '@/contexts/AlertContext';
+import type { LoginResponse } from '../types';
 
 // ────────────────────────────────────────
 // Type Definitions
@@ -78,7 +79,7 @@ const Login: React.FC = () => {
     }));
   };
 
-  const handleSuccessfulLogin = (data: any): void => {
+  const handleSuccessfulLogin = (data: LoginResponse): void => {
     // Store token and user info
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);

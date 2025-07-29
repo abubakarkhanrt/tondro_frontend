@@ -9,22 +9,11 @@
  */
 
 import { useState, useCallback } from 'react';
+import type { FilterParams, PaginationState, SnackbarState } from '../types';
 
 // ────────────────────────────────────────
 // Type Definitions
 // ────────────────────────────────────────
-
-export interface PaginationState {
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-export interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
 
 export interface BaseEntityState<T> {
   data: T[];
@@ -37,7 +26,7 @@ export interface BaseEntityState<T> {
 // Hook Interface
 // ────────────────────────────────────────
 
-interface UseEntityStateReturn<T, F = Record<string, any>> {
+interface UseEntityStateReturn<T, F = FilterParams> {
   // Entity state
   entityState: BaseEntityState<T>;
   setEntityState: React.Dispatch<React.SetStateAction<BaseEntityState<T>>>;
@@ -74,7 +63,7 @@ interface UseEntityStateReturn<T, F = Record<string, any>> {
 // Hook Implementation
 // ────────────────────────────────────────
 
-export function useEntityState<T, F = Record<string, any>>(
+export function useEntityState<T, F = FilterParams>(
   defaultFilters: F,
   initialPageSize: number = 50
 ): UseEntityStateReturn<T, F> {
@@ -89,7 +78,7 @@ export function useEntityState<T, F = Record<string, any>>(
   // Pagination state
   const [pagination, setPagination] = useState<PaginationState>({
     page: 0,
-    pageSize: initialPageSize,
+    page_size: initialPageSize,
     total: 0,
   });
 
@@ -124,7 +113,7 @@ export function useEntityState<T, F = Record<string, any>>(
   const resetPagination = useCallback(() => {
     setPagination({
       page: 0,
-      pageSize: initialPageSize,
+      page_size: initialPageSize,
       total: 0,
     });
   }, [initialPageSize]);

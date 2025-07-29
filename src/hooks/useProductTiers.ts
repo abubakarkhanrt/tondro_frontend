@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiHelpers } from '../services/api';
-import type { ProductTier } from '../types';
+import type { Product, ProductTier } from '../types';
 import { getApiErrorMessage } from '@/utils/getApiErrorMessage';
 
 // ────────────────────────────────────────
@@ -21,12 +21,12 @@ interface UseProductTiersReturn {
   tiers: ProductTier[];
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: (products: Product[]) => Promise<void>;
   getTierByProductAndName: (
     productId: string,
     tierName: string
   ) => ProductTier | undefined;
-  getTiersByProduct: (productId: string) => ProductTier[];
+  getTiersByProductId: (productId: string) => string[];
 }
 
 // ────────────────────────────────────────
@@ -42,18 +42,11 @@ export const useProductTiers = (): UseProductTiersReturn => {
   // Fetch All Tiers (Updated to fetch per product)
   // ────────────────────────────────────────
 
-  const fetchTiers = useCallback(async () => {
+  const fetchTiers = useCallback(async (products: Product[]) => {
     try {
       setLoading(true);
       setError(null);
 
-      // First, get all products
-      const productsResponse = await apiHelpers.getProducts();
-      const products = Array.isArray(productsResponse.data)
-        ? productsResponse.data
-        : productsResponse.data.products || [];
-
-      // Then fetch tiers for each product
       const allTiers: ProductTier[] = [];
 
       for (const product of products) {
@@ -64,31 +57,23 @@ export const useProductTiers = (): UseProductTiersReturn => {
             controller.signal
           );
 
-          if (response.data.tiers) {
-            allTiers.push(...response.data.tiers);
+          if (response.data.product_tiers) {
+            allTiers.push(...response.data.product_tiers);
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn(`Failed to fetch tiers for product ${product.id}:`, err);
           // Continue with other products even if one fails
         }
       }
 
       setTiers(allTiers);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Failed to fetch product tiers'));
       setTiers([]);
     } finally {
       setLoading(false);
     }
   }, []);
-
-  // ────────────────────────────────────────
-  // Initial Load
-  // ────────────────────────────────────────
-
-  useEffect(() => {
-    fetchTiers();
-  }, [fetchTiers]);
 
   // ────────────────────────────────────────
   // Utility Functions
@@ -103,9 +88,12 @@ export const useProductTiers = (): UseProductTiersReturn => {
     [tiers]
   );
 
-  const getTiersByProduct = useCallback(
-    (productId: string): ProductTier[] => {
-      return tiers.filter(tier => tier.product_id === productId);
+  const getTiersByProductId = useCallback(
+    (productId: string): string[] => {
+      if (!productId) return [];
+      return tiers
+        .filter(tier => tier.product_id === productId)
+        .map(tier => tier.tier_name);
     },
     [tiers]
   );
@@ -116,7 +104,7 @@ export const useProductTiers = (): UseProductTiersReturn => {
     error,
     refetch: fetchTiers,
     getTierByProductAndName,
-    getTiersByProduct,
+    getTiersByProductId,
   };
 };
 
@@ -158,7 +146,7 @@ export const useProductTier = (
       );
 
       setTier(response.data.tier);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Failed to fetch product tier'));
       setTier(null);
     } finally {
@@ -175,61 +163,5 @@ export const useProductTier = (
     loading,
     error,
     refetch: fetchTier,
-  };
-};
-
-// ────────────────────────────────────────
-// Product-Specific Tiers Hook
-// ────────────────────────────────────────
-
-interface UseProductTiersByProductReturn {
-  tiers: ProductTier[];
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-}
-
-export const useProductTiersByProduct = (
-  productId: string
-): UseProductTiersByProductReturn => {
-  const [tiers, setTiers] = useState<ProductTier[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTiers = useCallback(async () => {
-    if (!productId) {
-      setTiers([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const controller = apiHelpers.createAbortController();
-      const response = await apiHelpers.getProductTiersByProduct(
-        productId,
-        controller.signal
-      );
-
-      setTiers(response.data.tiers || []);
-    } catch (err: any) {
-      setError(getApiErrorMessage(err));
-      setTiers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [productId]);
-
-  useEffect(() => {
-    fetchTiers();
-  }, [fetchTiers]);
-
-  return {
-    tiers,
-    loading,
-    error,
-    refetch: fetchTiers,
   };
 };

@@ -31,8 +31,8 @@ export interface JobDiagnosticsResponse {
     document_type: string;
     status: 'processing' | 'completed' | 'failed';
     result?: {
-      pass_1_extraction: any;
-      pass_2_correction: any;
+      pass_1_extraction: Record<string, unknown>;
+      pass_2_correction: Record<string, unknown>;
     };
     error?: {
       code: string;
@@ -57,8 +57,8 @@ export interface Job {
   filename: string;
   upload_timestamp: string;
   file_path: string | null;
-  extracted_data: any | null;
-  processing_metadata: any | null;
+  extracted_data: Record<string, unknown> | null;
+  processing_metadata: Record<string, unknown> | null;
   processing_duration_seconds: number;
 }
 
@@ -88,6 +88,7 @@ const transcriptsApi: AxiosInstance = axios.create({
   headers: {
     Accept: 'application/json',
   },
+  withCredentials: true, // Crucial for sending cookies automatically
 });
 
 // ────────────────────────────────────────
@@ -116,59 +117,6 @@ transcriptsApi.interceptors.request.use(
 
 // Apply the shared auth refresh interceptor
 addApiResponseInterceptor(transcriptsApi);
-
-// Transcripts API response interceptor (simpler, no auth redirects)
-transcriptsApi.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  error => {
-    // Don't redirect on cancelled requests
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-
-    // Enhanced transcripts API error handling
-    const errorInfo = {
-      message: 'Transcripts API Error',
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      method: error.config?.method,
-      data: error.response?.data,
-    };
-
-    // Log transcripts API errors for debugging
-    if (ENV_CONFIG.IS_DEVELOPMENT) {
-      console.error('Transcripts API Error:', errorInfo);
-    }
-
-    // Add transcripts-specific error context
-    error.transcriptsApiError = true;
-    error.errorInfo = errorInfo;
-
-    return Promise.reject(error);
-  }
-);
-
-// ────────────────────────────────────────
-// Utility Functions
-// ────────────────────────────────────────
-
-// Utility function to check if an error is from transcripts API
-export const isTranscriptsApiError = (error: any): boolean => {
-  return error && error.transcriptsApiError === true;
-};
-
-// Utility function to get transcripts API error info
-export const getTranscriptsApiErrorInfo = (error: any) => {
-  return error?.errorInfo || null;
-};
-
-// Utility function to validate and log API responses
-export const validateApiResponse = (response: any) => {
-  return response;
-};
 
 // ────────────────────────────────────────
 // API Helper Functions
@@ -203,36 +151,29 @@ export const transcriptsApiHelpers = {
     return transcriptsApi
       .post(API_ENDPOINTS.TRANSCRIPTS.SUBMIT_JOB, formData, config)
       .catch(error => {
-        if (error.transcriptsApiError) {
-          console.error(
-            'Transcripts API Job Submission Error:',
-            error.errorInfo
+        console.error('Transcripts API Job Submission Error:', error.errorInfo);
+        if (error.response?.status === 413) {
+          throw new Error(
+            'File too large. Please select a smaller file (max 10MB).'
           );
-          if (error.response?.status === 413) {
-            throw new Error(
-              'File too large. Please select a smaller file (max 10MB).'
-            );
-          } else if (error.response?.status === 415) {
-            throw new Error(
-              'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
-            );
-          } else if (error.response?.status === 503) {
-            throw new Error(
-              'Transcripts service is temporarily unavailable. Please try again later.'
-            );
-          } else if (error.response?.status >= 500) {
-            throw new Error(
-              'Transcripts service error. Please try again later.'
-            );
-          } else if (error.response?.status >= 400) {
-            throw new Error(
-              'Invalid request. Please check your file and try again.'
-            );
-          } else if (!error.response) {
-            throw new Error(
-              'Unable to connect to transcripts service. Please check your connection.'
-            );
-          }
+        } else if (error.response?.status === 415) {
+          throw new Error(
+            'Unsupported file type. Please select a PDF, JPG, JPEG, or PNG file.'
+          );
+        } else if (error.response?.status === 503) {
+          throw new Error(
+            'Transcripts service is temporarily unavailable. Please try again later.'
+          );
+        } else if (error.response?.status >= 500) {
+          throw new Error('Transcripts service error. Please try again later.');
+        } else if (error.response?.status >= 400) {
+          throw new Error(
+            'Invalid request. Please check your file and try again.'
+          );
+        } else if (!error.response) {
+          throw new Error(
+            'Unable to connect to transcripts service. Please check your connection.'
+          );
         }
         throw error;
       });

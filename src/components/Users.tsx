@@ -47,11 +47,12 @@ import {
 import { apiHelpers } from '../services/api';
 import {
   type User,
-  type OrganizationV2,
+  type Organization,
   type CreateUserRequest,
   type UpdateUserRequest,
   type Domain,
 } from '../types';
+import { UserRole, UserStatus } from '@/enums/user';
 import { getStatusBackgroundColor } from '../theme';
 import { TestIds } from '../testIds';
 import { getButtonProps } from '../utils/buttonStyles';
@@ -68,7 +69,7 @@ import { useAlert } from '@/contexts/AlertContext';
 // ────────────────────────────────────────
 
 const getRoleColor = (
-  role: string
+  role: UserRole
 ): 'error' | 'warning' | 'info' | 'default' => {
   // Handle both backend format and display format
   const normalizedRole = role.toLowerCase().replace('_', ' ');
@@ -83,14 +84,14 @@ const getRoleColor = (
   }
 };
 
-const getRoleDisplayName = (role: string): string => {
+const getRoleDisplayName = (role: UserRole): string => {
   switch (role) {
-    case 'global_admin':
+    case UserRole.GlobalAdmin:
       return 'Global Admin';
-    case 'tenant_admin':
+    case UserRole.TenantAdmin:
       return 'Tenant Admin';
     default:
-      return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return role;
   }
 };
 
@@ -126,7 +127,7 @@ const getDomainName = (
 };
 
 // Get available roles that match the expected role values
-const availableRoles = ['global_admin', 'tenant_admin'];
+const availableRoles = Object.values(UserRole);
 
 // ────────────────────────────────────────
 // Main Component
@@ -151,8 +152,8 @@ const Users: React.FC = () => {
     User,
     {
       organization_id: number | null;
-      role: string;
-      status: string;
+      role: UserRole | '';
+      status: UserStatus | '';
       search: string;
     }
   >(
@@ -165,7 +166,7 @@ const Users: React.FC = () => {
     50
   );
 
-  const [organizations, setOrganizations] = useState<OrganizationV2[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [domains, setDomains] = useState<Record<string, Domain[]>>({});
   const initialLoadRef = useRef<boolean>(false);
   const { showAlert } = useAlert();
@@ -228,14 +229,14 @@ const Users: React.FC = () => {
         fetchUsers();
       }
     }
-  }, [filters, pagination.page, pagination.pageSize]);
+  }, [filters, pagination.page, pagination.page_size]);
 
   const fetchOrganizations = async (): Promise<void> => {
     try {
       const response = await apiHelpers.getOrganizations();
-      const orgs: OrganizationV2[] = (response.data as any).organizations || [];
+      const orgs: Organization[] = response.data.organizations || [];
       setOrganizations(orgs);
-    } catch (error) {
+    } catch (error: unknown) {
       showAlert(
         getApiErrorMessage(error, 'Failed to fetch organizations'),
         'error'
@@ -246,9 +247,7 @@ const Users: React.FC = () => {
   const fetchDomains = async (): Promise<void> => {
     try {
       const response = await apiHelpers.getDomains();
-      // Fix: Use the correct response structure - domains are in response.data.domains
-      const allDomains =
-        response.data.domains || (response.data as any).items || [];
+      const allDomains = response.data.items || [];
 
       // Group domains by organization_id
       const domainsByOrg: Record<string, Domain[]> = {};
@@ -262,7 +261,7 @@ const Users: React.FC = () => {
       });
 
       setDomains(domainsByOrg);
-    } catch (error) {
+    } catch (error: unknown) {
       showAlert(getApiErrorMessage(error, 'Failed to fetch domains'), 'error');
       // Don't set error state as domains are not critical for page functionality
     }
@@ -282,7 +281,9 @@ const Users: React.FC = () => {
         password: formData.password,
       };
 
-      const userResponse = await apiHelpers.createUser(userData as any);
+      const userResponse = await apiHelpers.createUser(
+        userData as CreateUserRequest
+      );
       const newUserId = userResponse.data.id;
 
       // Step 2: Update the selected domain with the new user_id
@@ -291,7 +292,7 @@ const Users: React.FC = () => {
           await apiHelpers.updateDomain(String(formData.domain_id), {
             user_id: newUserId,
           });
-        } catch (domainError) {
+        } catch (domainError: unknown) {
           console.error('Failed to assign domain to user:', domainError);
           // Optionally delete the user if domain assignment fails
           // await apiHelpers.deleteUser(newUserId);
@@ -307,7 +308,7 @@ const Users: React.FC = () => {
       setCreateDialogOpen(false);
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
-    } catch (error: any) {
+    } catch (error: unknown) {
       showAlert(getApiErrorMessage(error, 'Failed to create user'), 'error');
     }
   };
@@ -324,7 +325,7 @@ const Users: React.FC = () => {
       await apiHelpers.deleteUser(id, reason);
       showAlert('User status updated successfully');
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showAlert(
         getApiErrorMessage(error, 'Failed to update user status'),
         'error'
@@ -382,21 +383,12 @@ const Users: React.FC = () => {
 
       await apiHelpers.updateUser(selectedUser.id, userData);
 
-      // Step 2: Handle domain assignment if domain selection changed
-      // Find the current domain assigned to this user
-      //const allDomains = Object.values(domains).flat();
-      //const currentUserDomain = allDomains.find(domain => domain.user_id === selectedUser.id);
-
-      // Get the selected domain from the edit dialog state
-      // We need to access the selectedDomainId from the EditUserDialog component
-      // For now, we'll handle this in the EditUserDialog's handleSubmit
-
       showAlert('User updated successfully');
       setSelectedUser(null);
       setEditMode(false);
       fetchUsers();
       fetchDomains(); // Refresh domains to show updated user assignments
-    } catch (error: any) {
+    } catch (error: unknown) {
       showAlert(getApiErrorMessage(error, 'Failed to update user'), 'error');
     }
   };
@@ -499,12 +491,12 @@ export default Users;
 interface FilterSectionProps {
   filters: {
     organization_id: number | null; // Changed from number to number | null
-    role: string;
-    status: string;
+    role: UserRole | '';
+    status: UserStatus | '';
     search: string;
   };
-  organizations: OrganizationV2[]; // Only OrganizationV2
-  userRoles: string[];
+  organizations: Organization[]; // Only Organization
+  userRoles: UserRole[];
   handleFilterChange: (field: string, value: string | number) => void;
   handleClearFilters: () => void;
 }
@@ -580,7 +572,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               showAllOption={true}
               allOptionText="All Organizations"
               margin="none"
-              organizations={organizations as any}
+              organizations={organizations}
               fetchFromApi={false}
             />
           </Grid>
@@ -604,24 +596,16 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 >
                   All
                 </MenuItem>
-                <MenuItem
-                  value="active"
-                  data-testid={TestIds.filterForm.statusOption('active')}
-                >
-                  Active
-                </MenuItem>
-                <MenuItem
-                  value="inactive"
-                  data-testid={TestIds.filterForm.statusOption('inactive')}
-                >
-                  Inactive
-                </MenuItem>
-                <MenuItem
-                  value="invited"
-                  data-testid={TestIds.filterForm.statusOption('invited')}
-                >
-                  Invited
-                </MenuItem>
+                {Object.values(UserStatus).map(status => (
+                  <MenuItem
+                    key={status}
+                    value={status}
+                    data-testid={TestIds.filterForm.statusOption(status)}
+                    className="text-transform-capitalize"
+                  >
+                    {status}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -652,16 +636,19 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
 interface UsersTableProps {
   users: User[];
-  organizations: OrganizationV2[]; // Only OrganizationV2
+  organizations: Organization[]; // Only Organization
   domains: Record<string, Domain[]>;
   loading: boolean;
   error: string;
   pagination: {
     page: number;
-    pageSize: number;
+    page_size: number;
     total: number;
   };
-  handlePageChange: (event: unknown, newPage: number) => void;
+  handlePageChange: (
+    event: React.MouseEvent<HTMLButtonElement> | null,
+    newPage: number
+  ) => void;
   handlePageSizeChange: (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
@@ -829,7 +816,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
               count={pagination.total}
               page={pagination.page}
               onPageChange={handlePageChange}
-              rowsPerPage={pagination.pageSize}
+              rowsPerPage={pagination.page_size}
               onRowsPerPageChange={handlePageSizeChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
               data-testid={TestIds.entityTable.pagination}
@@ -849,7 +836,7 @@ interface CreateUserDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CreateUserRequest) => Promise<void>;
-  organizations: OrganizationV2[];
+  organizations: Organization[];
   domains: Record<string, Domain[]>; // Add this prop
 }
 
@@ -866,14 +853,14 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     email: '',
     first_name: '',
     last_name: '',
-    role: 'tenant_admin',
+    role: UserRole.TenantAdmin,
     password: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [availableDomains, setAvailableDomains] = useState<Domain[]>([]); // Rename to match EditUserDialog
+  const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
   const [domainsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -968,19 +955,19 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         password: formData.password,
       };
 
-      await onSubmit(apiData as unknown as CreateUserRequest);
+      await onSubmit(apiData as CreateUserRequest);
       setFormData({
         organization_id: 0,
         domain_id: 0,
         email: '',
         first_name: '',
         last_name: '',
-        role: 'tenant_admin',
+        role: UserRole.TenantAdmin,
         password: '',
       });
       setConfirmPassword('');
       setErrors({});
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in create dialog:', error);
     } finally {
       setLoading(false);
@@ -994,7 +981,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       email: '',
       first_name: '',
       last_name: '',
-      role: 'tenant_admin',
+      role: UserRole.TenantAdmin,
       password: '',
     });
     setConfirmPassword('');
@@ -1035,7 +1022,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               required={true}
               testIdPrefix="users-create-organization"
               showAllOption={false}
-              organizations={organizations as any}
+              organizations={organizations}
               fetchFromApi={false}
               margin="none"
             />
@@ -1290,7 +1277,7 @@ interface ViewUserDialogProps {
   user: User;
   onClose: () => void;
   onUpdate: () => void;
-  organizations: OrganizationV2[]; // Only OrganizationV2
+  organizations: Organization[]; // Only Organization
   domains: Record<string, Domain[]>;
   setEditMode: (edit: boolean) => void;
   hasPermission: (
@@ -1442,9 +1429,9 @@ interface EditUserDialogProps {
   user: User;
   onClose: () => void;
   onSubmit: (data: UpdateUserRequest) => Promise<void>;
-  organizations: OrganizationV2[]; // Only OrganizationV2
+  organizations: Organization[]; // Only Organization
   domains: Record<string, Domain[]>;
-  userRoles: string[];
+  userRoles: UserRole[];
 }
 
 const EditUserDialog: React.FC<EditUserDialogProps> = ({
@@ -1460,7 +1447,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
     role: user.role,
-    status: user.status as 'active' | 'inactive' | 'pending' | 'invited',
+    status: user.status,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [availableDomains, setAvailableDomains] = useState<Domain[]>([]);
@@ -1500,7 +1487,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     } else {
       setAvailableDomains([]);
     }
-  }, [formData.organization_id, domains, user.id, selectedDomainId]);
+  }, [formData.organization_id, domains]);
 
   const handleSubmit = async (): Promise<void> => {
     if (!formData.email?.trim() || !formData.organization_id) {
@@ -1526,8 +1513,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         status: formData.status,
       };
 
-      await onSubmit(apiData as unknown as UpdateUserRequest);
-    } catch (error) {
+      await onSubmit(apiData as UpdateUserRequest);
+    } catch (error: unknown) {
       console.error('Error in edit dialog:', error);
     } finally {
       setLoading(false);
@@ -1701,11 +1688,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               onChange={e =>
                 setFormData({
                   ...formData,
-                  status: e.target.value as
-                    | 'active'
-                    | 'inactive'
-                    | 'pending'
-                    | 'invited',
+                  status: e.target.value as UserStatus,
                 })
               }
               label="Status"
@@ -1715,24 +1698,16 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 'aria-label': 'Status selection',
               }}
             >
-              <MenuItem
-                value="active"
-                data-testid={TestIds.users.editDialog.statusOption('active')}
-              >
-                Active
-              </MenuItem>
-              <MenuItem
-                value="inactive"
-                data-testid={TestIds.users.editDialog.statusOption('inactive')}
-              >
-                Inactive
-              </MenuItem>
-              <MenuItem
-                value="invited"
-                data-testid={TestIds.users.editDialog.statusOption('invited')}
-              >
-                Invited
-              </MenuItem>
+              {Object.values(UserStatus).map(status => (
+                <MenuItem
+                  key={status}
+                  value={status}
+                  data-testid={TestIds.users.editDialog.statusOption(status)}
+                  className="text-transform-capitalize"
+                >
+                  {status}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>

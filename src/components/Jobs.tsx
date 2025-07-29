@@ -4,7 +4,7 @@
  * Description: Displays a list of all processing jobs for the user.
  * Author: Muhammad Abubakar Khan
  * Created: 11-07-2024
- * Last Updated: 18-07-2025
+ * Last Updated: 25-07-2025
  * ──────────────────────────────────────────────────
  */
 import React, { useState, useEffect, useCallback } from 'react';
@@ -85,12 +85,18 @@ const Jobs: React.FC = () => {
 
   const formatTimestamp = (timestamp: string | null): string => {
     if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString(undefined, {
+
+    // Remove microseconds and append 'Z' to indicate UTC
+    const cleanTimestamp = timestamp.replace(/\.\d+$/, '') + 'Z';
+    const date = new Date(cleanTimestamp);
+
+    return date.toLocaleString(undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   };
 

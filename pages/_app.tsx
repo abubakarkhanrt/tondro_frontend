@@ -17,6 +17,7 @@ import ErrorBoundary from '../src/components/ErrorBoundary';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { AuthGuard } from '../src/components/AuthGuard';
 import { AlertProvider } from '../src/contexts/AlertContext';
+import '../src/styles/app.css';
 
 // Validate environment on app startup
 if (typeof window !== 'undefined') {
